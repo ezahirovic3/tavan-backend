@@ -90,6 +90,19 @@ class BlogPostResource extends Resource
                 ->label('Boja pozadine (fallback)')
                 ->nullable(),
 
+            TextInput::make('author_name')
+                ->label('Autor')
+                ->default('Tavan tim')
+                ->maxLength(100),
+
+            FileUpload::make('author_avatar')
+                ->label('Autorova fotografija')
+                ->image()
+                ->disk('r2')
+                ->directory('blog/authors')
+                ->visibility('public')
+                ->nullable(),
+
             Toggle::make('is_published')
                 ->label('Objavljeno')
                 ->default(false),

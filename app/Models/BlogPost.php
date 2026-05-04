@@ -15,6 +15,8 @@ class BlogPost extends Model
         'content',
         'cover_image',
         'cover_color',
+        'author_name',
+        'author_avatar',
         'read_time',
         'is_published',
         'published_at',
