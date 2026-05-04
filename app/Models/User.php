@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,7 +13,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 {
     use HasApiTokens, HasFactory, HasUlids, Notifiable;
 
@@ -26,6 +28,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'phone',
         'phone_verified_at',
         'is_verified',
+        'role',
         'profile_setup_done',
         'feed_setup_done',
         'first_listing_coach_seen',
@@ -55,6 +58,16 @@ class User extends Authenticatable implements MustVerifyEmail
             'notifications_enabled'     => 'boolean',
             'rating'            => 'decimal:2',
         ];
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return in_array($this->role, ['admin', 'super_admin']);
     }
 
     public function products(): HasMany
