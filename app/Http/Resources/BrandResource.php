@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class BrandResource extends JsonResource
 {
@@ -13,7 +14,7 @@ class BrandResource extends JsonResource
             'id'         => $this->id,
             'name'       => $this->name,
             'slug'       => $this->slug,
-            'logo_url'   => $this->logo_url,
+            'logo_url'   => $this->logo_url ? Storage::disk('r2')->url($this->logo_url) : null,
             'sort_order' => $this->sort_order,
         ];
     }
