@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\UserAddressController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\UserPreferenceController;
+use App\Http\Controllers\Api\BlogPostController;
 use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +31,11 @@ Route::prefix('v1')->group(function () {
     Route::get('brands', [BrandController::class, 'index']);
     Route::get('categories', [CategoryController::class, 'index']);
     Route::get('shipping-options', [ShippingOptionController::class, 'index']);
+
+    // Blog (slugs must be declared before {slug} wildcard)
+    Route::get('posts', [BlogPostController::class, 'index']);
+    Route::get('posts/slugs', [BlogPostController::class, 'slugs']);
+    Route::get('posts/{slug}', [BlogPostController::class, 'show']);
 
     // Products feed + detail — no auth required, but controller uses user() if present
     Route::get('products', [ProductController::class, 'index']);

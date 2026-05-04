@@ -2,25 +2,25 @@
 
 ## Project Overview
 
-Tavan is a Bosnian secondhand fashion marketplace (think Vinted for Bosnia). This is the Laravel 11 REST API + Filament admin panel that powers the Tavan mobile app.
+Tavan is a Bosnian secondhand fashion marketplace (think Vinted for Bosnia). This is the Laravel 13 REST API + Filament admin panel that powers the Tavan mobile app.
 
 - **Mobile app**: `/Users/macbookpro/Desktop/tavan-mobile` (React Native / Expo)
-- **Backend**: this directory — Laravel 11, MySQL 8, Laravel Sail (Docker)
+- **Backend**: this directory — Laravel 13, MySQL 8, Laravel Sail (Docker)
 - **Language/region**: Bosnia and Herzegovina; prices in KM (Convertible Mark); UI text in Bosnian/Croatian
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | Laravel 11 |
+| Framework | Laravel 13 |
 | Database | MySQL 8 |
-| Auth | Firebase Auth (mobile) + Firebase Admin PHP SDK (token verification) |
+| Auth | Laravel Sanctum (token-based) |
 | Image storage | Cloudflare R2 (S3-compatible via Laravel filesystem) |
 | Real-time | Laravel Reverb (WebSockets, Pusher protocol) |
-| Admin panel | Filament 3 |
-| API docs | L5-Swagger (OpenAPI 3.0) |
+| Admin panel | Filament 4 |
+| API docs | Scramble (auto-generated OpenAPI, no annotations) |
 | Local dev | Laravel Sail (Docker) |
-| Hosting | Laravel Forge + DigitalOcean |
+| Hosting | Laravel Forge + Laravel VPS |
 | Queue/cache | Redis |
 
 ## Domain Setup
@@ -54,7 +54,7 @@ Tavan is a Bosnian secondhand fashion marketplace (think Vinted for Bosnia). Thi
 
 API runs at: http://localhost/api  
 Telescope (debug dashboard): http://localhost/telescope  
-Swagger docs: http://localhost/api/documentation  
+API docs (Scramble): http://localhost/docs/api  
 Filament admin: http://localhost/admin  
 
 ## Authentication Flow
@@ -78,11 +78,11 @@ Laravel owns auth end-to-end. Firebase is not used.
 ```
 Mobile App (React Native)
     │
-    │ HTTP requests (Bearer: Firebase ID Token)
+    │ HTTP requests (Bearer: Sanctum token)
     ▼
 Laravel REST API (api.tavan.store)
     │
-    ├── Firebase Admin SDK (verify token)
+    ├── Sanctum (token verification)
     ├── MySQL (business data)
     ├── Cloudflare R2 (images)
     └── Laravel Reverb (WebSocket events)
@@ -97,7 +97,7 @@ Filament Admin (admin.tavan.store)
 app/
   Http/
     Controllers/Api/     # API controllers (one per resource)
-    Middleware/          # FirebaseAuth middleware
+    Middleware/          # Auth middleware
     Requests/            # Form request validation
     Resources/           # API resources (response shaping)
   Models/                # Eloquent models
@@ -161,12 +161,13 @@ Error response:
 - [x] Phase 7 — Image upload (Cloudflare R2 via S3-compatible driver)
 - [ ] Phase 8 — Filament admin panel (brands, categories, users, products)
 - [ ] Phase 9 — Push notifications
-- [ ] Phase 10 — Production deployment (Forge + DigitalOcean)
+- [ ] Phase 10 — Production deployment (Forge + Laravel VPS)
 
 ## Installed Packages
 
-- `filament/filament` v4.x — admin panel at /admin
-- `laravel/sanctum` v4.x — API token issuance (`personal_access_tokens` table)
-- `laravel/socialite` v5.x — Google + Apple social login (Phase 2b)
-- `laravel/telescope` v5.x — local debug dashboard at /telescope
-- `dedoc/scramble` v0.13 — auto-generates OpenAPI docs at /docs/api (no annotations needed)
+- `filament/filament` ^4.0 — admin panel at /admin
+- `laravel/sanctum` ^4.3 — API token issuance (`personal_access_tokens` table)
+- `laravel/reverb` ^1.10 — WebSocket server
+- `laravel/socialite` ^5.27 — Google + Apple social login (Phase 2b)
+- `laravel/telescope` ^5.20 — local debug dashboard at /telescope
+- `dedoc/scramble` ^0.13.20 — auto-generates OpenAPI docs at /docs/api (no annotations needed)
