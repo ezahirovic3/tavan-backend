@@ -45,9 +45,10 @@ class ConversationService
         Conversation $conversation,
         string $senderId,
         string $type,
-        array $payload
+        array $payload,
+        ?string $body = null
     ): Message {
-        $message = $this->createMessage($conversation, $senderId, $type, null, $payload);
+        $message = $this->createMessage($conversation, $senderId, $type, $body, $payload);
 
         broadcast(new NewMessage($message));
 

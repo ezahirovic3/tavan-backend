@@ -144,18 +144,33 @@ class OrderController extends Controller
 
     private function systemStatus(Order $order, string $actorId, string $status): void
     {
-        $conversation = $this->conversations->findOrCreate($order->buyer_id, $order->seller_id);
-        $this->conversations->sendSystemMessage($conversation, $actorId, 'system_status', [
-            'orderId' => $order->id,
-            'status'  => $status,
-        ]);
-
-        // Notify the OTHER party (not the actor)
-        $recipientId = $actorId === $order->seller_id ? $order->buyer_id : $order->seller_id;
-
         $isBuyerActor = $actorId === $order->buyer_id;
 
-        [$title, $body] = match ($status) {
+        // Human-readable text stored in message body — shown in chat as a status line
+        $statusText = match ($status) {
+            'accepted'  => 'Narudžba je prihvaćena.',
+            'shipped'   => 'Prodavač je poslao paket.',
+            'delivered' => 'Kupac je potvrdio dostavu.',
+            'completed' => 'Narudžba je uspješno završena.',
+            'declined'  => $isBuyerActor
+                            ? 'Kupac je otkazao narudžbu.'
+                            : 'Prodavač je odbio narudžbu.',
+            default     => 'Status narudžbe je promijenjen.',
+        };
+
+        $conversation = $this->conversations->findOrCreate($order->buyer_id, $order->seller_id);
+        $this->conversations->sendSystemMessage(
+            $conversation,
+            $actorId,
+            'system_status',
+            ['orderId' => $order->id, 'status' => $status],
+            $statusText,
+        );
+
+        // Push notification to the OTHER party
+        $recipientId = $isBuyerActor ? $order->seller_id : $order->buyer_id;
+
+        [$title, $pushBody] = match ($status) {
             'accepted'  => ['Narudžba prihvaćena ✅', 'Prodavač je prihvatio vašu narudžbu.'],
             'shipped'   => ['Paket poslan 📦', 'Vaša narudžba je na putu!'],
             'delivered' => ['Potvrda dostave', 'Kupac je potvrdio dostavu.'],
@@ -169,7 +184,7 @@ class OrderController extends Controller
         $this->push->sendToUser(
             $recipientId,
             $title,
-            $body,
+            $pushBody,
             ['type' => 'order', 'orderId' => $order->id, 'status' => $status],
         );
     }
