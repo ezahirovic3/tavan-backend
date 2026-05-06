@@ -58,21 +58,6 @@ Once started, the API is live at:
 
 ---
 
-## Seed accounts
-
-After `migrate:fresh --seed` these accounts are available:
-
-| Email | Password | Role |
-|---|---|---|
-| `test@tavan.ba` | `test123` | Main test user (power seller) |
-| `amira@tavan.ba` | `lozinka123` | Seller — Mostar |
-| `lejla@tavan.ba` | `lozinka123` | Seller — Tuzla |
-| `kenan@tavan.ba` | `lozinka123` | Buyer — Sarajevo |
-| `sara@tavan.ba` | `lozinka123` | Buyer — Banja Luka |
-| `admin@tavan.store` | `password` | Filament admin panel |
-
----
-
 ## Optional: shorter alias
 
 Add this to your `~/.zshrc` so you can type `sail` instead of `./vendor/bin/sail`:

@@ -20,12 +20,12 @@ class SocialAuthController extends Controller
     public function google(Request $request): JsonResponse
     {
         $request->validate([
-            'idToken' => ['required', 'string'],
+            'id_token' => ['required', 'string'],
         ]);
 
         // Verify the ID token with Google's tokeninfo endpoint
         $response = Http::get('https://oauth2.googleapis.com/tokeninfo', [
-            'id_token' => $request->idToken,
+            'id_token' => $request->id_token,
         ]);
 
         if (! $response->successful()) {
@@ -74,13 +74,13 @@ class SocialAuthController extends Controller
     public function apple(Request $request): JsonResponse
     {
         $request->validate([
-            'identityToken' => ['required', 'string'],
-            'givenName'     => ['sometimes', 'nullable', 'string'],
-            'familyName'    => ['sometimes', 'nullable', 'string'],
+            'identity_token' => ['required', 'string'],
+            'given_name'     => ['sometimes', 'nullable', 'string'],
+            'family_name'    => ['sometimes', 'nullable', 'string'],
         ]);
 
         try {
-            $payload = $this->verifyAppleToken($request->identityToken);
+            $payload = $this->verifyAppleToken($request->identity_token);
         } catch (\Throwable $e) {
             Log::warning('[SocialAuth] Apple token verification failed: ' . $e->getMessage());
             return response()->json(['message' => 'Nevažeći Apple token.'], 401);
@@ -93,8 +93,8 @@ class SocialAuthController extends Controller
             return response()->json(['message' => 'Apple nije vratio potrebne podatke.'], 422);
         }
 
-        $givenName  = $request->givenName;
-        $familyName = $request->familyName;
+        $givenName  = $request->given_name;
+        $familyName = $request->family_name;
         $name       = trim(($givenName ?? '') . ' ' . ($familyName ?? '')) ?: null;
 
         $user = $this->findOrCreateUser(
