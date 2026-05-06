@@ -51,12 +51,11 @@ Route::prefix('v1')->group(function () {
 
     Route::get('users', [UserController::class, 'index']);
     Route::get('users/{username}', [UserController::class, 'show']);
+    // Public: controller uses optional auth to restrict draft visibility to owner only
+    Route::get('users/{username}/products', [UserController::class, 'products']);
 
     // ── Authenticated ─────────────────────────────────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
-
-        // User products — auth required so owner can filter by status (incl. drafts)
-        Route::get('users/{username}/products', [UserController::class, 'products']);
 
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
