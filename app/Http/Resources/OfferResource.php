@@ -20,7 +20,7 @@ class OfferResource extends JsonResource
             'product'       => new ProductResource($this->whenLoaded('product')),
             'buyer'         => new UserResource($this->whenLoaded('buyer')),
             'seller'        => new UserResource($this->whenLoaded('seller')),
-            'created_at'    => $this->created_at->toISOString(),
+            'created_at'    => $this->created_at?->toISOString(),
         ];
     }
 }

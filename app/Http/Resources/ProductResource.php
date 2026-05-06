@@ -35,7 +35,7 @@ class ProductResource extends JsonResource
                 isset($this->is_wishlisted),
                 fn () => (bool) $this->is_wishlisted
             ),
-            'created_at'    => $this->created_at->toISOString(),
+            'created_at'    => $this->created_at?->toISOString(),
         ];
     }
 }

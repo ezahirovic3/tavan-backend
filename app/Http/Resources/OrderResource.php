@@ -30,7 +30,7 @@ class OrderResource extends JsonResource
             'seller'          => new UserResource($this->whenLoaded('seller')),
             'offer'           => new OfferResource($this->whenLoaded('offer')),
             'reviews'         => ReviewResource::collection($this->whenLoaded('reviews')),
-            'created_at'      => $this->created_at->toISOString(),
+            'created_at'      => $this->created_at?->toISOString(),
         ];
     }
 }
