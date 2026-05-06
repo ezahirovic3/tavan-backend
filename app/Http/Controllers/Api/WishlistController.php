@@ -77,4 +77,37 @@ class WishlistController extends Controller
             'data' => ['product_id' => $product->id, 'is_wishlisted' => false],
         ]);
     }
+
+    public function toggle(Request $request, Product $product): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($product->seller_id === $user->id) {
+            return response()->json([
+                'message' => 'Ne možeš lajkovati vlastiti artikal.',
+                'code'    => 'OWN_PRODUCT',
+            ], 422);
+        }
+
+        $item = WishlistItem::where('user_id', $user->id)
+            ->where('product_id', $product->id)
+            ->first();
+
+        if ($item) {
+            $item->delete();
+            $product->decrement('likes');
+            $isWishlisted = false;
+        } else {
+            WishlistItem::create([
+                'user_id'    => $user->id,
+                'product_id' => $product->id,
+            ]);
+            $product->increment('likes');
+            $isWishlisted = true;
+        }
+
+        return response()->json([
+            'data' => ['is_wishlisted' => $isWishlisted],
+        ]);
+    }
 }

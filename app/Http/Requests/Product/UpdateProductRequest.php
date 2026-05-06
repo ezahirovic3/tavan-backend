@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Product;
 
+use App\Models\Brand;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,6 +25,14 @@ class UpdateProductRequest extends FormRequest
         if ($this->has('condition') && isset(self::CONDITION_MAP[$this->condition])) {
             $this->merge(['condition' => self::CONDITION_MAP[$this->condition]]);
         }
+
+        // If brand_id is explicitly sent as null, resolve to the "Ostali" brand
+        if ($this->has('brand_id') && ! $this->filled('brand_id')) {
+            $other = Brand::where('is_other', true)->value('id');
+            if ($other) {
+                $this->merge(['brand_id' => $other]);
+            }
+        }
     }
 
     public function rules(): array
@@ -42,10 +51,10 @@ class UpdateProductRequest extends FormRequest
             'shipping_size' => ['sometimes', Rule::in(['S', 'M', 'L'])],
             'location'      => ['sometimes', 'string', 'max:128'],
             'brand_id'      => ['sometimes', 'nullable', 'ulid', 'exists:brands,id'],
-            'brand_custom'  => ['sometimes', 'nullable', 'string', 'max:255'],
             'allows_trades' => ['sometimes', 'boolean'],
             'allows_offers' => ['sometimes', 'boolean'],
             'measurements'  => ['sometimes', 'nullable', 'array'],
+            'status'        => ['sometimes', Rule::in(['draft', 'active', 'sold'])],
         ];
     }
 }

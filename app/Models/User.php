@@ -37,6 +37,8 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         'rating',
         'total_reviews',
         'last_active_at',
+        'google_id',
+        'apple_id',
     ];
 
     protected $hidden = [
@@ -93,5 +95,10 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function preference(): HasOne
     {
         return $this->hasOne(UserPreference::class);
+    }
+
+    public function brandSuggestions(): HasMany
+    {
+        return $this->hasMany(BrandSuggestion::class);
     }
 }

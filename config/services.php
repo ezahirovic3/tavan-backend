@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'google' => [
+        'ios_client_id'     => env('GOOGLE_IOS_CLIENT_ID'),
+        'android_client_id' => env('GOOGLE_ANDROID_CLIENT_ID'),
+    ],
+
+    'apple' => [
+        'client_id' => env('APPLE_CLIENT_ID'),
+        'team_id'   => env('APPLE_TEAM_ID'),
+        'key_id'    => env('APPLE_KEY_ID'),
+        'private_key' => env('APPLE_PRIVATE_KEY'),
+    ],
+
 ];

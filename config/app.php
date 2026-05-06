@@ -99,6 +99,9 @@ return [
 
     'key' => env('APP_KEY'),
 
+    // Shared secret sent by first-party clients (mobile app, landing page) via X-App-Key header
+    'client_key' => env('APP_CLIENT_KEY'),
+
     'previous_keys' => [
         ...array_filter(
             explode(',', (string) env('APP_PREVIOUS_KEYS', ''))

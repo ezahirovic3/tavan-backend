@@ -11,11 +11,14 @@ class Brand extends Model
 {
     use HasFactory, HasUlids;
 
-    protected $fillable = ['name', 'slug', 'logo_url', 'is_active', 'sort_order'];
+    protected $fillable = ['name', 'slug', 'logo_url', 'is_active', 'is_other', 'sort_order'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean',
+            'is_other'  => 'boolean',
+        ];
     }
 
     public function products(): HasMany
@@ -26,5 +29,10 @@ class Brand extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true)->orderBy('sort_order');
+    }
+
+    public function scopeOther($query)
+    {
+        return $query->where('is_other', true);
     }
 }

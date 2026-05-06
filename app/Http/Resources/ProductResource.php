@@ -29,7 +29,6 @@ class ProductResource extends JsonResource
             'likes'         => $this->likes,
             'measurements'  => $this->measurements,
             'brand'         => new BrandResource($this->whenLoaded('brand')),
-            'brand_custom'  => $this->brand_custom,
             'images'        => ProductImageResource::collection($this->whenLoaded('images')),
             'seller'        => new UserResource($this->whenLoaded('seller')),
             'is_wishlisted' => $this->when(

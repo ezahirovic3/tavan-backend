@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\Api\BrandController;
+use App\Http\Controllers\Api\BrandSuggestionController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\ProductImageController;
 use App\Http\Controllers\Api\UserAvatarController;
@@ -26,6 +28,12 @@ Route::prefix('v1')->group(function () {
     // ── Public ────────────────────────────────────────────────────────────────
     Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('auth/login', [AuthController::class, 'login']);
+    Route::post('auth/social/google', [SocialAuthController::class, 'google']);
+    Route::post('auth/social/apple', [SocialAuthController::class, 'apple']);
+
+    Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('auth/verify-reset-otp', [AuthController::class, 'verifyResetOtp']);
+    Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
     Route::post('auth/phone/send-otp', [AuthController::class, 'sendPhoneOtp']);
 
     Route::get('brands', [BrandController::class, 'index']);
@@ -52,6 +60,7 @@ Route::prefix('v1')->group(function () {
 
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
+        Route::post('auth/change-password', [AuthController::class, 'changePassword']);
         Route::post('auth/phone/verify-otp', [AuthController::class, 'verifyPhoneOtp']);
 
         Route::patch('users/me', [UserController::class, 'update']);
@@ -76,6 +85,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('products/{product}/images/reorder', [ProductImageController::class, 'reorder']);
 
         Route::get('wishlist', [WishlistController::class, 'index']);
+        Route::post('wishlist/{product}/toggle', [WishlistController::class, 'toggle']);
         Route::post('wishlist/{product}', [WishlistController::class, 'store']);
         Route::delete('wishlist/{product}', [WishlistController::class, 'destroy']);
 
@@ -104,10 +114,14 @@ Route::prefix('v1')->group(function () {
         Route::post('orders/{order}/decline', [OrderController::class, 'decline']);
 
         // Reviews
+        Route::get('reviews/{review}', [ReviewController::class, 'show']);
         Route::post('orders/{order}/reviews', [ReviewController::class, 'store']);
 
         // Support
         Route::post('support', [SupportInquiryController::class, 'store']);
+
+        // Brand suggestions
+        Route::post('brand-suggestions', [BrandSuggestionController::class, 'store']);
 
         // Push tokens
         Route::post('push-tokens', [PushTokenController::class, 'store']);
