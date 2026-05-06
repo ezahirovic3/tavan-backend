@@ -125,6 +125,25 @@ class ConversationController extends Controller
             return response()->json(['data' => new MessageResource($message)], 201);
         }
 
+        // Inquiry message (system_inquiry)
+        if ($request->type === 'system_inquiry') {
+            $message = $this->conversations->sendSystemMessage(
+                $conversation,
+                $request->user()->id,
+                'system_inquiry',
+                ['productId' => $request->product_id, 'text' => $request->text],
+            );
+
+            $this->push->sendToUser(
+                $recipientId,
+                $request->user()->name,
+                '❓ ' . $request->text,
+                ['type' => 'message', 'conversationId' => $conversation->id],
+            );
+
+            return response()->json(['data' => new MessageResource($message)], 201);
+        }
+
         // Text message
         $message = $this->conversations->sendText($conversation, $request->user(), $request->body);
 

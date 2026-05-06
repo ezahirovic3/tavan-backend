@@ -123,8 +123,17 @@ class OrderController extends Controller
 
     public function decline(Request $request, Order $order): JsonResponse
     {
-        $this->authorize('sellerAction', $order);
-        abort_if($order->status !== 'pending', 422, 'Može se odbiti samo narudžba u čekanju.');
+        $this->authorize('decline', $order);
+
+        $isBuyer = $request->user()->id === $order->buyer_id;
+
+        if ($isBuyer) {
+            // Buyer can only cancel while the order is still pending
+            abort_if($order->status !== 'pending', 422, 'Možeš otkazati samo narudžbu u čekanju.');
+        } else {
+            // Seller can decline pending orders or accepted ones (e.g. buyer never showed up)
+            abort_if(! in_array($order->status, ['pending', 'accepted']), 422, 'Ova narudžba ne može biti odbijena.');
+        }
 
         $order->update(['status' => 'declined']);
         $order->product->update(['status' => 'active']);
@@ -144,12 +153,16 @@ class OrderController extends Controller
         // Notify the OTHER party (not the actor)
         $recipientId = $actorId === $order->seller_id ? $order->buyer_id : $order->seller_id;
 
+        $isBuyerActor = $actorId === $order->buyer_id;
+
         [$title, $body] = match ($status) {
             'accepted'  => ['Narudžba prihvaćena ✅', 'Prodavač je prihvatio vašu narudžbu.'],
             'shipped'   => ['Paket poslan 📦', 'Vaša narudžba je na putu!'],
             'delivered' => ['Potvrda dostave', 'Kupac je potvrdio dostavu.'],
             'completed' => ['Narudžba završena 🎉', 'Narudžba je uspješno završena.'],
-            'declined'  => ['Narudžba odbijena', 'Prodavač je odbio vašu narudžbu.'],
+            'declined'  => $isBuyerActor
+                            ? ['Narudžba otkazana', 'Kupac je otkazao narudžbu.']
+                            : ['Narudžba odbijena', 'Prodavač je odbio vašu narudžbu.'],
             default     => ['Ažuriranje narudžbe', 'Status vaše narudžbe je promijenjen.'],
         };
 
