@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Responses: snake_case keys → camelCase (Laravel returns snake_case, mobile expects camelCase)
         $middleware->appendToGroup('api', \App\Http\Middleware\ConvertCamelToSnakeCase::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\ConvertResponseKeysToCamelCase::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastActiveAt::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

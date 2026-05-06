@@ -17,6 +17,8 @@ use App\Http\Controllers\Api\SupportInquiryController;
 use App\Http\Controllers\Api\TradeController;
 use App\Http\Controllers\Api\UserAddressController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\UserBlockController;
+use App\Http\Controllers\Api\UserReportController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\UserPreferenceController;
 use App\Http\Controllers\Api\BlogPostController;
@@ -61,6 +63,10 @@ Route::prefix('v1')->group(function () {
         Route::get('auth/me', [AuthController::class, 'me']);
         Route::post('auth/change-password', [AuthController::class, 'changePassword']);
         Route::post('auth/phone/verify-otp', [AuthController::class, 'verifyPhoneOtp']);
+
+        Route::post('users/{user}/block', [UserBlockController::class, 'store']);
+        Route::delete('users/{user}/block', [UserBlockController::class, 'destroy']);
+        Route::post('users/{user}/report', [UserReportController::class, 'store']);
 
         Route::patch('users/me', [UserController::class, 'update']);
         Route::delete('users/me', [UserController::class, 'destroy']);
