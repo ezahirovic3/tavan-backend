@@ -12,8 +12,6 @@ class LocalAuthProvider implements AuthProviderInterface
     public function register(array $data): array
     {
         $user = User::create($data);
-        $user->sendEmailVerificationNotification();
-
         $token = $user->createToken('mobile')->plainTextToken;
 
         return ['user' => $user, 'token' => $token];
