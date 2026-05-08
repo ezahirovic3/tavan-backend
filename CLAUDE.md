@@ -159,7 +159,7 @@ Error response:
 - [x] Phase 5 — Transactions (offers, trades, orders, reviews — 44 routes total)
 - [x] Phase 6 — Messaging (conversations, messages, Reverb WebSockets — 49 routes total)
 - [x] Phase 7 — Image upload (Cloudflare R2 via S3-compatible driver)
-- [x] Phase 8 — Filament admin panel (brands, categories, users, products, orders, blog, support, moderation)
+- [x] Phase 8 — Filament admin panel (brands, users, products, orders, blog, support, moderation)
 - [x] Phase 9 — Push notifications (Expo Push API via PushNotificationService)
 - [x] Phase 10 — Production deployment (Forge + Laravel VPS, api.tavan.store + admin.tavan.store)
 

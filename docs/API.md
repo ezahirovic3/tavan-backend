@@ -116,8 +116,8 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
 | GET | `/brands` | No | List all brands |
-| GET | `/categories` | No | List all categories |
-| GET | `/shipping-options` | No | List shipping options |
+
+> **Note:** Categories and shipping/delivery options are defined statically on the mobile client and are not served from the API.
 
 ---
 

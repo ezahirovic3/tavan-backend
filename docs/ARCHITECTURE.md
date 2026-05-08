@@ -65,7 +65,9 @@ The mobile app reads the payload, fetches the entity, and renders the appropriat
 
 ### 5. Admin-Managed Catalog
 
-Brands, categories, and shipping options are stored in MySQL and managed via Filament. The mobile app fetches them from `/api/v1/brands`, `/api/v1/categories`, `/api/v1/shipping-options`. No app release needed to add a new brand or category.
+Brands are stored in MySQL and managed via Filament. The mobile app fetches them from `/api/v1/brands`.
+
+Categories and shipping/delivery options are defined statically in the mobile client (`src/constants/`) and are not served from the API. This keeps them fast (no network round-trip) and avoids the overhead of admin wiring for data that rarely changes.
 
 ### 6. Response Shape Contract
 

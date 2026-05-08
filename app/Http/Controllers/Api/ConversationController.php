@@ -26,8 +26,17 @@ class ConversationController extends Controller
     {
         $userId = $request->user()->id;
 
-        $conversations = Conversation::where('participant_one_id', $userId)
-            ->orWhere('participant_two_id', $userId)
+        $blockedIds = $request->user()->blockedUserIds();
+
+        $conversations = Conversation::where(function ($q) use ($userId) {
+                $q->where('participant_one_id', $userId)
+                  ->orWhere('participant_two_id', $userId);
+            })
+            ->when(! empty($blockedIds), function ($q) use ($userId, $blockedIds) {
+                // Hide conversations where the other participant is blocked (either direction)
+                $q->whereNotIn('participant_one_id', $blockedIds)
+                  ->whereNotIn('participant_two_id', $blockedIds);
+            })
             ->with(['participantOne', 'participantTwo', 'lastMessage.sender', 'product.images'])
             ->orderByDesc('last_message_at')
             ->paginate(30);
@@ -115,6 +124,7 @@ class ConversationController extends Controller
 
         $blockedIds = $request->user()->blockedUserIds();
         abort_if(in_array($recipientId, $blockedIds), 422, 'Ne možeš slati poruke ovom korisniku.');
+
 
         // Image message
         if ($request->hasFile('image')) {

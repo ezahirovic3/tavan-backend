@@ -7,16 +7,15 @@ use App\Http\Controllers\Api\BrandSuggestionController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\ProductImageController;
 use App\Http\Controllers\Api\UserAvatarController;
-use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ReviewController;
-use App\Http\Controllers\Api\ShippingOptionController;
 use App\Http\Controllers\Api\SupportInquiryController;
 use App\Http\Controllers\Api\TradeController;
 use App\Http\Controllers\Api\UserAddressController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\ProductReportController;
 use App\Http\Controllers\Api\UserBlockController;
 use App\Http\Controllers\Api\UserReportController;
 use App\Http\Controllers\Api\PushTokenController;
@@ -39,8 +38,6 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/phone/send-otp', [AuthController::class, 'sendPhoneOtp']);
 
     Route::get('brands', [BrandController::class, 'index']);
-    Route::get('categories', [CategoryController::class, 'index']);
-    Route::get('shipping-options', [ShippingOptionController::class, 'index']);
 
     // Blog (slugs must be declared before {slug} wildcard)
     Route::get('posts', [BlogPostController::class, 'index']);
@@ -86,6 +83,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('products/{product}', [ProductController::class, 'update']);
         Route::delete('products/{product}', [ProductController::class, 'destroy']);
         Route::post('products/{product}/publish', [ProductController::class, 'publish']);
+        Route::post('products/{product}/report', [ProductReportController::class, 'store']);
         Route::post('products/{product}/images', [ProductImageController::class, 'store']);
         Route::delete('products/{product}/images/{image}', [ProductImageController::class, 'destroy']);
         Route::patch('products/{product}/images/reorder', [ProductImageController::class, 'reorder']);
