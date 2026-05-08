@@ -10,7 +10,7 @@ class SupportInquiry extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['user_id', 'subject', 'body', 'status'];
+    protected $fillable = ['user_id', 'name', 'email', 'subject', 'body', 'status'];
 
     public function user(): BelongsTo
     {

@@ -53,6 +53,9 @@ Route::prefix('v1')->group(function () {
     // Public: controller uses optional auth to restrict draft visibility to owner only
     Route::get('users/{username}/products', [UserController::class, 'products']);
 
+    // Support — public so the landing page (unauthenticated) can submit inquiries
+    Route::post('support', [SupportInquiryController::class, 'store']);
+
     // ── Authenticated ─────────────────────────────────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
 
@@ -120,9 +123,6 @@ Route::prefix('v1')->group(function () {
         // Reviews
         Route::get('reviews/{review}', [ReviewController::class, 'show']);
         Route::post('orders/{order}/reviews', [ReviewController::class, 'store']);
-
-        // Support
-        Route::post('support', [SupportInquiryController::class, 'store']);
 
         // Brand suggestions
         Route::post('brand-suggestions', [BrandSuggestionController::class, 'store']);

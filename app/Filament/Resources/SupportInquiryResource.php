@@ -34,9 +34,14 @@ class SupportInquiryResource extends Resource
         return $schema->schema([
             Section::make('Upit')->schema([
                 Grid::make(2)->schema([
-                    TextEntry::make('user.name')->label('Korisnik')->default('Anoniman'),
+                    TextEntry::make('user.name')->label('Korisnik (nalog)')->default('—'),
                     TextEntry::make('status')->label('Status')->badge()
                         ->color(fn (string $state) => $state === 'open' ? 'warning' : 'success'),
+                ]),
+                Grid::make(2)->schema([
+                    TextEntry::make('name')->label('Ime')->default('—'),
+                    TextEntry::make('email')->label('E-mail')->default('—')
+                        ->copyable(),
                 ]),
                 TextEntry::make('subject')->label('Predmet'),
                 TextEntry::make('body')->label('Poruka'),
@@ -49,8 +54,10 @@ class SupportInquiryResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('user.name')->label('Korisnik')->default('Anoniman')->searchable(),
-                TextColumn::make('subject')->label('Predmet')->searchable()->limit(50),
+                TextColumn::make('name')->label('Ime')->default('—')->searchable(),
+                TextColumn::make('email')->label('E-mail')->default('—')->searchable(),
+                TextColumn::make('user.name')->label('Korisnik (nalog)')->default('—')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('subject')->label('Predmet')->searchable()->limit(60),
                 TextColumn::make('status')->label('Status')->badge()
                     ->color(fn (string $state) => $state === 'open' ? 'warning' : 'success'),
                 TextColumn::make('created_at')->label('Datum')->dateTime()->sortable(),
