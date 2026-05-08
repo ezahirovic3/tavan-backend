@@ -13,6 +13,7 @@ class BlogPost extends Model
         'tag',
         'excerpt',
         'content',
+        'blocks',
         'cover_image',
         'cover_color',
         'author_name',
@@ -25,6 +26,7 @@ class BlogPost extends Model
     protected $casts = [
         'is_published'  => 'boolean',
         'published_at'  => 'datetime',
+        'blocks'        => 'array',
     ];
 
     protected static function boot(): void

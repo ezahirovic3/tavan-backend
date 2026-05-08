@@ -9,11 +9,12 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Get;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
@@ -32,6 +33,8 @@ class BlogPostResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+
+            // ── Meta ──────────────────────────────────────────────────────────
             TextInput::make('title')
                 ->label('Naslov')
                 ->required()
@@ -63,21 +66,78 @@ class BlogPostResource extends Resource
                 ->rows(2)
                 ->columnSpanFull(),
 
-            RichEditor::make('content')
+            // ── Content blocks ────────────────────────────────────────────────
+            Repeater::make('blocks')
                 ->label('Sadržaj')
+                ->addActionLabel('Dodaj blok')
                 ->columnSpanFull()
-                ->toolbarButtons([
-                    'blockquote', 'bold', 'bulletList', 'codeBlock',
-                    'h2', 'h3', 'italic', 'link', 'orderedList',
-                    'redo', 'strike', 'underline', 'undo',
+                ->collapsible()
+                ->cloneable()
+                ->itemLabel(fn (array $state): string => match ($state['type'] ?? '') {
+                    'paragraph'  => '¶ Paragraf',
+                    'heading'    => '## Naslov',
+                    'subheading' => '### Podnaslov',
+                    'quote'      => '❝ Citat',
+                    'image'      => '🖼 Slika',
+                    'instagram'  => '📷 Instagram',
+                    'youtube'    => '▶ YouTube',
+                    default      => 'Blok',
+                })
+                ->schema([
+                    Select::make('type')
+                        ->label('Tip bloka')
+                        ->required()
+                        ->live()
+                        ->options([
+                            'paragraph'  => 'Paragraf',
+                            'heading'    => 'Naslov (H2)',
+                            'subheading' => 'Podnaslov (H3)',
+                            'quote'      => 'Citat',
+                            'image'      => 'Slika',
+                            'instagram'  => 'Instagram embed',
+                            'youtube'    => 'YouTube video',
+                        ]),
+
+                    // ── Text field — paragraph / heading / subheading / quote ──
+                    Textarea::make('text')
+                        ->label('Tekst')
+                        ->rows(4)
+                        ->visible(fn (Get $get) => in_array($get('type'), [
+                            'paragraph', 'heading', 'subheading', 'quote',
+                        ])),
+
+                    // ── Quote attribution ─────────────────────────────────────
+                    TextInput::make('author')
+                        ->label('Autor citata')
+                        ->placeholder('npr. Tavan tim')
+                        ->visible(fn (Get $get) => $get('type') === 'quote'),
+
+                    // ── Image upload ──────────────────────────────────────────
+                    FileUpload::make('file')
+                        ->label('Slika')
+                        ->image()
+                        ->disk('r2')
+                        ->directory('blog/images')
+                        ->visibility('public')
+                        ->visible(fn (Get $get) => $get('type') === 'image'),
+
+                    TextInput::make('caption')
+                        ->label('Opis slike (opcionalno)')
+                        ->visible(fn (Get $get) => $get('type') === 'image'),
+
+                    // ── Embed URL — instagram / youtube ───────────────────────
+                    TextInput::make('url')
+                        ->label(fn (Get $get) => $get('type') === 'youtube'
+                            ? 'YouTube URL'
+                            : 'Instagram URL objave')
+                        ->placeholder(fn (Get $get) => $get('type') === 'youtube'
+                            ? 'https://www.youtube.com/watch?v=...'
+                            : 'https://www.instagram.com/p/...')
+                        ->url()
+                        ->visible(fn (Get $get) => in_array($get('type'), ['instagram', 'youtube'])),
                 ]),
 
-            TextInput::make('read_time')
-                ->label('Vrijeme čitanja')
-                ->placeholder('npr. 4 min')
-                ->maxLength(20)
-                ->default('3 min'),
-
+            // ── Cover ─────────────────────────────────────────────────────────
             FileUpload::make('cover_image')
                 ->label('Naslovna slika')
                 ->image()
@@ -87,9 +147,10 @@ class BlogPostResource extends Resource
                 ->nullable(),
 
             ColorPicker::make('cover_color')
-                ->label('Boja pozadine (fallback)')
+                ->label('Boja pozadine (fallback ako nema slike)')
                 ->nullable(),
 
+            // ── Author ────────────────────────────────────────────────────────
             TextInput::make('author_name')
                 ->label('Autor')
                 ->default('Tavan tim')
@@ -102,6 +163,13 @@ class BlogPostResource extends Resource
                 ->directory('blog/authors')
                 ->visibility('public')
                 ->nullable(),
+
+            // ── Publishing ────────────────────────────────────────────────────
+            TextInput::make('read_time')
+                ->label('Vrijeme čitanja')
+                ->placeholder('npr. 4 min')
+                ->maxLength(20)
+                ->default('3 min'),
 
             Toggle::make('is_published')
                 ->label('Objavljeno')
