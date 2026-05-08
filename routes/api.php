@@ -64,6 +64,7 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/change-password', [AuthController::class, 'changePassword']);
         Route::post('auth/phone/verify-otp', [AuthController::class, 'verifyPhoneOtp']);
 
+        Route::get('users/me/blocks', [UserBlockController::class, 'index']);
         Route::post('users/{user}/block', [UserBlockController::class, 'store']);
         Route::delete('users/{user}/block', [UserBlockController::class, 'destroy']);
         Route::post('users/{user}/report', [UserReportController::class, 'store']);

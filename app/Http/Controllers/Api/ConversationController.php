@@ -50,6 +50,9 @@ class ConversationController extends Controller
 
     public function store(StartConversationRequest $request): JsonResponse
     {
+        $blockedIds = $request->user()->blockedUserIds();
+        abort_if(in_array($request->user_id, $blockedIds), 422, 'Ne možeš kontaktirati ovog korisnika.');
+
         $conversation = $this->conversations->findOrCreate(
             $request->user()->id,
             $request->user_id,
@@ -109,6 +112,9 @@ class ConversationController extends Controller
         $recipientId = $conversation->participant_one_id === $request->user()->id
             ? $conversation->participant_two_id
             : $conversation->participant_one_id;
+
+        $blockedIds = $request->user()->blockedUserIds();
+        abort_if(in_array($recipientId, $blockedIds), 422, 'Ne možeš slati poruke ovom korisniku.');
 
         // Image message
         if ($request->hasFile('image')) {

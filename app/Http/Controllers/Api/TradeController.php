@@ -58,6 +58,12 @@ class TradeController extends Controller
         Product::whereIn('id', [$trade->product_id, $trade->offered_product_id])
             ->update(['status' => 'sold']);
 
+        $conversation = $this->conversations->findOrCreate($trade->buyer_id, $trade->seller_id);
+        $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
+            'tradeId' => $trade->id,
+            'status'  => 'accepted',
+        ], 'Prodavač je prihvatio zamjenu.');
+
         return response()->json(['data' => new TradeResource($trade->fresh()->load('product', 'offeredProduct', 'buyer', 'seller'))]);
     }
 
@@ -71,7 +77,7 @@ class TradeController extends Controller
         $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
             'tradeId' => $trade->id,
             'status'  => 'declined',
-        ]);
+        ], 'Prodavač je odbio zamjenu.');
 
         return response()->json(['data' => new TradeResource($trade->fresh()->load('product', 'offeredProduct', 'buyer', 'seller'))]);
     }
@@ -86,7 +92,7 @@ class TradeController extends Controller
         $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
             'tradeId' => $trade->id,
             'status'  => 'countered',
-        ]);
+        ], 'Prodavač je predložio kontra-zamjenu.');
 
         return response()->json(['data' => new TradeResource($trade->fresh()->load('product', 'offeredProduct', 'buyer', 'seller'))]);
     }

@@ -4,7 +4,7 @@
 
 Tavan is a Bosnian secondhand fashion marketplace (think Vinted for Bosnia). This is the Laravel 13 REST API + Filament admin panel that powers the Tavan mobile app.
 
-- **Mobile app**: `/Users/macbookpro/Desktop/tavan-mobile` (React Native / Expo)
+- **Mobile app**: `/Volumes/SSD/tavan-mobile` (React Native / Expo)
 - **Backend**: this directory — Laravel 13, MySQL 8, Laravel Sail (Docker)
 - **Language/region**: Bosnia and Herzegovina; prices in KM (Convertible Mark); UI text in Bosnian/Croatian
 
@@ -119,7 +119,7 @@ docs/
 
 ## API Response Contract
 
-All responses must match the shape the mobile app expects (defined by mock server).  
+All responses must match the shape the mobile app expects.  
 **Never change response shapes without updating the mobile `/src/api/*.service.js` files.**
 
 Standard success response:
@@ -159,9 +159,9 @@ Error response:
 - [x] Phase 5 — Transactions (offers, trades, orders, reviews — 44 routes total)
 - [x] Phase 6 — Messaging (conversations, messages, Reverb WebSockets — 49 routes total)
 - [x] Phase 7 — Image upload (Cloudflare R2 via S3-compatible driver)
-- [ ] Phase 8 — Filament admin panel (brands, categories, users, products)
-- [ ] Phase 9 — Push notifications
-- [ ] Phase 10 — Production deployment (Forge + Laravel VPS)
+- [x] Phase 8 — Filament admin panel (brands, categories, users, products, orders, blog, support, moderation)
+- [x] Phase 9 — Push notifications (Expo Push API via PushNotificationService)
+- [x] Phase 10 — Production deployment (Forge + Laravel VPS, api.tavan.store + admin.tavan.store)
 
 ## Installed Packages
 

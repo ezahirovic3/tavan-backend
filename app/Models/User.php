@@ -100,4 +100,23 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasMany(BrandSuggestion::class);
     }
+
+    public function blocks(): HasMany
+    {
+        return $this->hasMany(UserBlock::class, 'blocker_id');
+    }
+
+    /**
+     * Returns all user IDs that are in a block relationship with this user —
+     * either this user blocked them, or they blocked this user.
+     * Used to filter products, conversations, and profiles.
+     */
+    public function blockedUserIds(): array
+    {
+        return UserBlock::where('blocker_id', $this->id)
+            ->orWhere('blocked_id', $this->id)
+            ->get()
+            ->map(fn ($b) => $b->blocker_id === $this->id ? $b->blocked_id : $b->blocker_id)
+            ->toArray();
+    }
 }

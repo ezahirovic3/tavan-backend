@@ -23,6 +23,14 @@ class ProductController extends Controller
         $query = Product::active()
             ->with(['images', 'brand', 'seller']);
 
+        // Hide products from users in a block relationship with the viewer
+        if ($authUser) {
+            $blockedIds = $authUser->blockedUserIds();
+            if (! empty($blockedIds)) {
+                $query->whereNotIn('seller_id', $blockedIds);
+            }
+        }
+
         // ── Category filters ───────────────────────────────────────────────────
         if ($request->filled('root_category')) {
             $query->where('root_category', $request->root_category);

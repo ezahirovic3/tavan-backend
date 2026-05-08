@@ -73,7 +73,7 @@ class OfferController extends Controller
         $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
             'offerId' => $offer->id,
             'status'  => 'accepted',
-        ]);
+        ], 'Prodavač je prihvatio ponudu.');
 
         $this->push->sendToUser(
             $offer->buyer_id,
@@ -92,7 +92,10 @@ class OfferController extends Controller
         $offer->update(['status' => 'declined']);
 
         $conversation = $this->conversations->findOrCreate($offer->buyer_id, $offer->seller_id);
-        $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', ['offerId' => $offer->id, 'status' => 'declined']);
+        $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
+            'offerId' => $offer->id,
+            'status'  => 'declined',
+        ], 'Prodavač je odbio ponudu.');
 
         $this->push->sendToUser(
             $offer->buyer_id,
