@@ -34,9 +34,11 @@ class ProductResource extends Resource
             Select::make('status')
                 ->label('Status')
                 ->options([
-                    'draft'  => 'Draft',
-                    'active' => 'Aktivan',
-                    'sold'   => 'Prodan',
+                    'draft'          => 'Draft',
+                    'pending_review' => 'Na pregledu',
+                    'active'         => 'Aktivan',
+                    'reserved'       => 'Rezervisan',
+                    'sold'           => 'Prodan',
                 ])
                 ->required(),
         ]);
@@ -64,10 +66,20 @@ class ProductResource extends Resource
                     }),
                 TextColumn::make('status')->label('Status')->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'active' => 'success',
-                        'draft'  => 'warning',
-                        'sold'   => 'gray',
-                        default  => 'gray',
+                        'active'         => 'success',
+                        'pending_review' => 'warning',
+                        'draft'          => 'gray',
+                        'reserved'       => 'info',
+                        'sold'           => 'gray',
+                        default          => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'active'         => 'Aktivan',
+                        'pending_review' => 'Na pregledu',
+                        'draft'          => 'Draft',
+                        'reserved'       => 'Rezervisan',
+                        'sold'           => 'Prodan',
+                        default          => $state,
                     }),
                 TextColumn::make('likes')->label('❤️')->sortable(),
                 TextColumn::make('created_at')->label('Objavljeno')->date()->sortable(),
@@ -75,13 +87,48 @@ class ProductResource extends Resource
             ->filters([
                 SelectFilter::make('status')
                     ->label('Status')
-                    ->options(['draft' => 'Draft', 'active' => 'Aktivan', 'sold' => 'Prodan']),
+                    ->options([
+                        'draft'          => 'Draft',
+                        'pending_review' => 'Na pregledu',
+                        'active'         => 'Aktivan',
+                        'reserved'       => 'Rezervisan',
+                        'sold'           => 'Prodan',
+                    ]),
                 SelectFilter::make('root_category')
                     ->label('Kategorija')
                     ->options(['women' => 'Žene', 'men' => 'Muškarci']),
             ])
             ->actions([
                 ViewAction::make(),
+
+                // Approve: pending_review → active + mark seller as trusted (no future review needed)
+                Action::make('approve')
+                    ->label('Odobri')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(fn (Product $record) => $record->status === 'pending_review')
+                    ->action(function (Product $record) {
+                        $record->update(['status' => 'active']);
+                        // If this was the seller's first-review listing, trust them going forward
+                        if ($record->seller->listings_require_review) {
+                            $record->seller->update(['listings_require_review' => false]);
+                        }
+                    })
+                    ->requiresConfirmation()
+                    ->modalHeading('Odobri oglas')
+                    ->modalDescription('Oglas će biti objavljen i prodavač će biti označen kao pouzdan (buduće objave idu odmah na aktivan).'),
+
+                // Reject: send back to draft so the seller can edit and resubmit
+                Action::make('reject')
+                    ->label('Vrati na draft')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (Product $record) => $record->status === 'pending_review')
+                    ->action(fn (Product $record) => $record->update(['status' => 'draft']))
+                    ->requiresConfirmation()
+                    ->modalHeading('Odbij oglas')
+                    ->modalDescription('Oglas će biti vraćen na draft. Prodavač će morati ponovo podnijeti oglas.'),
+
                 Action::make('deactivate')
                     ->label('Deaktiviraj')
                     ->icon('heroicon-o-eye-slash')
@@ -89,6 +136,7 @@ class ProductResource extends Resource
                     ->visible(fn (Product $record) => $record->status === 'active')
                     ->action(fn (Product $record) => $record->update(['status' => 'draft']))
                     ->requiresConfirmation(),
+
                 Action::make('activate')
                     ->label('Aktiviraj')
                     ->icon('heroicon-o-eye')

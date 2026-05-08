@@ -38,6 +38,7 @@ class User extends Authenticatable implements FilamentUser
         'last_active_at',
         'google_id',
         'apple_id',
+        'listings_require_review',
     ];
 
     protected $hidden = [
@@ -56,7 +57,8 @@ class User extends Authenticatable implements FilamentUser
             'feed_setup_done'           => 'boolean',
             'first_listing_coach_seen'  => 'boolean',
             'first_draft_coach_seen'    => 'boolean',
-            'notifications_enabled'     => 'boolean',
+            'notifications_enabled'       => 'boolean',
+            'listings_require_review'    => 'boolean',
             'rating'            => 'decimal:2',
         ];
     }

@@ -55,7 +55,9 @@ class StoreProductRequest extends FormRequest
             'allows_trades' => ['boolean'],
             'allows_offers' => ['boolean'],
             'measurements'  => ['nullable', 'array'],
-            'status'        => ['nullable', Rule::in(['draft', 'active'])],
+            // Client may only signal intent to save as draft.
+            // The server decides the actual status (pending_review vs active) for published listings.
+            'status'        => ['nullable', Rule::in(['draft'])],
         ];
     }
 }

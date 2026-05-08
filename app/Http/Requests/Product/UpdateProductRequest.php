@@ -54,7 +54,7 @@ class UpdateProductRequest extends FormRequest
             'allows_trades' => ['sometimes', 'boolean'],
             'allows_offers' => ['sometimes', 'boolean'],
             'measurements'  => ['sometimes', 'nullable', 'array'],
-            'status'        => ['sometimes', Rule::in(['draft', 'active', 'sold'])],
+            'status'        => ['sometimes', Rule::in(['draft', 'pending_review', 'active', 'reserved', 'sold'])],
         ];
     }
 }

@@ -65,8 +65,21 @@ class Product extends Model
         return $this->hasMany(WishlistItem::class);
     }
 
+    /**
+     * Public-facing scope: only fully active products.
+     * pending_review and draft are owner-only and must never appear in public feeds.
+     */
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+
+    /**
+     * Owner-visible scope: everything except sold/archived.
+     * Used when the authenticated user is fetching their own listings.
+     */
+    public function scopeVisibleToOwner($query)
+    {
+        return $query->whereIn('status', ['draft', 'pending_review', 'active', 'reserved']);
     }
 }

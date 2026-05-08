@@ -171,7 +171,18 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $product = $request->user()->products()->create($request->validated());
+        $seller = $request->user();
+        $data   = $request->validated();
+
+        // If the client did not explicitly save as draft, determine the correct
+        // published status from the seller's trust level:
+        //   - listings_require_review = true  → pending_review (awaits admin approval)
+        //   - listings_require_review = false → active (trusted seller, goes live immediately)
+        if (($data['status'] ?? null) !== 'draft') {
+            $data['status'] = $seller->listings_require_review ? 'pending_review' : 'active';
+        }
+
+        $product = $seller->products()->create($data);
 
         return response()->json(['data' => new ProductResource($product->load('images', 'brand'))], 201);
     }
@@ -211,7 +222,11 @@ class ProductController extends Controller
     {
         $this->authorize('publish', $product);
 
-        abort_if($product->status !== 'draft', 422, 'Samo draft proizvodi mogu biti objavljeni.');
+        abort_if(
+            ! in_array($product->status, ['draft', 'pending_review']),
+            422,
+            'Samo draft ili pending_review proizvodi mogu biti objavljeni.'
+        );
 
         $product->update(['status' => 'active']);
 

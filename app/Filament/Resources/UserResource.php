@@ -32,6 +32,9 @@ class UserResource extends Resource
             TextInput::make('email')->label('Email')->email()->unique(ignoreRecord: true),
             TextInput::make('location')->label('Grad')->nullable(),
             Toggle::make('is_verified')->label('Verificiran'),
+            Toggle::make('listings_require_review')
+                ->label('Oglasi zahtijevaju pregled')
+                ->helperText('Ako je uključeno, novi oglasi ovog prodavača idu na pregled prije objave.'),
         ]);
     }
 
@@ -47,10 +50,16 @@ class UserResource extends Resource
                     ->formatStateUsing(fn ($state) => $state > 0 ? "⭐ {$state}" : '—'),
                 TextColumn::make('total_reviews')->label('Recenzija')->sortable(),
                 IconColumn::make('is_verified')->label('Verificiran')->boolean(),
+                IconColumn::make('listings_require_review')->label('Pregled')->boolean()
+                    ->trueIcon('heroicon-o-clock')
+                    ->falseIcon('heroicon-o-check-circle')
+                    ->trueColor('warning')
+                    ->falseColor('success'),
                 TextColumn::make('created_at')->label('Registriran')->date()->sortable(),
             ])
             ->filters([
                 TernaryFilter::make('is_verified')->label('Verificiran'),
+                TernaryFilter::make('listings_require_review')->label('Zahtijeva pregled'),
                 TernaryFilter::make('email_verified_at')
                     ->label('Email verificiran')
                     ->nullable(),

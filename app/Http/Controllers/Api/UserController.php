@@ -118,11 +118,15 @@ class UserController extends Controller
         $authenticatedUserId = $authUser?->id;
         $isOwner             = $authenticatedUserId === $user->id;
 
-        // active + reserved + sold are public; draft is owner-only
+        // active + reserved + sold are public.
+        // draft + pending_review are owner-only — never exposed to other users.
+        $ownerOnlyStatuses  = ['draft', 'pending_review'];
+        $publicStatuses     = ['active', 'reserved', 'sold'];
+
         $allowedStatus = match (true) {
-            in_array($requestedStatus, ['active', 'reserved', 'sold']) => $requestedStatus,
-            $requestedStatus === 'draft' && $isOwner                   => 'draft',
-            default                                                    => 'active',
+            in_array($requestedStatus, $publicStatuses)                          => $requestedStatus,
+            in_array($requestedStatus, $ownerOnlyStatuses) && $isOwner           => $requestedStatus,
+            default                                                               => 'active',
         };
 
         $products = $user->products()
