@@ -93,6 +93,12 @@ class UserController extends Controller
             app(ImageService::class)->deleteByUrl($user->avatar);
         }
 
+        // Delete all of the user's products + their R2 images.
+        // The Product booted() deleting hook handles R2 cleanup for each product.
+        // We only remove non-sold listings — sold ones are kept so order history stays intact.
+        $user->products()->whereNotIn('status', ['sold'])->get()
+            ->each(fn ($product) => $product->delete());
+
         // Anonymize instead of hard-delete to preserve order/review history
         $user->update([
             'name'     => 'Obrisani korisnik',

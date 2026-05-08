@@ -14,8 +14,10 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class UserResource extends Resource
 {
@@ -58,6 +60,11 @@ class UserResource extends Resource
                 TextColumn::make('created_at')->label('Registriran')->date()->sortable(),
             ])
             ->filters([
+                // Hide anonymized accounts by default; admin can toggle to see them
+                Filter::make('hide_deleted')
+                    ->label('Sakrij obrisane')
+                    ->query(fn (Builder $query) => $query->where('email', 'not like', '%@deleted.tavan'))
+                    ->default(),
                 TernaryFilter::make('is_verified')->label('Verificiran'),
                 TernaryFilter::make('listings_require_review')->label('Zahtijeva pregled'),
                 TernaryFilter::make('email_verified_at')
