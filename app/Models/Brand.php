@@ -21,6 +21,21 @@ class Brand extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        // When a logo is replaced in Filament, delete the old R2 file
+        static::saving(function (Brand $brand) {
+            if ($brand->isDirty('logo_url') && $brand->getOriginal('logo_url')) {
+                app(\App\Services\ImageService::class)->deleteByUrl($brand->getOriginal('logo_url'));
+            }
+        });
+
+        // When a brand is deleted, remove its logo from R2
+        static::deleting(function (Brand $brand) {
+            app(\App\Services\ImageService::class)->deleteByUrl($brand->logo_url);
+        });
+    }
+
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);

@@ -7,6 +7,7 @@ use App\Http\Requests\User\UpdateProfileRequest;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\ImageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -86,6 +87,11 @@ class UserController extends Controller
 
         // Revoke all tokens
         $user->tokens()->delete();
+
+        // Delete avatar from R2 before anonymizing
+        if ($user->avatar) {
+            app(ImageService::class)->deleteByUrl($user->avatar);
+        }
 
         // Anonymize instead of hard-delete to preserve order/review history
         $user->update([

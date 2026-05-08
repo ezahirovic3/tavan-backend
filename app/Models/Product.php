@@ -69,6 +69,16 @@ class Product extends Model
      * Public-facing scope: only fully active products.
      * pending_review and draft are owner-only and must never appear in public feeds.
      */
+    protected static function booted(): void
+    {
+        static::deleting(function (Product $product) {
+            // Delete every R2 image file before the DB row is removed.
+            // Covers: ProductController@destroy, Filament DeleteBulkAction, any future path.
+            $imageService = app(\App\Services\ImageService::class);
+            $product->images->each(fn ($img) => $imageService->deleteProductImage($img));
+        });
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
