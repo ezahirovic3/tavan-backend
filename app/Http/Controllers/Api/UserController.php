@@ -110,8 +110,12 @@ class UserController extends Controller
             }
         })->firstOrFail();
 
+        // This is a public route, so $request->user() is null even when a Bearer token
+        // is present. Resolve the Sanctum user manually (same pattern as ProductController).
+        $authUser = $request->user() ?? \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
+
         $requestedStatus     = $request->get('status', 'active');
-        $authenticatedUserId = $request->user()?->id;
+        $authenticatedUserId = $authUser?->id;
         $isOwner             = $authenticatedUserId === $user->id;
 
         // active + reserved + sold are public; draft is owner-only
