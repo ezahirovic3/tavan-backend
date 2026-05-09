@@ -19,6 +19,12 @@ class UserBlockResource extends Resource
     protected static ?string $pluralLabel = 'Blokiranja';
     protected static ?int $navigationSort = 3;
 
+    // ── Permissions ───────────────────────────────────────────────────────────
+    // Blocks are view-only from the panel — only super_admin can delete records
+    public static function canCreate(): bool              { return false; }
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool { return auth()->user()?->isSuperAdmin() ?? false; }
+    public static function canDeleteAny(): bool           { return auth()->user()?->isSuperAdmin() ?? false; }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([]);

@@ -25,6 +25,12 @@ class ProductResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = 'Sadržaj';
     protected static ?int $navigationSort = 1;
 
+    // ── Permissions ───────────────────────────────────────────────────────────
+    // Any admin can approve/reject/deactivate products; only super_admin can delete
+    public static function canCreate(): bool              { return false; }
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool { return auth()->user()?->isSuperAdmin() ?? false; }
+    public static function canDeleteAny(): bool           { return auth()->user()?->isSuperAdmin() ?? false; }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([

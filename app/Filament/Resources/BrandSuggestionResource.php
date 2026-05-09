@@ -21,6 +21,12 @@ class BrandSuggestionResource extends Resource
     protected static ?int $navigationSort = 3;
     protected static ?string $navigationLabel = 'Prijedlozi brendova';
 
+    // ── Permissions ───────────────────────────────────────────────────────────
+    // Read-only for all admins — create/delete managed via brand promotion flow
+    public static function canCreate(): bool              { return false; }
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool { return auth()->user()?->isSuperAdmin() ?? false; }
+    public static function canDeleteAny(): bool           { return auth()->user()?->isSuperAdmin() ?? false; }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([]);

@@ -34,8 +34,14 @@ class ConversationController extends Controller
             })
             ->when(! empty($blockedIds), function ($q) use ($userId, $blockedIds) {
                 // Hide conversations where the other participant is blocked (either direction)
-                $q->whereNotIn('participant_one_id', $blockedIds)
-                  ->whereNotIn('participant_two_id', $blockedIds);
+                // but never filter out admin_support conversations (system user)
+                $q->where(function ($inner) use ($blockedIds) {
+                    $inner->where('type', 'admin_support')
+                          ->orWhere(function ($sub) use ($blockedIds) {
+                              $sub->whereNotIn('participant_one_id', $blockedIds)
+                                  ->whereNotIn('participant_two_id', $blockedIds);
+                          });
+                });
             })
             ->with(['participantOne', 'participantTwo', 'lastMessage.sender', 'product.images'])
             ->orderByDesc('last_message_at')
@@ -55,6 +61,20 @@ class ConversationController extends Controller
                 'total'        => $conversations->total(),
             ],
         ]);
+    }
+
+    /**
+     * POST /conversations/support
+     * Find or create the admin support conversation for the authenticated user.
+     */
+    public function support(Request $request): JsonResponse
+    {
+        $conversation = $this->conversations->findOrCreateSupportConversation($request->user()->id);
+
+        $conversation->load(['participantOne', 'participantTwo', 'lastMessage.sender', 'product.images']);
+        $conversation->unread_count = $this->conversations->unreadCount($conversation, $request->user()->id);
+
+        return response()->json(['data' => new ConversationResource($conversation)]);
     }
 
     public function store(StartConversationRequest $request): JsonResponse
@@ -117,6 +137,12 @@ class ConversationController extends Controller
     public function sendMessage(SendMessageRequest $request, Conversation $conversation): JsonResponse
     {
         abort_if(! $conversation->hasParticipant($request->user()->id), 403);
+
+        // Block user replies on admin_support conversations where allow_replies is disabled
+        if ($conversation->isAdminSupport() && $conversation->allow_replies === false) {
+            $systemId = config('tavan.system_user_id');
+            abort_if($request->user()->id !== $systemId, 403, 'Odgovaranje je onemogućeno za ovaj razgovor.');
+        }
 
         $recipientId = $conversation->participant_one_id === $request->user()->id
             ? $conversation->participant_two_id

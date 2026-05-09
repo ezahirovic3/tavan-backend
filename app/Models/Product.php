@@ -7,10 +7,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\Support\LogOptions;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
 
 class Product extends Model
 {
-    use HasFactory, HasUlids;
+    use HasFactory, HasUlids, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['title', 'price', 'status', 'seller_id'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     protected $fillable = [
         'seller_id',

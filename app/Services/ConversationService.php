@@ -19,8 +19,47 @@ class ConversationService
 
         return Conversation::firstOrCreate(
             ['participant_one_id' => $one, 'participant_two_id' => $two],
-            ['product_id' => $productId]
+            ['product_id' => $productId, 'type' => 'user']
         );
+    }
+
+    /**
+     * Find or create the admin_support conversation between the system user and a real user.
+     */
+    public function findOrCreateSupportConversation(string $userId): Conversation
+    {
+        $systemId = config('tavan.system_user_id');
+        [$one, $two] = collect([$systemId, $userId])->sort()->values()->all();
+
+        return Conversation::firstOrCreate(
+            ['participant_one_id' => $one, 'participant_two_id' => $two],
+            ['type' => 'admin_support', 'allow_replies' => true, 'status' => 'open']
+        );
+    }
+
+    /**
+     * Send a message from the admin side of a support conversation.
+     * The message is stored with sender_id = system user so mobile shows "Tavan Podrška".
+     * The real admin's ID is preserved in the payload for audit purposes.
+     */
+    public function sendSupportReply(Conversation $conversation, User $adminUser, string $body): Message
+    {
+        $message = $this->createMessage(
+            $conversation,
+            config('tavan.system_user_id'),
+            'text',
+            $body,
+            ['admin_id' => $adminUser->id, 'admin_name' => $adminUser->name],
+        );
+
+        // Re-open conversation if it was resolved
+        if ($conversation->status === 'resolved') {
+            $conversation->update(['status' => 'open']);
+        }
+
+        broadcast(new NewMessage($message))->toOthers();
+
+        return $message;
     }
 
     public function sendText(Conversation $conversation, User $sender, string $body): Message

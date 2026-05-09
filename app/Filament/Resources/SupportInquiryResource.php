@@ -24,6 +24,12 @@ class SupportInquiryResource extends Resource
     protected static ?string $pluralLabel = 'Upiti';
     protected static ?int $navigationSort = 1;
 
+    // ── Permissions ───────────────────────────────────────────────────────────
+    // Any admin can view and resolve inquiries; only super_admin can delete them
+    public static function canCreate(): bool              { return false; }
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool { return auth()->user()?->isSuperAdmin() ?? false; }
+    public static function canDeleteAny(): bool           { return auth()->user()?->isSuperAdmin() ?? false; }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([]);

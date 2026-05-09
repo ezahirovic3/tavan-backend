@@ -23,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('api', \App\Http\Middleware\ConvertResponseKeysToCamelCase::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastActiveAt::class);
     })
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
+        // Remove activity log entries older than the configured retention period (default: 365 days)
+        $schedule->command('activitylog:clean')->weekly();
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();

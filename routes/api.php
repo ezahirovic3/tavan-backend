@@ -134,6 +134,7 @@ Route::prefix('v1')->group(function () {
         // Conversations
         Route::get('conversations', [ConversationController::class, 'index']);
         Route::get('conversations/unread', [ConversationController::class, 'unreadCount']);
+        Route::post('conversations/support', [ConversationController::class, 'support']);
         Route::post('conversations', [ConversationController::class, 'store']);
         Route::get('conversations/{conversation}', [ConversationController::class, 'show']);
         Route::get('conversations/{conversation}/info', [ConversationController::class, 'info']);

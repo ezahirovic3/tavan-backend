@@ -11,10 +11,20 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Activitylog\Support\LogOptions;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
 
 class User extends Authenticatable implements FilamentUser
 {
-    use HasApiTokens, HasFactory, HasUlids, Notifiable;
+    use HasApiTokens, HasFactory, HasUlids, LogsActivity, Notifiable;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'email', 'role', 'is_verified', 'listings_require_review'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     protected $fillable = [
         'name',
@@ -39,6 +49,7 @@ class User extends Authenticatable implements FilamentUser
         'google_id',
         'apple_id',
         'listings_require_review',
+        'is_system',
     ];
 
     protected $hidden = [
@@ -59,6 +70,7 @@ class User extends Authenticatable implements FilamentUser
             'first_draft_coach_seen'    => 'boolean',
             'notifications_enabled'       => 'boolean',
             'listings_require_review'    => 'boolean',
+            'is_system'                  => 'boolean',
             'rating'            => 'decimal:2',
         ];
     }
@@ -68,9 +80,14 @@ class User extends Authenticatable implements FilamentUser
         return $this->role === 'super_admin';
     }
 
-    public function canAccessPanel(Panel $panel): bool
+    public function isAdmin(): bool
     {
         return in_array($this->role, ['admin', 'super_admin']);
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->isAdmin();
     }
 
     public function products(): HasMany

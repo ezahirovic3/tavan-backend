@@ -17,6 +17,7 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class BrandResource extends Resource
@@ -25,6 +26,11 @@ class BrandResource extends Resource
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-tag';
     protected static \UnitEnum|string|null $navigationGroup = 'Katalog';
     protected static ?int $navigationSort = 1;
+
+    // ── Permissions ───────────────────────────────────────────────────────────
+    // Any admin can create and edit brands; only super_admin can delete
+    public static function canDelete(Model $record): bool { return auth()->user()?->isSuperAdmin() ?? false; }
+    public static function canDeleteAny(): bool           { return auth()->user()?->isSuperAdmin() ?? false; }
 
     public static function form(Schema $schema): Schema
     {
