@@ -20,8 +20,8 @@ class BlogPostResource extends JsonResource
             'blocks'       => $this->resolveBlocks(),
             'coverImage'   => $this->cover_image ? Storage::disk('r2')->url($this->cover_image) : null,
             'coverColor'   => $this->cover_color,
-            'authorName'   => $this->author_name,
-            'authorAvatar' => $this->author_avatar ? Storage::disk('r2')->url($this->author_avatar) : null,
+            'authorName'   => $this->author?->name,
+            'authorAvatar' => $this->author?->avatar ? Storage::disk('r2')->url($this->author->avatar) : null,
         ];
     }
 

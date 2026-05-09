@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\BlogAuthor;
 use App\Models\BlogPost;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -10,6 +11,11 @@ class BlogPostSeeder extends Seeder
 {
     public function run(): void
     {
+        $author = BlogAuthor::firstOrCreate(
+            ['name' => 'Tavan tim'],
+            ['bio' => 'Zvanični blog tim Tavan platforme.']
+        );
+
         $posts = [
 
             // ── 1 ────────────────────────────────────────────────────────────────
@@ -19,7 +25,7 @@ class BlogPostSeeder extends Seeder
                 'tag'          => 'Savjeti',
                 'excerpt'      => 'Second hand kupovina nije samo trend — to je pametan, ekološki i budžetski odgovoran način oblačenja. Evo 7 razloga zašto sve više Bosanaca bira half.',
                 'cover_color'  => '#E8F5E9',
-                'author_name'  => 'Tavan tim',
+                'blog_author_id' => $author->id,
                 'read_time'    => '5 min',
                 'is_published' => true,
                 'published_at' => Carbon::parse('2026-04-22'),
@@ -51,7 +57,7 @@ class BlogPostSeeder extends Seeder
                 'tag'          => 'Savjeti',
                 'excerpt'      => 'Imaš hrpu odjeće koja skuplja prašinu? Pretvori je u gotovinu. Ovaj vodič ti pokazuje kako brzo i sigurno prodati odjeću online putem Tavan aplikacije.',
                 'cover_color'  => '#FFF3E0',
-                'author_name'  => 'Tavan tim',
+                'blog_author_id' => $author->id,
                 'read_time'    => '6 min',
                 'is_published' => true,
                 'published_at' => Carbon::parse('2026-04-28'),
@@ -83,7 +89,7 @@ class BlogPostSeeder extends Seeder
                 'tag'          => 'Moda',
                 'excerpt'      => 'Evropa je davno prihvatila second hand kao legitiman modni izbor. Bosna je na redu. Gledamo kako se mijenja odnos prema polovnoj odjeći i zašto je to dobra vijest za sve.',
                 'cover_color'  => '#F3E5F5',
-                'author_name'  => 'Tavan tim',
+                'blog_author_id' => $author->id,
                 'read_time'    => '4 min',
                 'is_published' => true,
                 'published_at' => Carbon::parse('2026-05-02'),
@@ -111,7 +117,7 @@ class BlogPostSeeder extends Seeder
                 'tag'          => 'Tavan',
                 'excerpt'      => 'Tavan je prva bosanska second hand fashion platforma. Kupuj i prodaj odjeću, obuću i modne dodatke direktno od osoba u tvojoj blizini — jednostavno, sigurno i u KM.',
                 'cover_color'  => '#E3F2FD',
-                'author_name'  => 'Tavan tim',
+                'blog_author_id' => $author->id,
                 'read_time'    => '3 min',
                 'is_published' => true,
                 'published_at' => Carbon::parse('2026-05-05'),
@@ -139,7 +145,7 @@ class BlogPostSeeder extends Seeder
                 'tag'          => 'Moda',
                 'excerpt'      => 'Kupiš second hand komad ali ne znaš kako ga uklopiti? Ovi savjeti od stilista ti pomažu da od half nalaza napraviš outfite koji izgledaju skupo i promišljeno.',
                 'cover_color'  => '#FCE4EC',
-                'author_name'  => 'Tavan tim',
+                'blog_author_id' => $author->id,
                 'read_time'    => '5 min',
                 'is_published' => true,
                 'published_at' => Carbon::parse('2026-05-08'),
@@ -169,7 +175,7 @@ class BlogPostSeeder extends Seeder
                 'tag'          => 'Zajednica',
                 'excerpt'      => 'Fast fashion je jedan od najvećih ekoloških problema modernog doba. Saznaj kako cirkularna ekonomija u modi funkcioniše i šta možeš učiniti već danas u Bosni.',
                 'cover_color'  => '#E8F5E9',
-                'author_name'  => 'Tavan tim',
+                'blog_author_id' => $author->id,
                 'read_time'    => '4 min',
                 'is_published' => true,
                 'published_at' => Carbon::parse('2026-05-10'),

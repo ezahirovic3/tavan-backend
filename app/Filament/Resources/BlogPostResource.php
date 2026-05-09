@@ -7,6 +7,7 @@ use App\Models\BlogPost;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use App\Models\BlogAuthor;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
@@ -157,18 +158,16 @@ class BlogPostResource extends Resource
                 ->nullable(),
 
             // ── Author ────────────────────────────────────────────────────────
-            TextInput::make('author_name')
+            Select::make('blog_author_id')
                 ->label('Autor')
-                ->default('Tavan tim')
-                ->maxLength(100),
-
-            FileUpload::make('author_avatar')
-                ->label('Autorova fotografija')
-                ->image()
-                ->disk('r2')
-                ->directory('blog/authors')
-                ->visibility('public')
-                ->nullable(),
+                ->options(fn () => BlogAuthor::orderBy('name')->pluck('name', 'id'))
+                ->searchable()
+                ->nullable()
+                ->createOptionForm([
+                    TextInput::make('name')->label('Ime autora')->required(),
+                    TextInput::make('bio')->label('Kratka biografija')->maxLength(255),
+                ])
+                ->createOptionUsing(fn (array $data) => BlogAuthor::create($data)->id),
 
             // ── Publishing ────────────────────────────────────────────────────
             TextInput::make('read_time')

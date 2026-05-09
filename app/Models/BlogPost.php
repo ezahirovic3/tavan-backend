@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 
@@ -27,8 +28,7 @@ class BlogPost extends Model
         'blocks',
         'cover_image',
         'cover_color',
-        'author_name',
-        'author_avatar',
+        'blog_author_id',
         'read_time',
         'is_published',
         'published_at',
@@ -53,22 +53,15 @@ class BlogPost extends Model
                 $post->published_at = null;
             }
 
-            // When cover_image or author_avatar is replaced in Filament, remove the old R2 file
-            $imageService = app(\App\Services\ImageService::class);
-
-            foreach (['cover_image', 'author_avatar'] as $field) {
-                if ($post->isDirty($field) && $post->getOriginal($field)) {
-                    $imageService->deleteByUrl($post->getOriginal($field));
-                }
+            if ($post->isDirty('cover_image') && $post->getOriginal('cover_image')) {
+                app(\App\Services\ImageService::class)->deleteByUrl($post->getOriginal('cover_image'));
             }
         });
 
         static::deleting(function (BlogPost $post) {
             $imageService = app(\App\Services\ImageService::class);
 
-            // Cover + author avatar
             $imageService->deleteByUrl($post->cover_image);
-            $imageService->deleteByUrl($post->author_avatar);
 
             // Inline images embedded in the blocks JSON array
             foreach ($post->blocks ?? [] as $block) {
@@ -77,6 +70,11 @@ class BlogPost extends Model
                 }
             }
         });
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(BlogAuthor::class, 'blog_author_id');
     }
 
     public function scopePublished(Builder $query): Builder
