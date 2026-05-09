@@ -7,8 +7,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Migrate existing null values to 'user' first, then tighten the column to NOT NULL.
-        DB::table('users')->whereNull('role')->update(['role' => 'user']);
+        // Step 1: expand the enum to include 'user' while keeping it nullable
+        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('user','admin','super_admin') NULL DEFAULT NULL");
+        // Step 2: fill existing nulls now that 'user' is a valid enum value
+        DB::statement("UPDATE users SET role = 'user' WHERE role IS NULL");
+        // Step 3: tighten to NOT NULL with a default
         DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('user','admin','super_admin') NOT NULL DEFAULT 'user'");
     }
 
