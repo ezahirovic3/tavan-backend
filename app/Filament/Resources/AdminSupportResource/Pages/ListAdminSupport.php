@@ -38,6 +38,9 @@ class ListAdminSupport extends ListRecords
                                 ->mapWithKeys(fn ($u) => [$u->id => "{$u->name} (@{$u->username})"])
                                 ->all()
                         )
+                        ->getOptionLabelUsing(fn ($value) =>
+                            User::find($value)?->name ?? $value
+                        )
                         ->required(),
                     Textarea::make('body')
                         ->label('Poruka')

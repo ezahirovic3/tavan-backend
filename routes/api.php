@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\UserBlockController;
 use App\Http\Controllers\Api\UserReportController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\UserPreferenceController;
+use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\BlogPostController;
 use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Support\Facades\Route;
@@ -130,6 +131,11 @@ Route::prefix('v1')->group(function () {
         // Push tokens
         Route::post('push-tokens', [PushTokenController::class, 'store']);
         Route::delete('push-tokens', [PushTokenController::class, 'destroy']);
+
+        // Announcements
+        Route::get('announcements', [AnnouncementController::class, 'index']);
+        Route::get('announcements/unread-count', [AnnouncementController::class, 'unreadCount']);
+        Route::post('announcements/{announcement}/read', [AnnouncementController::class, 'markRead']);
 
         // Conversations
         Route::get('conversations', [ConversationController::class, 'index']);
