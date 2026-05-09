@@ -7,10 +7,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Add 'user' as an explicit role value and set it as the default.
-        // Existing null values (regular users) are migrated to 'user'.
-        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('user','admin','super_admin') NOT NULL DEFAULT 'user'");
+        // Migrate existing null values to 'user' first, then tighten the column to NOT NULL.
         DB::table('users')->whereNull('role')->update(['role' => 'user']);
+        DB::statement("ALTER TABLE users MODIFY COLUMN role ENUM('user','admin','super_admin') NOT NULL DEFAULT 'user'");
     }
 
     public function down(): void
