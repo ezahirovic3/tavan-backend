@@ -79,7 +79,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Nevažeći zahtjev.'], 422);
         }
 
-        if (now()->diffInMinutes($record->created_at) > 15) {
+        if ((now()->timestamp - \Carbon\Carbon::parse($record->created_at)->timestamp) > 900) {
             DB::table('email_verification_tokens')->where('email', $request->email)->delete();
             return response()->json(['message' => 'Kod je istekao. Zatraži novi.'], 422);
         }
@@ -109,11 +109,11 @@ class AuthController extends Controller
         $record = DB::table('email_verification_tokens')->where('email', $request->email)->first();
 
         if ($record) {
-            $secondsAgo = now()->diffInSeconds($record->sent_at);
+            $secondsAgo = now()->timestamp - \Carbon\Carbon::parse($record->sent_at)->timestamp;
             if ($secondsAgo < 60) {
                 return response()->json([
                     'message'           => 'Sačekaj malo prije ponovnog slanja.',
-                    'seconds_remaining' => 60 - (int) $secondsAgo,
+                    'seconds_remaining' => max(0, 60 - $secondsAgo),
                 ], 429);
             }
         }
