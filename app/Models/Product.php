@@ -86,6 +86,9 @@ class Product extends Model
             // Covers: ProductController@destroy, Filament DeleteBulkAction, any future path.
             $imageService = app(\App\Services\ImageService::class);
             $product->images->each(fn ($img) => $imageService->deleteProductImage($img));
+
+            // Remove any wishlist entries pointing at this product
+            $product->wishlistItems()->delete();
         });
     }
 

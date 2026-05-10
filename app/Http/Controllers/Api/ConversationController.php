@@ -138,10 +138,15 @@ class ConversationController extends Controller
     {
         abort_if(! $conversation->hasParticipant($request->user()->id), 403);
 
-        // Block user replies on admin_support conversations where allow_replies is disabled
+        // Block replies on admin_support conversations where allow_replies is disabled
         if ($conversation->isAdminSupport() && $conversation->allow_replies === false) {
             $systemId = config('tavan.system_user_id');
             abort_if($request->user()->id !== $systemId, 403, 'Odgovaranje je onemogućeno za ovaj razgovor.');
+        }
+
+        // Block replies in user conversations where the other participant deleted their account
+        if (! $conversation->isAdminSupport() && $conversation->allow_replies === false) {
+            abort(403, 'Korisnik je obrisao račun. Slanje poruka nije moguće.');
         }
 
         $recipientId = $conversation->participant_one_id === $request->user()->id

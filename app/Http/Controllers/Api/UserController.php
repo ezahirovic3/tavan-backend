@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\User\UpdateProfileRequest;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\UserResource;
+use App\Models\Conversation;
+use App\Models\Order;
 use App\Models\User;
+use App\Services\ConversationService;
 use App\Services\ImageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +21,7 @@ class UserController extends Controller
         $query = $request->get('q', '');
 
         $users = User::query()
+            ->where('email', 'not like', '%@deleted.tavan')
             ->withCount(['products as item_count' => fn ($q) => $q->where('status', 'active')])
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($inner) use ($query) {
@@ -84,22 +88,54 @@ class UserController extends Controller
     public function destroy(Request $request): JsonResponse
     {
         $user = $request->user();
+        $conversations = app(ConversationService::class);
 
-        // Revoke all tokens
+        // 1. Cancel all active orders and notify the other party via system message
+        $activeOrders = Order::where(function ($q) use ($user) {
+                $q->where('buyer_id', $user->id)->orWhere('seller_id', $user->id);
+            })
+            ->whereIn('status', ['pending', 'accepted', 'shipped'])
+            ->with('product')
+            ->get();
+
+        foreach ($activeOrders as $order) {
+            $order->update(['status' => 'cancelled']);
+
+            // Restore the product to active if the deleted user was the buyer
+            // (seller's own products will be deleted below anyway)
+            if ($order->buyer_id === $user->id && $order->product?->status === 'reserved') {
+                $order->product->update(['status' => 'active']);
+            }
+
+            $conversation = $conversations->findOrCreate($order->buyer_id, $order->seller_id);
+            $conversations->sendSystemMessage(
+                $conversation,
+                $user->id,
+                'system_status',
+                ['orderId' => $order->id, 'status' => 'cancelled'],
+                'Narudžba je otkazana jer je korisnik obrisao račun.',
+            );
+        }
+
+        // 2. Lock all conversations this user is part of — preserve history, block new messages
+        Conversation::where('participant_one_id', $user->id)
+            ->orWhere('participant_two_id', $user->id)
+            ->update(['allow_replies' => false]);
+
+        // 3. Revoke all tokens
         $user->tokens()->delete();
 
-        // Delete avatar from R2 before anonymizing
+        // 4. Delete avatar from R2
         if ($user->avatar) {
             app(ImageService::class)->deleteByUrl($user->avatar);
         }
 
-        // Delete all of the user's products + their R2 images.
-        // The Product booted() deleting hook handles R2 cleanup for each product.
-        // We only remove non-sold listings — sold ones are kept so order history stays intact.
+        // 5. Delete non-sold products + their R2 images and wishlisted entries
+        //    (the Product deleting hook handles R2 and wishlist cleanup)
         $user->products()->whereNotIn('status', ['sold'])->get()
             ->each(fn ($product) => $product->delete());
 
-        // Anonymize instead of hard-delete to preserve order/review history
+        // 6. Anonymize instead of hard-delete to preserve order/review history
         $user->update([
             'name'     => 'Obrisani korisnik',
             'username' => 'deleted_' . $user->id,
