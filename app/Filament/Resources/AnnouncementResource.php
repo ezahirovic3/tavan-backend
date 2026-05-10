@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\AnnouncementResource\Pages;
 use App\Models\Announcement;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -13,6 +14,8 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Actions\ViewAction;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -29,12 +32,10 @@ class AnnouncementResource extends Resource
 
     // ── Permissions ───────────────────────────────────────────────────────────
 
-    // Announcements are immutable once sent — no editing
-    public static function canEdit(Model $record): bool   { return false; }
-    public static function canDelete(Model $record): bool { return auth()->user()?->isSuperAdmin() ?? false; }
-    public static function canDeleteAny(): bool           { return auth()->user()?->isSuperAdmin() ?? false; }
+    public static function canDelete(Model $record): bool { return true; }
+    public static function canDeleteAny(): bool           { return true; }
 
-    // ── Form (create only) ────────────────────────────────────────────────────
+    // ── Form (create + edit) ──────────────────────────────────────────────────
 
     public static function form(Schema $schema): Schema
     {
@@ -69,6 +70,17 @@ class AnnouncementResource extends Resource
                     ->required()
                     ->visible(fn ($get) => $get('target_group') === 'city'),
             ]),
+
+            Section::make('Vidljivost')->schema([
+                DateTimePicker::make('expires_at')
+                    ->label('Ističe')
+                    ->placeholder('Nikad (ostavite prazno)')
+                    ->helperText('Nakon ovog datuma obavještenje neće biti prikazano korisnicima. Ostavite prazno za trajna obavještenja.')
+                    ->nullable()
+                    ->native(false)
+                    ->seconds(false)
+                    ->minDate(now()),
+            ]),
         ]);
     }
 
@@ -95,6 +107,10 @@ class AnnouncementResource extends Resource
                     TextEntry::make('target_value')->label('Grad')->default('—'),
                     TextEntry::make('creator.name')->label('Poslao'),
                     TextEntry::make('sent_at')->label('Datum slanja')->dateTime('d.m.Y H:i'),
+                    TextEntry::make('expires_at')
+                        ->label('Ističe')
+                        ->dateTime('d.m.Y H:i')
+                        ->default('Nikad'),
                     TextEntry::make('reads_count')
                         ->label('Pročitalo')
                         ->state(fn (Announcement $record) => $record->reads()->count() . ' korisnika'),
@@ -130,23 +146,25 @@ class AnnouncementResource extends Resource
                         default                   => 'Svi',
                     }),
 
-                TextColumn::make('target_value')
-                    ->label('Grad')
-                    ->default('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
                 TextColumn::make('reads_count')
                     ->label('Pročitalo')
                     ->state(fn (Announcement $record) => $record->reads()->count()),
 
+                TextColumn::make('sent_at')
+                    ->label('Poslano')
+                    ->dateTime('d.m.Y H:i')
+                    ->sortable(),
+
+                TextColumn::make('expires_at')
+                    ->label('Ističe')
+                    ->dateTime('d.m.Y H:i')
+                    ->default('—')
+                    ->color(fn ($state) => $state && $state < now() ? 'danger' : null)
+                    ->sortable(),
+
                 TextColumn::make('creator.name')
                     ->label('Poslao')
                     ->toggleable(isToggledHiddenByDefault: true),
-
-                TextColumn::make('sent_at')
-                    ->label('Datum')
-                    ->dateTime('d.m.Y H:i')
-                    ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('target_group')
@@ -158,7 +176,11 @@ class AnnouncementResource extends Resource
                         'listings_require_review' => 'Pregled oglasa',
                     ]),
             ])
-            ->actions([ViewAction::make()])
+            ->actions([
+                ViewAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
+            ])
             ->defaultSort('sent_at', 'desc');
     }
 
@@ -169,6 +191,7 @@ class AnnouncementResource extends Resource
         return [
             'index'  => Pages\ListAnnouncements::route('/'),
             'create' => Pages\CreateAnnouncement::route('/create'),
+            'edit'   => Pages\EditAnnouncement::route('/{record}/edit'),
             'view'   => Pages\ViewAnnouncement::route('/{record}'),
         ];
     }

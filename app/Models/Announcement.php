@@ -18,12 +18,14 @@ class Announcement extends Model
         'target_value',
         'created_by',
         'sent_at',
+        'expires_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'sent_at' => 'datetime',
+            'sent_at'    => 'datetime',
+            'expires_at' => 'datetime',
         ];
     }
 

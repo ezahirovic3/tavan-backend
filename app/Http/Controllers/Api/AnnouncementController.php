@@ -24,6 +24,7 @@ class AnnouncementController extends Controller
         $readIds = AnnouncementRead::where('user_id', $userId)->pluck('announcement_id')->flip();
 
         $announcements = Announcement::whereNotNull('sent_at')
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->where(function ($q) use ($user) {
                 $q->where('target_group', 'all')
                   ->orWhere(fn ($s) => $s->where('target_group', 'verified')->where(fn () => $user->is_verified))
@@ -78,6 +79,7 @@ class AnnouncementController extends Controller
         $readIds = AnnouncementRead::where('user_id', $userId)->pluck('announcement_id');
 
         $count = Announcement::whereNotNull('sent_at')
+            ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->whereNotIn('id', $readIds)
             ->where(function ($q) use ($user) {
                 $q->where('target_group', 'all')
