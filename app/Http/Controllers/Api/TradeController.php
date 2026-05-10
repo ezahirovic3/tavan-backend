@@ -8,12 +8,16 @@ use App\Http\Resources\TradeResource;
 use App\Models\Product;
 use App\Models\Trade;
 use App\Services\ConversationService;
+use App\Services\PushNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class TradeController extends Controller
 {
-    public function __construct(private readonly ConversationService $conversations) {}
+    public function __construct(
+        private readonly ConversationService $conversations,
+        private readonly PushNotificationService $push,
+    ) {}
 
     public function store(StoreTradeRequest $request): JsonResponse
     {
@@ -37,6 +41,13 @@ class TradeController extends Controller
 
         $conversation = $this->conversations->findOrCreate($request->user()->id, $product->seller_id, $product->id);
         $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_trade', ['tradeId' => $trade->id]);
+
+        $this->push->sendToUser(
+            $product->seller_id,
+            'Nova zamjena — ' . $product->title,
+            $request->user()->name . ' želi zamijeniti za "' . $offeredProduct->title . '".',
+            ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id],
+        );
 
         return response()->json(['data' => new TradeResource($trade->load('product', 'offeredProduct', 'buyer', 'seller'))], 201);
     }
@@ -64,6 +75,13 @@ class TradeController extends Controller
             'status'  => 'accepted',
         ], 'Prodavač je prihvatio zamjenu.');
 
+        $this->push->sendToUser(
+            $trade->buyer_id,
+            'Zamjena prihvaćena! 🎉',
+            'Prodavač je prihvatio vašu zamjenu.',
+            ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id, 'status' => 'accepted'],
+        );
+
         return response()->json(['data' => new TradeResource($trade->fresh()->load('product', 'offeredProduct', 'buyer', 'seller'))]);
     }
 
@@ -79,6 +97,13 @@ class TradeController extends Controller
             'status'  => 'declined',
         ], 'Prodavač je odbio zamjenu.');
 
+        $this->push->sendToUser(
+            $trade->buyer_id,
+            'Zamjena odbijena',
+            'Prodavač je odbio vašu zamjenu.',
+            ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id, 'status' => 'declined'],
+        );
+
         return response()->json(['data' => new TradeResource($trade->fresh()->load('product', 'offeredProduct', 'buyer', 'seller'))]);
     }
 
@@ -93,6 +118,13 @@ class TradeController extends Controller
             'tradeId' => $trade->id,
             'status'  => 'countered',
         ], 'Prodavač je predložio kontra-zamjenu.');
+
+        $this->push->sendToUser(
+            $trade->buyer_id,
+            'Kontra-zamjena',
+            'Prodavač je predložio kontra-zamjenu.',
+            ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id, 'status' => 'countered'],
+        );
 
         return response()->json(['data' => new TradeResource($trade->fresh()->load('product', 'offeredProduct', 'buyer', 'seller'))]);
     }

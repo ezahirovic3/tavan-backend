@@ -4,9 +4,11 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Product;
+use App\Services\PushNotificationService;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Actions\Action;
@@ -150,6 +152,66 @@ class ProductResource extends Resource
                     ->visible(fn (Product $record) => $record->status === 'draft')
                     ->action(fn (Product $record) => $record->update(['status' => 'active']))
                     ->requiresConfirmation(),
+
+                Action::make('sendPush')
+                    ->label('Pošalji push')
+                    ->icon('heroicon-o-bell')
+                    ->color('info')
+                    ->form([
+                        TextInput::make('title')
+                            ->label('Naslov')
+                            ->required()
+                            ->default(fn (Product $record) => '✨ ' . $record->title),
+                        Textarea::make('body')
+                            ->label('Poruka')
+                            ->required()
+                            ->default(fn (Product $record) => $record->seller->name . ' prodaje za ' . number_format($record->price, 2) . ' KM. Pogledaj!'),
+                        Select::make('active_within_days')
+                            ->label('Aktivnost korisnika')
+                            ->options([
+                                ''   => 'Svi korisnici',
+                                '7'  => 'Aktivni u zadnjih 7 dana',
+                                '30' => 'Aktivni u zadnjih 30 dana',
+                                '90' => 'Aktivni u zadnjih 90 dana',
+                            ])
+                            ->default(''),
+                        Select::make('root_category')
+                            ->label('Kategorija interesa')
+                            ->options([
+                                ''      => 'Sve kategorije',
+                                'women' => 'Žene',
+                                'men'   => 'Muškarci',
+                            ])
+                            ->default(''),
+                        Select::make('has_listings')
+                            ->label('Publika')
+                            ->options([
+                                ''  => 'Svi korisnici',
+                                '1' => 'Samo prodavači (imaju aktivne oglase)',
+                            ])
+                            ->default(''),
+                    ])
+                    ->action(function (Product $record, array $data) {
+                        $filters = array_filter([
+                            'active_within_days' => $data['active_within_days'] ?: null,
+                            'root_category'      => $data['root_category'] ?: null,
+                            'has_listings'       => $data['has_listings'] ? true : null,
+                        ]);
+
+                        $count = app(PushNotificationService::class)->sendToFiltered(
+                            $data['title'],
+                            $data['body'],
+                            ['type' => 'product', 'productId' => $record->id],
+                            $filters,
+                        );
+
+                        Notification::make()
+                            ->title("Push poslan na {$count} uređaja")
+                            ->success()
+                            ->send();
+                    })
+                    ->modalHeading('Pošalji push notifikaciju')
+                    ->modalSubmitActionLabel('Pošalji'),
             ])
             ->bulkActions([
                 BulkActionGroup::make([DeleteBulkAction::make()]),

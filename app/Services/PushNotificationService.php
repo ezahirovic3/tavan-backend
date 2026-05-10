@@ -61,6 +61,57 @@ class PushNotificationService
     }
 
     /**
+     * Send a push notification to a filtered subset of all users.
+     *
+     * Supported filters:
+     *   active_within_days  int|null  — only users active within N days
+     *   has_listings        bool      — only users with at least one active listing
+     *   root_category       string    — only users whose preferences include 'women'|'men'
+     *
+     * Returns the number of devices the push was sent to.
+     */
+    public function sendToFiltered(string $title, string $body, array $data = [], array $filters = []): int
+    {
+        $query = PushToken::query();
+
+        if (! empty($filters['active_within_days'])) {
+            $query->whereHas('user', fn ($q) =>
+                $q->where('last_active_at', '>=', now()->subDays((int) $filters['active_within_days']))
+            );
+        }
+
+        if (! empty($filters['has_listings'])) {
+            $query->whereHas('user.products', fn ($q) =>
+                $q->where('status', 'active')
+            );
+        }
+
+        if (! empty($filters['root_category'])) {
+            $query->whereHas('user.preferences', fn ($q) =>
+                $q->whereJsonContains('categories', $filters['root_category'])
+            );
+        }
+
+        $tokens = $query->pluck('token')->all();
+
+        if (empty($tokens)) {
+            return 0;
+        }
+
+        $messages = array_map(fn (string $token) => [
+            'to'    => $token,
+            'title' => $title,
+            'body'  => $body,
+            'data'  => $data,
+            'sound' => 'default',
+        ], $tokens);
+
+        $this->dispatch($messages);
+
+        return count($tokens);
+    }
+
+    /**
      * POST messages to the Expo push endpoint in chunks of 100.
      */
     private function dispatch(array $messages): void

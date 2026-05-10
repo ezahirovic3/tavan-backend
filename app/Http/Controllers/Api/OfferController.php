@@ -50,7 +50,7 @@ class OfferController extends Controller
             $product->seller_id,
             'Nova ponuda — ' . $product->title,
             $request->user()->name . ' nudi ' . number_format($request->offered_price, 2) . ' KM',
-            ['type' => 'offer', 'offerId' => $offer->id],
+            ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id],
         );
 
         return response()->json(['data' => new OfferResource($offer->load('product', 'buyer', 'seller'))], 201);
@@ -79,7 +79,7 @@ class OfferController extends Controller
             $offer->buyer_id,
             'Ponuda prihvaćena! 🎉',
             'Prodavač je prihvatio vašu ponudu. Nastavi na plaćanje.',
-            ['type' => 'offer', 'offerId' => $offer->id, 'status' => 'accepted'],
+            ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'accepted'],
         );
 
         return response()->json(['data' => new OfferResource($offer->fresh()->load('product', 'buyer', 'seller'))]);
@@ -101,7 +101,7 @@ class OfferController extends Controller
             $offer->buyer_id,
             'Ponuda odbijena',
             'Prodavač je odbio vašu ponudu.',
-            ['type' => 'offer', 'offerId' => $offer->id, 'status' => 'declined'],
+            ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'declined'],
         );
 
         return response()->json(['data' => new OfferResource($offer->fresh()->load('product', 'buyer', 'seller'))]);
@@ -123,7 +123,7 @@ class OfferController extends Controller
             $offer->buyer_id,
             'Kontra-ponuda',
             'Prodavač je ponudio ' . number_format($request->counter_price, 2) . ' KM.',
-            ['type' => 'offer', 'offerId' => $offer->id, 'status' => 'countered'],
+            ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'countered'],
         );
 
         return response()->json(['data' => new OfferResource($offer->fresh()->load('product', 'buyer', 'seller'))]);
