@@ -13,9 +13,9 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -110,7 +110,7 @@ class AnnouncementResource extends Resource
                     TextEntry::make('expires_at')
                         ->label('Ističe')
                         ->dateTime('d.m.Y H:i')
-                        ->default('Nikad'),
+                        ->placeholder('Nikad'),
                     TextEntry::make('reads_count')
                         ->label('Pročitalo')
                         ->state(fn (Announcement $record) => $record->reads()->count() . ' korisnika'),
@@ -158,7 +158,7 @@ class AnnouncementResource extends Resource
                 TextColumn::make('expires_at')
                     ->label('Ističe')
                     ->dateTime('d.m.Y H:i')
-                    ->default('—')
+                    ->placeholder('—')
                     ->color(fn ($state) => $state && $state < now() ? 'danger' : null)
                     ->sortable(),
 
