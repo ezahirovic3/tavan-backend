@@ -112,7 +112,10 @@ class OrderController extends Controller
     public function complete(Request $request, Order $order): JsonResponse
     {
         $this->authorize('buyerAction', $order);
-        abort_if($order->status !== 'delivered', 422, 'Narudžba još nije isporučena.');
+
+        $isPickup = $order->delivery_method === 'pickup';
+        $validStatus = $isPickup ? 'accepted' : 'delivered';
+        abort_if($order->status !== $validStatus, 422, $isPickup ? 'Narudžba nije prihvaćena.' : 'Narudžba još nije isporučena.');
 
         $order->update(['status' => 'completed']);
         $order->product->update(['status' => 'sold']);
