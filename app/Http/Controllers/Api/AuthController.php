@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Contracts\AuthProviderInterface;
+use App\Exceptions\EmailNotVerifiedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
@@ -12,8 +13,10 @@ use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\SendPhoneOtpRequest;
 use App\Http\Requests\Auth\VerifyPhoneOtpRequest;
 use App\Http\Requests\Auth\VerifyResetOtpRequest;
-use App\Notifications\PasswordResetOtpNotification;
 use App\Http\Resources\UserResource;
+use App\Models\User;
+use App\Notifications\EmailVerificationOtpNotification;
+use App\Notifications\PasswordResetOtpNotification;
 use App\Services\Auth\PhoneVerificationService;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +24,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
-use App\Models\User;
 
 class AuthController extends Controller
 {
@@ -36,8 +38,8 @@ class AuthController extends Controller
 
         return response()->json([
             'data' => [
-                'user'  => new UserResource($result['user']),
-                'token' => $result['token'],
+                'status' => $result['status'],
+                'email'  => $result['email'],
             ],
         ], 201);
     }
@@ -46,6 +48,12 @@ class AuthController extends Controller
     {
         try {
             $result = $this->auth->login($request->email, $request->password);
+        } catch (EmailNotVerifiedException $e) {
+            return response()->json([
+                'message' => 'Email adresa nije potvrđena.',
+                'code'    => 'email_not_verified',
+                'email'   => $e->email,
+            ], 403);
         } catch (AuthenticationException) {
             return response()->json(['message' => 'Pogrešni podaci za prijavu.'], 401);
         }
@@ -56,6 +64,76 @@ class AuthController extends Controller
                 'token' => $result['token'],
             ],
         ]);
+    }
+
+    public function verifyEmail(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'otp'   => 'required|string|size:6',
+        ]);
+
+        $record = DB::table('email_verification_tokens')->where('email', $request->email)->first();
+
+        if (! $record) {
+            return response()->json(['message' => 'Nevažeći zahtjev.'], 422);
+        }
+
+        if (now()->diffInMinutes($record->created_at) > 15) {
+            DB::table('email_verification_tokens')->where('email', $request->email)->delete();
+            return response()->json(['message' => 'Kod je istekao. Zatraži novi.'], 422);
+        }
+
+        if (! Hash::check($request->otp, $record->token)) {
+            return response()->json(['message' => 'Pogrešan kod. Provjeri email i pokušaj ponovo.'], 422);
+        }
+
+        $user = User::where('email', $request->email)->firstOrFail();
+        $user->update(['email_verified_at' => now()]);
+        DB::table('email_verification_tokens')->where('email', $request->email)->delete();
+
+        $token = $user->createToken('mobile')->plainTextToken;
+
+        return response()->json([
+            'data' => [
+                'user'  => new UserResource($user),
+                'token' => $token,
+            ],
+        ]);
+    }
+
+    public function resendEmailVerification(Request $request): JsonResponse
+    {
+        $request->validate(['email' => 'required|email']);
+
+        $record = DB::table('email_verification_tokens')->where('email', $request->email)->first();
+
+        if ($record) {
+            $secondsAgo = now()->diffInSeconds($record->sent_at);
+            if ($secondsAgo < 60) {
+                return response()->json([
+                    'message'           => 'Sačekaj malo prije ponovnog slanja.',
+                    'seconds_remaining' => 60 - (int) $secondsAgo,
+                ], 429);
+            }
+        }
+
+        $user = User::where('email', $request->email)->whereNull('email_verified_at')->first();
+
+        if (! $user) {
+            return response()->json(['message' => 'Zahtjev nije validan.'], 422);
+        }
+
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        DB::table('email_verification_tokens')->updateOrInsert(
+            ['email' => $request->email],
+            ['token' => Hash::make($otp), 'sent_at' => now(), 'created_at' => now()],
+        );
+
+        $user->notify(new EmailVerificationOtpNotification($otp));
+
+        return response()->json(['message' => 'Novi kod je poslan.']);
     }
 
     public function logout(Request $request): JsonResponse
@@ -74,7 +152,6 @@ class AuthController extends Controller
     {
         $user = User::where('email', $request->email)->first();
 
-        // Always return 200 — don't reveal whether the email exists
         if (! $user) {
             return response()->json(['message' => 'Ako postoji račun sa tom adresom, poslaćemo ti kod za reset.']);
         }
@@ -110,7 +187,6 @@ class AuthController extends Controller
             return response()->json(['message' => 'Nevažeći kod. Provjeri email i pokušaj ponovo.'], 422);
         }
 
-        // OTP is valid — replace it with a short-lived reset token
         $resetToken = Str::uuid()->toString();
 
         DB::table('password_reset_tokens')
@@ -130,7 +206,6 @@ class AuthController extends Controller
             return response()->json(['message' => 'Nevažeći ili istekao zahtjev.'], 422);
         }
 
-        // Reset token expires after 15 minutes
         if (now()->diffInMinutes($record->created_at) > 15) {
             DB::table('password_reset_tokens')->where('email', $request->email)->delete();
             return response()->json(['message' => 'Zahtjev je istekao. Počni ispočetka.'], 422);

@@ -156,7 +156,10 @@ class SocialAuthController extends Controller
         if ($email) {
             $user = User::where('email', $email)->first();
             if ($user) {
-                $user->update([$provider . '_id' => $providerId]);
+                $user->update([
+                    $provider . '_id'   => $providerId,
+                    'email_verified_at' => $user->email_verified_at ?? now(),
+                ]);
                 return $user;
             }
         }
@@ -180,6 +183,7 @@ class SocialAuthController extends Controller
             'email'              => $email,
             'password'           => bcrypt(Str::random(32)), // unusable password
             'profile_setup_done' => false,
+            'email_verified_at'  => now(),
         ]);
     }
 }

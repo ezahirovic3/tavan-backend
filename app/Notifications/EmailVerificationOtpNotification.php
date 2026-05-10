@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class PasswordResetOtpNotification extends Notification implements ShouldQueue
+class EmailVerificationOtpNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -21,12 +21,12 @@ class PasswordResetOtpNotification extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
-            ->subject('Tavan — Reset lozinke')
+            ->subject('Tavan — Potvrda email adrese')
             ->greeting('Zdravo!')
-            ->line('Primili smo zahtjev za reset lozinke na tvom Tavan računu.')
+            ->line('Hvala što si se registrovao/la na Tavan.')
             ->line('Tvoj verifikacijski kod je:')
             ->line('**' . $this->otp . '**')
             ->line('Kod je validan 15 minuta.')
-            ->line('Ako nisi ti zatražio/la reset, ignoriši ovaj email.');
+            ->line('Ako nisi ti kreirao/la ovaj račun, ignoriši ovaj email.');
     }
 }

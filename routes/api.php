@@ -33,6 +33,9 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/social/google', [SocialAuthController::class, 'google']);
     Route::post('auth/social/apple', [SocialAuthController::class, 'apple']);
 
+    Route::post('auth/email/verify', [AuthController::class, 'verifyEmail'])->middleware('throttle:5,10');
+    Route::post('auth/email/resend', [AuthController::class, 'resendEmailVerification'])->middleware('throttle:5,10');
+
     Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('auth/verify-reset-otp', [AuthController::class, 'verifyResetOtp']);
     Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
