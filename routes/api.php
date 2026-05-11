@@ -33,8 +33,8 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/login', [AuthController::class, 'login']);
     Route::post('auth/social/google', [SocialAuthController::class, 'google']);
     Route::post('auth/social/apple', [SocialAuthController::class, 'apple']);
-    Route::get('auth/social/google/redirect', [SocialAuthRedirectController::class, 'redirect']);
-    Route::get('auth/social/google/callback', [SocialAuthRedirectController::class, 'callback']);
+    Route::get('auth/social/google/redirect', [SocialAuthRedirectController::class, 'redirect'])->withoutMiddleware(\App\Http\Middleware\VerifyAppKey::class);
+    Route::get('auth/social/google/callback', [SocialAuthRedirectController::class, 'callback'])->withoutMiddleware(\App\Http\Middleware\VerifyAppKey::class);
 
     Route::post('auth/email/verify', [AuthController::class, 'verifyEmail'])->middleware('throttle:5,10');
     Route::post('auth/email/resend', [AuthController::class, 'resendEmailVerification'])->middleware('throttle:5,10');
