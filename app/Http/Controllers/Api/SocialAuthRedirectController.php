@@ -21,6 +21,7 @@ class SocialAuthRedirectController extends Controller
     {
         return Socialite::driver('google')
             ->scopes(['openid', 'profile', 'email'])
+            ->stateless()
             ->redirect();
     }
 
@@ -34,7 +35,7 @@ class SocialAuthRedirectController extends Controller
     public function callback(): \Illuminate\Http\RedirectResponse
     {
         try {
-            $googleUser = Socialite::driver('google')->user();
+            $googleUser = Socialite::driver('google')->stateless()->user();
         } catch (\Throwable $e) {
             return redirect('tavan://auth?error=google_auth_failed');
         }
