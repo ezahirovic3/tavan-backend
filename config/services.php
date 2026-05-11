@@ -38,6 +38,9 @@ return [
     'google' => [
         'ios_client_id'     => env('GOOGLE_IOS_CLIENT_ID'),
         'android_client_id' => env('GOOGLE_ANDROID_CLIENT_ID'),
+        'client_id'         => env('GOOGLE_WEB_CLIENT_ID'),
+        'client_secret'     => env('GOOGLE_WEB_CLIENT_SECRET'),
+        'redirect'          => env('GOOGLE_REDIRECT_URI'),
     ],
 
     'apple' => [

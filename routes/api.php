@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\SocialAuthController;
+use App\Http\Controllers\Api\SocialAuthRedirectController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\BrandSuggestionController;
 use App\Http\Controllers\Api\ConversationController;
@@ -32,6 +33,8 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/login', [AuthController::class, 'login']);
     Route::post('auth/social/google', [SocialAuthController::class, 'google']);
     Route::post('auth/social/apple', [SocialAuthController::class, 'apple']);
+    Route::get('auth/social/google/redirect', [SocialAuthRedirectController::class, 'redirect']);
+    Route::get('auth/social/google/callback', [SocialAuthRedirectController::class, 'callback']);
 
     Route::post('auth/email/verify', [AuthController::class, 'verifyEmail'])->middleware('throttle:5,10');
     Route::post('auth/email/resend', [AuthController::class, 'resendEmailVerification'])->middleware('throttle:5,10');
