@@ -122,6 +122,7 @@ class OrderController extends Controller
 
         if ($order->trade_id) {
             $order->trade->offeredProduct()->update(['status' => 'sold']);
+            $order->trade->update(['status' => 'completed']);
         }
 
         $this->systemStatus($order, $request->user()->id, 'completed');
