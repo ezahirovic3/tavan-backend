@@ -108,8 +108,11 @@ class ProductController extends Controller
         };
 
         // Personalized feed — filter by the authenticated user's saved preferences.
-        // personalized=true  → products matching ANY preference (size OR root_category OR city)
+        // personalized=true    → products matching preferences
         // personalized=exclude → products matching NONE of the preferences ("Ostali artikli")
+        //
+        // City is AND-ed with sizes/categories when both are set, so it narrows results
+        // to local items rather than independently pulling in all items from that city.
         $personalizedParam = $request->query('personalized');
 
         if ($personalizedParam && $authUser) {
@@ -124,23 +127,58 @@ class ProductController extends Controller
                 $categories = $prefs->categories ?? [];
                 $cities     = $prefs->cities     ?? [];
 
-                $hasFilter = ! empty($sizes) || ! empty($categories) || ! empty($cities);
+                // Parse subcategory preference keys like "men-tops" → {root, category} pairs.
+                // Keys are always "{rootId}-{categoryKey}" with no hyphens in either segment.
+                $subcategoryPairs = collect($prefs->subcategories ?? [])
+                    ->map(function (string $key) {
+                        $dash = strpos($key, '-');
+                        return $dash !== false
+                            ? ['root' => substr($key, 0, $dash), 'category' => substr($key, $dash + 1)]
+                            : null;
+                    })
+                    ->filter()
+                    ->values();
+
+                $hasSizesOrCategories = ! empty($sizes) || $subcategoryPairs->isNotEmpty() || ! empty($categories);
+                $hasCities            = ! empty($cities);
+                $hasFilter            = $hasSizesOrCategories || $hasCities;
+
+                // Closure that applies the size + category OR block.
+                $applySizesAndCategories = function ($q) use ($sizes, $categories, $subcategoryPairs) {
+                    if (! empty($sizes)) $q->orWhereIn('size', $sizes);
+
+                    if ($subcategoryPairs->isNotEmpty()) {
+                        $q->orWhere(function ($sq) use ($subcategoryPairs) {
+                            foreach ($subcategoryPairs as $pair) {
+                                $sq->orWhere(function ($pq) use ($pair) {
+                                    $pq->where('root_category', $pair['root'])
+                                       ->where('category', $pair['category']);
+                                });
+                            }
+                        });
+                    } elseif (! empty($categories)) {
+                        $q->orWhereIn('root_category', $categories);
+                    }
+                };
+
+                // Build the match condition depending on which preference types are set.
+                // When sizes/categories AND cities are both set, city is AND-ed so it
+                // restricts to local matches rather than independently including all city items.
+                $applyMatch = function ($q) use ($hasSizesOrCategories, $hasCities, $cities, $applySizesAndCategories) {
+                    if ($hasSizesOrCategories && $hasCities) {
+                        $q->where($applySizesAndCategories)->whereIn('location', $cities);
+                    } elseif ($hasSizesOrCategories) {
+                        $q->where($applySizesAndCategories);
+                    } else {
+                        $q->whereIn('location', $cities);
+                    }
+                };
 
                 if ($hasFilter) {
                     if ($personalizedParam === 'true' || $personalizedParam === '1') {
-                        // Include products that match ANY preference (OR logic)
-                        $query->where(function ($q) use ($sizes, $categories, $cities) {
-                            if (! empty($sizes))      $q->orWhereIn('size', $sizes);
-                            if (! empty($categories)) $q->orWhereIn('root_category', $categories);
-                            if (! empty($cities))     $q->orWhereIn('location', $cities);
-                        });
+                        $query->where($applyMatch);
                     } elseif ($personalizedParam === 'exclude') {
-                        // Exclude products that match ANY preference — the complement bucket
-                        $query->whereNot(function ($q) use ($sizes, $categories, $cities) {
-                            if (! empty($sizes))      $q->orWhereIn('size', $sizes);
-                            if (! empty($categories)) $q->orWhereIn('root_category', $categories);
-                            if (! empty($cities))     $q->orWhereIn('location', $cities);
-                        });
+                        $query->whereNot($applyMatch);
                     }
                 }
             }
