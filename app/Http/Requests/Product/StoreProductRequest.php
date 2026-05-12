@@ -8,13 +8,6 @@ use Illuminate\Validation\Rule;
 
 class StoreProductRequest extends FormRequest
 {
-    private const CONDITION_MAP = [
-        'new'       => 'novo',
-        'very_good' => 'kao_novo',
-        'good'      => 'odlican',
-        'worn'      => 'dobar',
-    ];
-
     public function authorize(): bool
     {
         return true;
@@ -22,10 +15,6 @@ class StoreProductRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if ($this->has('condition') && isset(self::CONDITION_MAP[$this->condition])) {
-            $this->merge(['condition' => self::CONDITION_MAP[$this->condition]]);
-        }
-
         if (! $this->filled('brand_id')) {
             $other = Brand::where('is_other', true)->value('id');
             if ($other) {
@@ -45,7 +34,7 @@ class StoreProductRequest extends FormRequest
             'root_category' => [$isDraft ? 'nullable' : 'required', Rule::in(['women', 'men'])],
             'category'      => ['nullable', 'string', 'max:128'],
             'subcategory'   => ['nullable', 'string', 'max:128'],
-            'condition'     => [$isDraft ? 'nullable' : 'required', 'nullable', Rule::in(['novo', 'kao_novo', 'odlican', 'dobar', 'zadrzavajuci'])],
+            'condition'     => [$isDraft ? 'nullable' : 'required', 'nullable', Rule::in(['new', 'very_good', 'good', 'worn'])],
             'size'          => ['nullable', 'string', 'max:32'],
             'color'         => ['nullable', 'string', 'max:64'],
             'material'      => ['nullable', 'string', 'max:128'],

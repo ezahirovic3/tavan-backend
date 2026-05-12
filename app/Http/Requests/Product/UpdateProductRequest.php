@@ -8,13 +8,6 @@ use Illuminate\Validation\Rule;
 
 class UpdateProductRequest extends FormRequest
 {
-    private const CONDITION_MAP = [
-        'new'       => 'novo',
-        'very_good' => 'kao_novo',
-        'good'      => 'odlican',
-        'worn'      => 'dobar',
-    ];
-
     public function authorize(): bool
     {
         return true;
@@ -22,10 +15,6 @@ class UpdateProductRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if ($this->has('condition') && isset(self::CONDITION_MAP[$this->condition])) {
-            $this->merge(['condition' => self::CONDITION_MAP[$this->condition]]);
-        }
-
         // If brand_id is explicitly sent as null, resolve to the "Ostali" brand
         if ($this->has('brand_id') && ! $this->filled('brand_id')) {
             $other = Brand::where('is_other', true)->value('id');
@@ -44,7 +33,7 @@ class UpdateProductRequest extends FormRequest
             'root_category' => ['sometimes', Rule::in(['women', 'men'])],
             'category'      => ['sometimes', 'nullable', 'string', 'max:128'],
             'subcategory'   => ['sometimes', 'nullable', 'string', 'max:128'],
-            'condition'     => ['sometimes', Rule::in(['novo', 'kao_novo', 'odlican', 'dobar', 'zadrzavajuci'])],
+            'condition'     => ['sometimes', Rule::in(['new', 'very_good', 'good', 'worn'])],
             'size'          => ['sometimes', 'nullable', 'string', 'max:32'],
             'color'         => ['sometimes', 'nullable', 'string', 'max:64'],
             'material'      => ['sometimes', 'nullable', 'string', 'max:128'],
