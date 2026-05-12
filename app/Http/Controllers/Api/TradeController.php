@@ -8,6 +8,7 @@ use App\Http\Resources\TradeResource;
 use App\Models\Product;
 use App\Models\Trade;
 use App\Services\ConversationService;
+use App\Services\OrderService;
 use App\Services\PushNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class TradeController extends Controller
     public function __construct(
         private readonly ConversationService $conversations,
         private readonly PushNotificationService $push,
+        private readonly OrderService $orders,
     ) {}
 
     public function store(StoreTradeRequest $request): JsonResponse
@@ -56,7 +58,7 @@ class TradeController extends Controller
     {
         $this->authorize('view', $trade);
 
-        return response()->json(['data' => new TradeResource($trade->load('product.images', 'offeredProduct.images', 'buyer', 'seller'))]);
+        return response()->json(['data' => new TradeResource($trade->load('product.images', 'offeredProduct.images', 'buyer', 'seller', 'order'))]);
     }
 
     public function accept(Request $request, Trade $trade): JsonResponse
@@ -65,13 +67,12 @@ class TradeController extends Controller
 
         $trade->update(['status' => 'accepted']);
 
-        // Mark both products as sold
-        Product::whereIn('id', [$trade->product_id, $trade->offered_product_id])
-            ->update(['status' => 'sold']);
+        $order = $this->orders->createFromTrade($trade);
 
         $conversation = $this->conversations->findOrCreate($trade->buyer_id, $trade->seller_id);
         $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
             'tradeId' => $trade->id,
+            'orderId' => $order->id,
             'status'  => 'accepted',
         ], 'Prodavač je prihvatio zamjenu.');
 
@@ -79,10 +80,10 @@ class TradeController extends Controller
             $trade->buyer_id,
             'Zamjena prihvaćena! 🎉',
             'Prodavač je prihvatio vašu zamjenu.',
-            ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id, 'status' => 'accepted'],
+            ['type' => 'trade', 'tradeId' => $trade->id, 'orderId' => $order->id, 'conversationId' => $conversation->id, 'status' => 'accepted'],
         );
 
-        return response()->json(['data' => new TradeResource($trade->fresh()->load('product.images', 'offeredProduct.images', 'buyer', 'seller'))]);
+        return response()->json(['data' => new TradeResource($trade->fresh()->load('product.images', 'offeredProduct.images', 'buyer', 'seller', 'order'))]);
     }
 
     public function decline(Request $request, Trade $trade): JsonResponse

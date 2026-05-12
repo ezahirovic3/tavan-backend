@@ -73,7 +73,7 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        return response()->json(['data' => new OrderResource($order->load('product.images', 'buyer', 'seller', 'offer', 'reviews.reviewer'))]);
+        return response()->json(['data' => new OrderResource($order->load('product.images', 'buyer', 'seller', 'offer', 'trade.offeredProduct.images', 'reviews.reviewer'))]);
     }
 
     public function accept(Request $request, Order $order): JsonResponse
@@ -119,9 +119,14 @@ class OrderController extends Controller
 
         $order->update(['status' => 'completed']);
         $order->product->update(['status' => 'sold']);
+
+        if ($order->trade_id) {
+            $order->trade->offeredProduct()->update(['status' => 'sold']);
+        }
+
         $this->systemStatus($order, $request->user()->id, 'completed');
 
-        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller', 'trade.offeredProduct.images'))]);
     }
 
     public function decline(Request $request, Order $order): JsonResponse
@@ -140,9 +145,15 @@ class OrderController extends Controller
 
         $order->update(['status' => 'declined']);
         $order->product->update(['status' => 'active']);
+
+        if ($order->trade_id) {
+            $order->trade->offeredProduct()->update(['status' => 'active']);
+            $order->trade->update(['status' => 'declined']);
+        }
+
         $this->systemStatus($order, $request->user()->id, 'declined');
 
-        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller', 'trade.offeredProduct.images'))]);
     }
 
     private function systemStatus(Order $order, string $actorId, string $status): void

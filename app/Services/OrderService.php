@@ -6,6 +6,7 @@ use App\Models\Offer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ShippingOption;
+use App\Models\Trade;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -82,6 +83,34 @@ class OrderService
 
             $offer->update(['status' => 'ordered']);
             $product->update(['status' => 'reserved']);
+
+            return $order;
+        });
+    }
+
+    public function createFromTrade(Trade $trade): Order
+    {
+        return DB::transaction(function () use ($trade) {
+            $product = $trade->product;
+
+            $order = Order::create([
+                'order_number'    => $this->generateOrderNumber(),
+                'buyer_id'        => $trade->buyer_id,
+                'seller_id'       => $trade->seller_id,
+                'product_id'      => $product->id,
+                'trade_id'        => $trade->id,
+                'subtotal'        => 0,
+                'discount'        => 0,
+                'shipping_cost'   => 0,
+                'total'           => 0,
+                'payment_method'  => 'trade',
+                'delivery_method' => 'pickup',
+                'status'          => 'accepted',
+            ]);
+
+            // Reserve both products until the trade is completed
+            Product::whereIn('id', [$trade->product_id, $trade->offered_product_id])
+                ->update(['status' => 'reserved']);
 
             return $order;
         });

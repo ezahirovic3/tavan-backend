@@ -19,6 +19,7 @@ class TradeResource extends JsonResource
             'offered_product'     => new ProductResource($this->whenLoaded('offeredProduct')),
             'buyer'               => new UserResource($this->whenLoaded('buyer')),
             'seller'              => new UserResource($this->whenLoaded('seller')),
+            'order'               => new OrderResource($this->whenLoaded('order')),
             'created_at'          => $this->created_at?->toISOString(),
         ];
     }
