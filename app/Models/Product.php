@@ -40,6 +40,9 @@ class Product extends Model
         'allows_offers',
         'shipping_size',
         'location',
+        'pickup_enabled',
+        'free_shipping',
+        'exact_shipping_price',
         'status',
         'likes',
         'measurements',
@@ -48,10 +51,13 @@ class Product extends Model
     protected function casts(): array
     {
         return [
-            'price'         => 'decimal:2',
-            'allows_trades' => 'boolean',
-            'allows_offers' => 'boolean',
-            'measurements'  => 'array',
+            'price'                => 'decimal:2',
+            'allows_trades'        => 'boolean',
+            'allows_offers'        => 'boolean',
+            'pickup_enabled'       => 'boolean',
+            'free_shipping'        => 'boolean',
+            'exact_shipping_price' => 'decimal:2',
+            'measurements'         => 'array',
         ];
     }
 

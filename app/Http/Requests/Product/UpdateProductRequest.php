@@ -51,8 +51,11 @@ class UpdateProductRequest extends FormRequest
             'shipping_size' => ['sometimes', Rule::in(['S', 'M', 'L'])],
             'location'      => ['sometimes', 'string', 'max:128'],
             'brand_id'      => ['sometimes', 'nullable', 'ulid', 'exists:brands,id'],
-            'allows_trades' => ['sometimes', 'boolean'],
-            'allows_offers' => ['sometimes', 'boolean'],
+            'allows_trades'        => ['sometimes', 'boolean'],
+            'allows_offers'        => ['sometimes', 'boolean'],
+            'pickup_enabled'       => ['sometimes', 'nullable', 'boolean'],
+            'free_shipping'        => ['sometimes', 'nullable', 'boolean'],
+            'exact_shipping_price' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'measurements'  => ['sometimes', 'nullable', 'array'],
             'status'        => ['sometimes', Rule::in(['draft', 'pending_review', 'active', 'reserved', 'sold'])],
         ];

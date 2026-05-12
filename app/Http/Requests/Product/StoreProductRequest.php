@@ -52,8 +52,11 @@ class StoreProductRequest extends FormRequest
             'shipping_size' => [$isDraft ? 'nullable' : 'required', 'nullable', Rule::in(['S', 'M', 'L'])],
             'location'      => [$isDraft ? 'nullable' : 'required', 'nullable', 'string', 'max:128'],
             'brand_id'      => ['nullable', 'ulid', 'exists:brands,id'],
-            'allows_trades' => ['boolean'],
-            'allows_offers' => ['boolean'],
+            'allows_trades'        => ['boolean'],
+            'allows_offers'        => ['boolean'],
+            'pickup_enabled'       => ['nullable', 'boolean'],
+            'free_shipping'        => ['nullable', 'boolean'],
+            'exact_shipping_price' => ['nullable', 'numeric', 'min:0'],
             'measurements'  => ['nullable', 'array'],
             // Client may only signal intent to save as draft.
             // The server decides the actual status (pending_review vs active) for published listings.
