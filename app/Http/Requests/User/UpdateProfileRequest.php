@@ -19,8 +19,10 @@ class UpdateProfileRequest extends FormRequest
             'username'          => ['sometimes', 'string', 'max:64', 'regex:/^[a-zA-Z0-9_.]+$/', Rule::unique('users')->ignore($this->user()->id)],
             'bio'               => ['sometimes', 'nullable', 'string', 'max:500'],
             'location'          => ['sometimes', 'nullable', 'string', 'max:128'],
-            'profile_setup_done' => ['sometimes', 'boolean'],
-            'feed_setup_done'   => ['sometimes', 'boolean'],
+            'profile_setup_done'         => ['sometimes', 'boolean'],
+            'feed_setup_done'            => ['sometimes', 'boolean'],
+            'first_listing_coach_seen'   => ['sometimes', 'boolean'],
+            'first_draft_coach_seen'     => ['sometimes', 'boolean'],
         ];
     }
 }
