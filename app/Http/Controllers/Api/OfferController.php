@@ -53,14 +53,14 @@ class OfferController extends Controller
             ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id],
         );
 
-        return response()->json(['data' => new OfferResource($offer->load('product', 'buyer', 'seller'))], 201);
+        return response()->json(['data' => new OfferResource($offer->load('product.images', 'buyer', 'seller'))], 201);
     }
 
     public function show(Request $request, Offer $offer): JsonResponse
     {
         $this->authorize('view', $offer);
 
-        return response()->json(['data' => new OfferResource($offer->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OfferResource($offer->load('product.images', 'buyer', 'seller'))]);
     }
 
     public function accept(AcceptOfferRequest $request, Offer $offer): JsonResponse
@@ -82,7 +82,7 @@ class OfferController extends Controller
             ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'accepted'],
         );
 
-        return response()->json(['data' => new OfferResource($offer->fresh()->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OfferResource($offer->fresh()->load('product.images', 'buyer', 'seller'))]);
     }
 
     public function decline(Request $request, Offer $offer): JsonResponse
@@ -104,7 +104,7 @@ class OfferController extends Controller
             ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'declined'],
         );
 
-        return response()->json(['data' => new OfferResource($offer->fresh()->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OfferResource($offer->fresh()->load('product.images', 'buyer', 'seller'))]);
     }
 
     public function counter(CounterOfferRequest $request, Offer $offer): JsonResponse
@@ -126,6 +126,6 @@ class OfferController extends Controller
             ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'countered'],
         );
 
-        return response()->json(['data' => new OfferResource($offer->fresh()->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OfferResource($offer->fresh()->load('product.images', 'buyer', 'seller'))]);
     }
 }
