@@ -62,7 +62,7 @@ class OrderController extends Controller
         $this->push->sendToUser(
             $product->seller_id,
             'Nova narudžba! 🛍️',
-            $request->user()->name . ' je kupio/la "' . $product->title . '".',
+            $request->user()->name . ' je naručio/la "' . $product->title . '".',
             ['type' => 'order', 'orderId' => $order->id],
         );
 

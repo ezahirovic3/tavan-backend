@@ -191,13 +191,37 @@ class ProductController extends Controller
     {
         $product->load(['images', 'brand', 'seller']);
 
-        if ($request->user()) {
-            $product->is_wishlisted = WishlistItem::where('user_id', $request->user()->id)
+        $authUser = $request->user() ?? \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
+
+        if ($authUser) {
+            $product->is_wishlisted = WishlistItem::where('user_id', $authUser->id)
                 ->where('product_id', $product->id)
                 ->exists();
         }
 
-        return response()->json(['data' => new ProductResource($product)]);
+        $sellerProducts = Product::where('seller_id', $product->seller_id)
+            ->where('id', '!=', $product->id)
+            ->where('status', 'active')
+            ->with('images')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $similarProducts = Product::where('category', $product->category)
+            ->where('root_category', $product->root_category)
+            ->where('id', '!=', $product->id)
+            ->where('seller_id', '!=', $product->seller_id)
+            ->where('status', 'active')
+            ->with('images')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        return response()->json([
+            'data'            => new ProductResource($product),
+            'sellerProducts'  => ProductResource::collection($sellerProducts),
+            'similarProducts' => ProductResource::collection($similarProducts),
+        ]);
     }
 
     public function update(UpdateProductRequest $request, Product $product): JsonResponse
