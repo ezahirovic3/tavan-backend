@@ -42,6 +42,10 @@ class OrderService
                 'shipping_phone'  => $data['shipping_phone'] ?? null,
             ]);
 
+            if ($offer) {
+                $offer->update(['status' => 'ordered']);
+            }
+
             // Reserved = buyer committed, but seller hasn't confirmed yet
             $product->update(['status' => 'reserved']);
 
@@ -76,7 +80,7 @@ class OrderService
                 'shipping_phone'  => $shippingData['shipping_phone'],
             ]);
 
-            $offer->update(['status' => 'accepted']);
+            $offer->update(['status' => 'ordered']);
             $product->update(['status' => 'reserved']);
 
             return $order;
