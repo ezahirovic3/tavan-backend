@@ -13,8 +13,20 @@ class StoreProductRequest extends FormRequest
         return true;
     }
 
+    private const LEGACY_CONDITION_MAP = [
+        'novo'         => 'new',
+        'kao_novo'     => 'very_good',
+        'odlican'      => 'good',
+        'dobar'        => 'worn',
+        'zadrzavajuci' => 'worn',
+    ];
+
     protected function prepareForValidation(): void
     {
+        if ($this->has('condition') && isset(self::LEGACY_CONDITION_MAP[$this->condition])) {
+            $this->merge(['condition' => self::LEGACY_CONDITION_MAP[$this->condition]]);
+        }
+
         if (! $this->filled('brand_id')) {
             $other = Brand::where('is_other', true)->value('id');
             if ($other) {

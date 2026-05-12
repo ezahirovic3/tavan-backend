@@ -13,8 +13,21 @@ class UpdateProductRequest extends FormRequest
         return true;
     }
 
+    private const LEGACY_CONDITION_MAP = [
+        'novo'         => 'new',
+        'kao_novo'     => 'very_good',
+        'odlican'      => 'good',
+        'dobar'        => 'worn',
+        'zadrzavajuci' => 'worn',
+    ];
+
     protected function prepareForValidation(): void
     {
+        // Normalize legacy Bosnian condition values sent by older clients
+        if ($this->has('condition') && isset(self::LEGACY_CONDITION_MAP[$this->condition])) {
+            $this->merge(['condition' => self::LEGACY_CONDITION_MAP[$this->condition]]);
+        }
+
         // If brand_id is explicitly sent as null, resolve to the "Ostali" brand
         if ($this->has('brand_id') && ! $this->filled('brand_id')) {
             $other = Brand::where('is_other', true)->value('id');
