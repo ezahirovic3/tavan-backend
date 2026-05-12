@@ -49,14 +49,14 @@ class TradeController extends Controller
             ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id],
         );
 
-        return response()->json(['data' => new TradeResource($trade->load('product', 'offeredProduct', 'buyer', 'seller'))], 201);
+        return response()->json(['data' => new TradeResource($trade->load('product.images', 'offeredProduct.images', 'buyer', 'seller'))], 201);
     }
 
     public function show(Request $request, Trade $trade): JsonResponse
     {
         $this->authorize('view', $trade);
 
-        return response()->json(['data' => new TradeResource($trade->load('product', 'offeredProduct', 'buyer', 'seller'))]);
+        return response()->json(['data' => new TradeResource($trade->load('product.images', 'offeredProduct.images', 'buyer', 'seller'))]);
     }
 
     public function accept(Request $request, Trade $trade): JsonResponse
@@ -82,7 +82,7 @@ class TradeController extends Controller
             ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id, 'status' => 'accepted'],
         );
 
-        return response()->json(['data' => new TradeResource($trade->fresh()->load('product', 'offeredProduct', 'buyer', 'seller'))]);
+        return response()->json(['data' => new TradeResource($trade->fresh()->load('product.images', 'offeredProduct.images', 'buyer', 'seller'))]);
     }
 
     public function decline(Request $request, Trade $trade): JsonResponse
@@ -104,7 +104,7 @@ class TradeController extends Controller
             ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id, 'status' => 'declined'],
         );
 
-        return response()->json(['data' => new TradeResource($trade->fresh()->load('product', 'offeredProduct', 'buyer', 'seller'))]);
+        return response()->json(['data' => new TradeResource($trade->fresh()->load('product.images', 'offeredProduct.images', 'buyer', 'seller'))]);
     }
 
     public function counter(Request $request, Trade $trade): JsonResponse
@@ -126,6 +126,6 @@ class TradeController extends Controller
             ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id, 'status' => 'countered'],
         );
 
-        return response()->json(['data' => new TradeResource($trade->fresh()->load('product', 'offeredProduct', 'buyer', 'seller'))]);
+        return response()->json(['data' => new TradeResource($trade->fresh()->load('product.images', 'offeredProduct.images', 'buyer', 'seller'))]);
     }
 }

@@ -20,6 +20,7 @@ class Review extends Model
         'rating',
         'comment',
         'role',
+        'created_at',
     ];
 
     protected function casts(): array
