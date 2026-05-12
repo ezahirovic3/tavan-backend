@@ -114,8 +114,8 @@ class OrderController extends Controller
         $this->authorize('buyerAction', $order);
 
         $isPickup = $order->delivery_method === 'pickup';
-        $validStatus = $isPickup ? 'accepted' : 'delivered';
-        abort_if($order->status !== $validStatus, 422, $isPickup ? 'Narudžba nije prihvaćena.' : 'Narudžba još nije isporučena.');
+        $validStatuses = $isPickup ? ['accepted'] : ['shipped', 'delivered'];
+        abort_if(! in_array($order->status, $validStatuses), 422, $isPickup ? 'Narudžba nije prihvaćena.' : 'Narudžba još nije poslana.');
 
         $order->update(['status' => 'completed']);
         $order->product->update(['status' => 'sold']);
