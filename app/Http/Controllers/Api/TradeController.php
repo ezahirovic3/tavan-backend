@@ -74,12 +74,12 @@ class TradeController extends Controller
             'tradeId' => $trade->id,
             'orderId' => $order->id,
             'status'  => 'accepted',
-        ], 'Prodavač je prihvatio zamjenu.');
+        ], '@' . $request->user()->username . ' je prihvatio/la zamjenu.');
 
         $this->push->sendToUser(
             $trade->buyer_id,
             'Zamjena prihvaćena! 🎉',
-            'Prodavač je prihvatio vašu zamjenu.',
+            '@' . $request->user()->username . ' je prihvatio/la vašu zamjenu.',
             ['type' => 'trade', 'tradeId' => $trade->id, 'orderId' => $order->id, 'conversationId' => $conversation->id, 'status' => 'accepted'],
         );
 
@@ -96,12 +96,12 @@ class TradeController extends Controller
         $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
             'tradeId' => $trade->id,
             'status'  => 'declined',
-        ], 'Prodavač je odbio zamjenu.');
+        ], '@' . $request->user()->username . ' je odbio/la zamjenu.');
 
         $this->push->sendToUser(
             $trade->buyer_id,
             'Zamjena odbijena',
-            'Prodavač je odbio vašu zamjenu.',
+            '@' . $request->user()->username . ' je odbio/la vašu zamjenu.',
             ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id, 'status' => 'declined'],
         );
 
@@ -118,12 +118,12 @@ class TradeController extends Controller
         $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
             'tradeId' => $trade->id,
             'status'  => 'countered',
-        ], 'Prodavač je predložio kontra-zamjenu.');
+        ], '@' . $request->user()->username . ' je predložio/la kontra-zamjenu.');
 
         $this->push->sendToUser(
             $trade->buyer_id,
             'Kontra-zamjena',
-            'Prodavač je predložio kontra-zamjenu.',
+            '@' . $request->user()->username . ' je predložio/la kontra-zamjenu.',
             ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id, 'status' => 'countered'],
         );
 

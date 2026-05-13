@@ -73,12 +73,12 @@ class OfferController extends Controller
         $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
             'offerId' => $offer->id,
             'status'  => 'accepted',
-        ], 'Prodavač je prihvatio ponudu.');
+        ], '@' . $request->user()->username . ' je prihvatio/la ponudu.');
 
         $this->push->sendToUser(
             $offer->buyer_id,
             'Ponuda prihvaćena! 🎉',
-            'Prodavač je prihvatio vašu ponudu. Nastavi na plaćanje.',
+            '@' . $request->user()->username . ' je prihvatio/la vašu ponudu. Nastavi na plaćanje.',
             ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'accepted'],
         );
 
@@ -95,12 +95,12 @@ class OfferController extends Controller
         $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
             'offerId' => $offer->id,
             'status'  => 'declined',
-        ], 'Prodavač je odbio ponudu.');
+        ], '@' . $request->user()->username . ' je odbio/la ponudu.');
 
         $this->push->sendToUser(
             $offer->buyer_id,
             'Ponuda odbijena',
-            'Prodavač je odbio vašu ponudu.',
+            '@' . $request->user()->username . ' je odbio/la vašu ponudu.',
             ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'declined'],
         );
 
@@ -117,12 +117,12 @@ class OfferController extends Controller
         ]);
 
         $conversation = $this->conversations->findOrCreate($offer->buyer_id, $offer->seller_id);
-        $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_offer', ['offerId' => $offer->id, 'status' => 'countered']);
+        $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_offer', ['offerId' => $offer->id, 'status' => 'countered'], '@' . $request->user()->username . ' je predložio/la kontra-ponudu.');
 
         $this->push->sendToUser(
             $offer->buyer_id,
             'Kontra-ponuda',
-            'Prodavač je ponudio ' . number_format($request->counter_price, 2) . ' KM.',
+            '@' . $request->user()->username . ' nudi ' . number_format($request->counter_price, 2) . ' KM.',
             ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'countered'],
         );
 

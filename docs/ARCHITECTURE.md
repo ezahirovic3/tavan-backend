@@ -133,4 +133,16 @@ All authenticated resource routes use Laravel policies. Users can only modify th
   - Redis
   - Supervisor for queue workers and Reverb
   - Zero-downtime deploys via Forge
+
+## Future Improvements
+
+### Phone Number Format Validation
+
+Currently `phone` is stored and verified as a free-form string (max 32 chars). There is no validation that it is a valid phone number (e.g. E.164 format like `+38761123456`).
+
+Recommended approach:
+- Add `libphonenumber` via [`propaganistas/laravel-phone`](https://github.com/Propaganistas/Laravel-Phone) to validate and normalise numbers on input.
+- Store numbers in E.164 format to prevent duplicates caused by formatting differences (e.g. `061123456` vs `+38761123456` being treated as different values when they are the same number).
+- Apply the `phone` rule in `SendPhoneOtpRequest` and `VerifyPhoneOtpRequest`.
+- Consider normalising existing rows with a one-off migration before enforcing the format.
 - **Domains**: `api.tavan.store` (API), `admin.tavan.store` (Filament)

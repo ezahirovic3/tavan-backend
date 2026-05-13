@@ -7,6 +7,7 @@ use App\Http\Requests\Order\StoreOrderRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\User;
 use App\Services\ConversationService;
 use App\Services\OrderService;
 use App\Services\PushNotificationService;
@@ -82,7 +83,7 @@ class OrderController extends Controller
         abort_if($order->status !== 'pending', 422, 'Narudžba nije u statusu čekanja.');
 
         $order->update(['status' => 'accepted']);
-        $this->systemStatus($order, $request->user()->id, 'accepted');
+        $this->systemStatus($order, $request->user(), 'accepted');
 
         return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
     }
@@ -93,7 +94,7 @@ class OrderController extends Controller
         abort_if($order->status !== 'accepted', 422, 'Narudžba mora biti prihvaćena prije slanja.');
 
         $order->update(['status' => 'shipped']);
-        $this->systemStatus($order, $request->user()->id, 'shipped');
+        $this->systemStatus($order, $request->user(), 'shipped');
 
         return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
     }
@@ -104,7 +105,7 @@ class OrderController extends Controller
         abort_if($order->status !== 'shipped', 422, 'Narudžba još nije poslana.');
 
         $order->update(['status' => 'delivered']);
-        $this->systemStatus($order, $request->user()->id, 'delivered');
+        $this->systemStatus($order, $request->user(), 'delivered');
 
         return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
     }
@@ -125,7 +126,7 @@ class OrderController extends Controller
             $order->trade->update(['status' => 'completed']);
         }
 
-        $this->systemStatus($order, $request->user()->id, 'completed');
+        $this->systemStatus($order, $request->user(), 'completed');
 
         return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller', 'trade.offeredProduct.images'))]);
     }
@@ -152,31 +153,31 @@ class OrderController extends Controller
             $order->trade->update(['status' => 'declined']);
         }
 
-        $this->systemStatus($order, $request->user()->id, 'declined');
+        $this->systemStatus($order, $request->user(), 'declined');
 
         return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller', 'trade.offeredProduct.images'))]);
     }
 
-    private function systemStatus(Order $order, string $actorId, string $status): void
+    private function systemStatus(Order $order, User $actor, string $status): void
     {
-        $isBuyerActor = $actorId === $order->buyer_id;
+        $isBuyerActor = $actor->id === $order->buyer_id;
+        $handle       = '@' . $actor->username;
 
-        // Human-readable text stored in message body — shown in chat as a status line
         $statusText = match ($status) {
-            'accepted'  => 'Narudžba je prihvaćena.',
-            'shipped'   => 'Prodavač je poslao paket.',
-            'delivered' => 'Kupac je potvrdio dostavu.',
-            'completed' => 'Narudžba je uspješno završena.',
+            'accepted'  => $handle . ' je prihvatio/la narudžbu.',
+            'shipped'   => $handle . ' je poslao/la paket.',
+            'delivered' => $handle . ' je potvrdio/la dostavu.',
+            'completed' => $handle . ' je potvrdio/la završetak narudžbe.',
             'declined'  => $isBuyerActor
-                            ? 'Kupac je otkazao narudžbu.'
-                            : 'Prodavač je odbio narudžbu.',
+                            ? $handle . ' je otkazao/la narudžbu.'
+                            : $handle . ' je odbio/la narudžbu.',
             default     => 'Status narudžbe je promijenjen.',
         };
 
         $conversation = $this->conversations->findOrCreate($order->buyer_id, $order->seller_id);
         $this->conversations->sendSystemMessage(
             $conversation,
-            $actorId,
+            $actor->id,
             'system_status',
             ['orderId' => $order->id, 'status' => $status],
             $statusText,
@@ -186,13 +187,13 @@ class OrderController extends Controller
         $recipientId = $isBuyerActor ? $order->seller_id : $order->buyer_id;
 
         [$title, $pushBody] = match ($status) {
-            'accepted'  => ['Narudžba prihvaćena ✅', 'Prodavač je prihvatio vašu narudžbu.'],
+            'accepted'  => ['Narudžba prihvaćena ✅', $handle . ' je prihvatio/la vašu narudžbu.'],
             'shipped'   => ['Paket poslan 📦', 'Vaša narudžba je na putu!'],
-            'delivered' => ['Potvrda dostave', 'Kupac je potvrdio dostavu.'],
+            'delivered' => ['Potvrda dostave', $handle . ' je potvrdio/la dostavu.'],
             'completed' => ['Narudžba završena 🎉', 'Narudžba je uspješno završena.'],
             'declined'  => $isBuyerActor
-                            ? ['Narudžba otkazana', 'Kupac je otkazao narudžbu.']
-                            : ['Narudžba odbijena', 'Prodavač je odbio vašu narudžbu.'],
+                            ? ['Narudžba otkazana', $handle . ' je otkazao/la narudžbu.']
+                            : ['Narudžba odbijena', $handle . ' je odbio/la vašu narudžbu.'],
             default     => ['Ažuriranje narudžbe', 'Status vaše narudžbe je promijenjen.'],
         };
 

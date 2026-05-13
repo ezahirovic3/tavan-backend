@@ -18,6 +18,13 @@ class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens, HasFactory, HasUlids, LogsActivity, Notifiable;
 
+    protected static function booting(): void
+    {
+        static::creating(function (self $user) {
+            $user->listings_require_review ??= config('tavan.listings_require_review');
+        });
+    }
+
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()

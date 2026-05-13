@@ -9,4 +9,10 @@ return [
      */
     'system_user_id' => '01TAVANSYSTEMSUPPORT000000',
 
+    /*
+     * When false, newly registered users can publish listings immediately (no admin review).
+     * Flip to true once the marketplace is established to require admin approval for new sellers.
+     */
+    'listings_require_review' => env('LISTINGS_REQUIRE_REVIEW', false),
+
 ];
