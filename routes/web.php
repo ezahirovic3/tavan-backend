@@ -6,6 +6,19 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/test-broadcast/{conversationId}', function (string $conversationId) {
+    $message = \App\Models\Message::whereHas('conversation', function ($q) use ($conversationId) {
+        $q->where('id', $conversationId);
+    })->latest()->first();
+
+    if (!$message) {
+        return response()->json(['error' => 'no message found', 'conversationId' => $conversationId], 404);
+    }
+
+    broadcast(new \App\Events\NewMessage($message));
+    return response()->json(['conversationId' => $conversationId, 'messageId' => $message->id, 'channel' => 'conversation.' . $message->conversation_id]);
+});
+
 Route::get('/health', function () {
     return response()->json([
         'ok'                 => true,
