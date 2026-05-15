@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\MessagesRead;
 use App\Events\NewMessage;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -96,10 +97,14 @@ class ConversationService
 
     public function markRead(Conversation $conversation, string $userId): void
     {
-        $conversation->messages()
+        $affected = $conversation->messages()
             ->where('sender_id', '!=', $userId)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
+
+        if ($affected > 0) {
+            broadcast(new MessagesRead($conversation->id, $userId));
+        }
     }
 
     public function unreadCount(Conversation $conversation, string $userId): int
