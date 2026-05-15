@@ -159,4 +159,9 @@ Route::prefix('v1')->group(function () {
     // ── Public reviews ────────────────────────────────────────────────────────
     Route::get('users/{username}/reviews', [ReviewController::class, 'userReviews']);
 
+    // ── Broadcasting channel auth (mobile uses Bearer token, not web session) ─
+    Route::post('broadcasting/auth', function (\Illuminate\Http\Request $request) {
+        return \Illuminate\Support\Facades\Broadcast::auth($request);
+    })->middleware('auth:sanctum');
+
 });
