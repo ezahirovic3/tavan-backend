@@ -7,6 +7,7 @@ use App\Http\Requests\Offer\AcceptOfferRequest;
 use App\Http\Requests\Offer\CounterOfferRequest;
 use App\Http\Requests\Offer\StoreOfferRequest;
 use App\Http\Resources\OfferResource;
+use App\Jobs\SendReminderNotificationJob;
 use App\Models\Offer;
 use App\Models\Product;
 use App\Services\ConversationService;
@@ -52,6 +53,9 @@ class OfferController extends Controller
             $request->user()->name . ' nudi ' . number_format($request->offered_price, 2) . ' KM',
             ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id],
         );
+
+        SendReminderNotificationJob::dispatch('offer', $offer->id, 'pending_seller')
+            ->delay(now()->addHours(24));
 
         return response()->json(['data' => new OfferResource($offer->load('product.images', 'buyer', 'seller'))], 201);
     }
@@ -125,6 +129,9 @@ class OfferController extends Controller
             '@' . $request->user()->username . ' nudi ' . number_format($request->counter_price, 2) . ' KM.',
             ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'countered'],
         );
+
+        SendReminderNotificationJob::dispatch('offer', $offer->id, 'countered_buyer')
+            ->delay(now()->addHours(24));
 
         return response()->json(['data' => new OfferResource($offer->fresh()->load('product.images', 'buyer', 'seller'))]);
     }

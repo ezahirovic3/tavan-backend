@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Trade\StoreTradeRequest;
 use App\Http\Resources\TradeResource;
+use App\Jobs\SendReminderNotificationJob;
 use App\Models\Product;
 use App\Models\Trade;
 use App\Services\ConversationService;
@@ -50,6 +51,9 @@ class TradeController extends Controller
             $request->user()->name . ' želi zamijeniti za "' . $offeredProduct->title . '".',
             ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id],
         );
+
+        SendReminderNotificationJob::dispatch('trade', $trade->id, 'active_seller')
+            ->delay(now()->addHours(24));
 
         return response()->json(['data' => new TradeResource($trade->load('product.images', 'offeredProduct.images', 'buyer', 'seller'))], 201);
     }
@@ -126,6 +130,9 @@ class TradeController extends Controller
             '@' . $request->user()->username . ' je predložio/la kontra-zamjenu.',
             ['type' => 'trade', 'tradeId' => $trade->id, 'conversationId' => $conversation->id, 'status' => 'countered'],
         );
+
+        SendReminderNotificationJob::dispatch('trade', $trade->id, 'countered_buyer')
+            ->delay(now()->addHours(24));
 
         return response()->json(['data' => new TradeResource($trade->fresh()->load('product.images', 'offeredProduct.images', 'buyer', 'seller'))]);
     }

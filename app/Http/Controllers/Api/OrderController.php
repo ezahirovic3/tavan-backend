@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\StoreOrderRequest;
 use App\Http\Resources\OrderResource;
+use App\Jobs\SendReminderNotificationJob;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -67,6 +68,9 @@ class OrderController extends Controller
             ['type' => 'order', 'orderId' => $order->id],
         );
 
+        SendReminderNotificationJob::dispatch('order', $order->id, 'pending_seller')
+            ->delay(now()->addHours(24));
+
         return response()->json(['data' => new OrderResource($order->load('product', 'buyer', 'seller'))], 201);
     }
 
@@ -85,6 +89,12 @@ class OrderController extends Controller
         $order->update(['status' => 'accepted']);
         $this->systemStatus($order, $request->user(), 'accepted');
 
+        // Remind seller to ship (delivery), or buyer to complete (pickup)
+        SendReminderNotificationJob::dispatch('order', $order->id, 'accepted_seller')
+            ->delay(now()->addHours(24));
+        SendReminderNotificationJob::dispatch('order', $order->id, 'accepted_buyer_pickup')
+            ->delay(now()->addHours(24));
+
         return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
     }
 
@@ -95,6 +105,9 @@ class OrderController extends Controller
 
         $order->update(['status' => 'shipped']);
         $this->systemStatus($order, $request->user(), 'shipped');
+
+        SendReminderNotificationJob::dispatch('order', $order->id, 'shipped_buyer')
+            ->delay(now()->addHours(48));
 
         return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
     }
