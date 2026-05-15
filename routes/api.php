@@ -164,19 +164,5 @@ Route::prefix('v1')->group(function () {
         return \Illuminate\Support\Facades\Broadcast::auth($request);
     })->middleware('auth:sanctum');
 
-    // ── Temporary: test broadcast to a specific channel ───────────────────────
-    Route::get('test-broadcast/{conversationId}', function (string $conversationId) {
-        $message = \App\Models\Message::whereHas('conversation', function ($q) use ($conversationId) {
-            $q->where('id', $conversationId);
-        })->latest()->first();
-
-        if (!$message) {
-            return response()->json(['error' => 'no message found for conversation ' . $conversationId], 404);
-        }
-
-        broadcast(new \App\Events\NewMessage($message));
-        \Illuminate\Support\Facades\Log::info('[test-broadcast] fired NewMessage for conversation: ' . $conversationId . ' message: ' . $message->id);
-        return response()->json(['conversationId' => $conversationId, 'messageId' => $message->id, 'status' => 'fired']);
-    });
 
 });
