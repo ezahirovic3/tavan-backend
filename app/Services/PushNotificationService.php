@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\PushToken;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -21,12 +22,15 @@ class PushNotificationService
             return;
         }
 
+        $badge = $this->incrementBadge($userId);
+
         $messages = array_map(fn (string $token) => [
             'to'    => $token,
             'title' => $title,
             'body'  => $body,
             'data'  => $data,
             'sound' => 'default',
+            'badge' => $badge,
         ], $tokens);
 
         $this->dispatch($messages);
@@ -109,6 +113,25 @@ class PushNotificationService
         $this->dispatch($messages);
 
         return count($tokens);
+    }
+
+    /**
+     * Atomically increment the push badge counter for a user and return the new value.
+     * The counter is stored in Redis and reset to 0 when the user opens the app.
+     */
+    private function incrementBadge(string $userId): int
+    {
+        $key = "push_badge:{$userId}";
+        Cache::add($key, 0, now()->addDays(30));
+        return (int) Cache::increment($key);
+    }
+
+    /**
+     * Reset the push badge counter for a user to 0 (called when the app is opened).
+     */
+    public function resetBadge(string $userId): void
+    {
+        Cache::forget("push_badge:{$userId}");
     }
 
     /**

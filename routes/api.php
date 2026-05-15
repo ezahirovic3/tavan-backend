@@ -137,6 +137,7 @@ Route::prefix('v1')->group(function () {
         // Push tokens
         Route::post('push-tokens', [PushTokenController::class, 'store']);
         Route::delete('push-tokens', [PushTokenController::class, 'destroy']);
+        Route::post('push-tokens/badge/reset', [PushTokenController::class, 'resetBadge']);
 
         // Announcements
         Route::get('announcements', [AnnouncementController::class, 'index']);
