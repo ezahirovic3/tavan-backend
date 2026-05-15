@@ -15,8 +15,25 @@ Route::get('/test-broadcast/{conversationId}', function (string $conversationId)
         return response()->json(['error' => 'no message found', 'conversationId' => $conversationId], 404);
     }
 
-    broadcast(new \App\Events\NewMessage($message));
-    return response()->json(['conversationId' => $conversationId, 'messageId' => $message->id, 'channel' => 'conversation.' . $message->conversation_id]);
+    try {
+        $broadcaster = app(\Illuminate\Broadcasting\BroadcastManager::class)->connection('reverb');
+        $result = $broadcaster->broadcast(
+            ['private-conversation.' . $conversationId],
+            'message.new',
+            ['test' => true, 'conversationId' => $conversationId]
+        );
+        return response()->json([
+            'status' => 'ok',
+            'channel' => 'private-conversation.' . $conversationId,
+            'result' => $result,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'class' => get_class($e),
+        ], 500);
+    }
 });
 
 Route::get('/health', function () {
