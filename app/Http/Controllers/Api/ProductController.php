@@ -126,6 +126,7 @@ class ProductController extends Controller
                 );
                 $categories = $prefs->categories ?? [];
                 $cities     = $prefs->cities     ?? [];
+                $brands     = $prefs->brands     ?? [];
 
                 // Parse subcategory preference keys like "men-tops" → {root, category} pairs.
                 // Keys are always "{rootId}-{categoryKey}" with no hyphens in either segment.
@@ -140,11 +141,12 @@ class ProductController extends Controller
                     ->values();
 
                 $hasSizesOrCategories = ! empty($sizes) || $subcategoryPairs->isNotEmpty() || ! empty($categories);
+                $hasBrands            = ! empty($brands);
                 $hasCities            = ! empty($cities);
-                $hasFilter            = $hasSizesOrCategories || $hasCities;
+                $hasFilter            = $hasSizesOrCategories || $hasBrands || $hasCities;
 
-                // Closure that applies the size + category OR block.
-                $applySizesAndCategories = function ($q) use ($sizes, $categories, $subcategoryPairs) {
+                // Closure that applies the size + category + brand OR block.
+                $applyPreferences = function ($q) use ($sizes, $categories, $subcategoryPairs, $brands) {
                     if (! empty($sizes)) $q->orWhereIn('size', $sizes);
 
                     if ($subcategoryPairs->isNotEmpty()) {
@@ -159,16 +161,22 @@ class ProductController extends Controller
                     } elseif (! empty($categories)) {
                         $q->orWhereIn('root_category', $categories);
                     }
+
+                    if (! empty($brands)) {
+                        $q->orWhereHas('brand', fn ($bq) => $bq->whereIn('id', $brands));
+                    }
                 };
 
                 // Build the match condition depending on which preference types are set.
-                // When sizes/categories AND cities are both set, city is AND-ed so it
+                // When sizes/categories/brands AND cities are both set, city is AND-ed so it
                 // restricts to local matches rather than independently including all city items.
-                $applyMatch = function ($q) use ($hasSizesOrCategories, $hasCities, $cities, $applySizesAndCategories) {
-                    if ($hasSizesOrCategories && $hasCities) {
-                        $q->where($applySizesAndCategories)->whereIn('location', $cities);
-                    } elseif ($hasSizesOrCategories) {
-                        $q->where($applySizesAndCategories);
+                $hasSizesOrCategoriesOrBrands = $hasSizesOrCategories || $hasBrands;
+
+                $applyMatch = function ($q) use ($hasSizesOrCategoriesOrBrands, $hasCities, $cities, $applyPreferences) {
+                    if ($hasSizesOrCategoriesOrBrands && $hasCities) {
+                        $q->where($applyPreferences)->whereIn('location', $cities);
+                    } elseif ($hasSizesOrCategoriesOrBrands) {
+                        $q->where($applyPreferences);
                     } else {
                         $q->whereIn('location', $cities);
                     }
