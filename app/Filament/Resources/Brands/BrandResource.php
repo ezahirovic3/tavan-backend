@@ -62,7 +62,7 @@ class BrandResource extends Resource
                         ->extraInputAttributes(['class' => 'font-mono']),
                 ]),
 
-                FileUpload::make('logo')
+                FileUpload::make('logo_url')
                     ->label('Logo')
                     ->image()
                     ->disk('r2')
@@ -92,7 +92,7 @@ class BrandResource extends Resource
             ->reorderable('sort_order')
             ->defaultSort('sort_order')
             ->columns([
-                ImageColumn::make('logo')
+                ImageColumn::make('logo_url')
                     ->label('Logo')
                     ->disk('r2')
                     ->square()
