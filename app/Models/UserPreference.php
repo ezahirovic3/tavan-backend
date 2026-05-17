@@ -19,6 +19,7 @@ class UserPreference extends Model
         'shoe_sizes',
         'categories',
         'subcategories',
+        'brands',
         'cities',
     ];
 
@@ -30,6 +31,7 @@ class UserPreference extends Model
             'shoe_sizes'   => 'array',
             'categories'   => 'array',
             'subcategories'=> 'array',
+            'brands'       => 'array',
             'cities'       => 'array',
         ];
     }

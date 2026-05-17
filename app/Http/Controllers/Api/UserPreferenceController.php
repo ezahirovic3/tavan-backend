@@ -19,6 +19,7 @@ class UserPreferenceController extends Controller
                 'shoe_sizes'    => [],
                 'categories'    => [],
                 'subcategories' => [],
+                'brands'        => [],
                 'cities'        => [],
             ]
         );
@@ -34,6 +35,7 @@ class UserPreferenceController extends Controller
             'shoe_sizes'    => ['sometimes', 'array'],
             'categories'    => ['sometimes', 'array'],
             'subcategories' => ['sometimes', 'array'],
+            'brands'        => ['sometimes', 'array'],
             'cities'        => ['sometimes', 'array'],
         ]);
 
@@ -48,13 +50,14 @@ class UserPreferenceController extends Controller
     private function format(UserPreference $prefs): array
     {
         return [
-            'userId'       => $prefs->user_id,
-            'topSizes'     => $prefs->top_sizes     ?? [],
-            'bottomSizes'  => $prefs->bottom_sizes  ?? [],
-            'shoeSizes'    => $prefs->shoe_sizes     ?? [],
-            'categories'   => $prefs->categories    ?? [],
-            'subcategories'=> $prefs->subcategories ?? [],
-            'cities'       => $prefs->cities        ?? [],
+            'userId'        => $prefs->user_id,
+            'topSizes'      => $prefs->top_sizes     ?? [],
+            'bottomSizes'   => $prefs->bottom_sizes  ?? [],
+            'shoeSizes'     => $prefs->shoe_sizes     ?? [],
+            'categories'    => $prefs->categories    ?? [],
+            'subcategories' => $prefs->subcategories ?? [],
+            'brands'        => $prefs->brands        ?? [],
+            'cities'        => $prefs->cities        ?? [],
         ];
     }
 }
