@@ -96,7 +96,8 @@ class BrandResource extends Resource
                     ->label('Logo')
                     ->disk('r2')
                     ->square()
-                    ->size(40),
+                    ->size(40)
+                    ->extraImgAttributes(['style' => 'object-fit: contain']),
 
                 TextColumn::make('name')
                     ->label('Naziv')
