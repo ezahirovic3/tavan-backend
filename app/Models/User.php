@@ -128,7 +128,22 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(BrandSuggestion::class);
     }
 
+    public function ordersAsBuyer(): HasMany
+    {
+        return $this->hasMany(Order::class, 'buyer_id');
+    }
+
+    public function ordersAsSeller(): HasMany
+    {
+        return $this->hasMany(Order::class, 'seller_id');
+    }
+
     public function blocks(): HasMany
+    {
+        return $this->hasMany(UserBlock::class, 'blocker_id');
+    }
+
+    public function blocksMade(): HasMany
     {
         return $this->hasMany(UserBlock::class, 'blocker_id');
     }

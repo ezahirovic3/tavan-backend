@@ -81,6 +81,16 @@ class Product extends Model
         return $this->hasMany(WishlistItem::class);
     }
 
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
+    public function reports(): HasMany
+    {
+        return $this->hasMany(ProductReport::class);
+    }
+
     /**
      * Public-facing scope: only fully active products.
      * pending_review and draft are owner-only and must never appear in public feeds.
