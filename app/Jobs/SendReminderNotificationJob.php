@@ -15,7 +15,7 @@ class SendReminderNotificationJob implements ShouldQueue
 
     public function __construct(
         private readonly string $modelType,
-        private readonly int $modelId,
+        private readonly string $modelId,
         private readonly string $reminderType,
     ) {}
 
