@@ -28,10 +28,9 @@ class ProductsTable
             ->columns([
                 ImageColumn::make('thumbnail')
                     ->label('')
-                    ->disk('r2')
                     ->square()
                     ->size(48)
-                    ->getStateUsing(fn ($record) => $record->images[0] ?? null),
+                    ->getStateUsing(fn ($record) => $record->images->first()?->url),
 
                 TextColumn::make('title')
                     ->label('Naslov')

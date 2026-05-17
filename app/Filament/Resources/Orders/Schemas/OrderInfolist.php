@@ -114,7 +114,6 @@ class OrderInfolist
                         Grid::make(12)->schema([
                             ImageEntry::make('buyer.avatar')
                                 ->label('')
-                                ->disk('r2')
                                 ->circular()
                                 ->size(56)
                                 ->columnSpan(3)
@@ -143,7 +142,6 @@ class OrderInfolist
                         Grid::make(12)->schema([
                             ImageEntry::make('seller.avatar')
                                 ->label('')
-                                ->disk('r2')
                                 ->circular()
                                 ->size(56)
                                 ->columnSpan(3)
@@ -173,11 +171,10 @@ class OrderInfolist
                         Grid::make(12)->schema([
                             ImageEntry::make('product.thumbnail')
                                 ->label('')
-                                ->disk('r2')
                                 ->square()
                                 ->size(96)
                                 ->columnSpan(3)
-                                ->state(fn ($record) => $record->product?->images[0] ?? null),
+                                ->state(fn ($record) => $record->product?->images->first()?->url),
                             Grid::make(1)
                                 ->columnSpan(9)
                                 ->schema([

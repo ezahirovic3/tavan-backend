@@ -103,11 +103,10 @@ class ProductReportResource extends Resource
                         Grid::make(12)->schema([
                             \Filament\Infolists\Components\ImageEntry::make('product.thumbnail')
                                 ->label('')
-                                ->disk('r2')
                                 ->square()
                                 ->size(140)
                                 ->columnSpan(4)
-                                ->state(fn ($record) => $record->product?->images[0] ?? null),
+                                ->state(fn ($record) => $record->product?->images->first()?->url),
 
                             Grid::make(1)
                                 ->columnSpan(8)
@@ -149,7 +148,6 @@ class ProductReportResource extends Resource
                         Grid::make(12)->schema([
                             \Filament\Infolists\Components\ImageEntry::make('reporter.avatar')
                                 ->label('')
-                                ->disk('r2')
                                 ->circular()
                                 ->size(56)
                                 ->columnSpan(3)

@@ -68,7 +68,6 @@ class ViewUser extends ViewRecord
                             // Avatar
                             ImageEntry::make('avatar')
                                 ->label('')
-                                ->disk('r2')
                                 ->circular()
                                 ->size(96)
                                 ->columnSpan(2)

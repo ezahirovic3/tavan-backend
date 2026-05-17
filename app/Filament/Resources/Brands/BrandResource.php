@@ -71,7 +71,7 @@ class BrandResource extends Resource
                     ->imageCropAspectRatio('1:1'),
 
                 Grid::make(2)->schema([
-                    Toggle::make('active')
+                    Toggle::make('is_active')
                         ->label('Aktivan')
                         ->default(true)
                         ->onColor('success'),
@@ -116,7 +116,7 @@ class BrandResource extends Resource
                     ->numeric()
                     ->color('gray'),
 
-                ToggleColumn::make('active')
+                ToggleColumn::make('is_active')
                     ->label('Aktivan')
                     ->onColor('success'),
 
@@ -126,7 +126,7 @@ class BrandResource extends Resource
                     ->extraAttributes(['class' => 'w-16']),
             ])
             ->filters([
-                TernaryFilter::make('active')->label('Status')
+                TernaryFilter::make('is_active')->label('Status')
                     ->trueLabel('Samo aktivni')
                     ->falseLabel('Samo neaktivni')
                     ->placeholder('Svi'),

@@ -3,7 +3,7 @@
     <div class="mb-6 flex flex-wrap items-center gap-3 border-b border-neutral-200 dark:border-neutral-800 pb-4">
         <div class="flex items-center gap-3">
             @if ($record->participantOne?->avatar)
-                <img src="{{ \Storage::disk('r2')->url($record->participantOne->avatar) }}"
+                <img src="{{ $record->participantOne->avatar }}"
                      class="h-10 w-10 object-cover ring-1 ring-neutral-200" />
             @else
                 <div class="h-10 w-10 bg-[#0A0A0A] dark:bg-white dark:text-[#0A0A0A] text-white grid place-items-center font-display font-extrabold text-sm">

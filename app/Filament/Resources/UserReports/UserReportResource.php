@@ -104,7 +104,6 @@ class UserReportResource extends Resource
                         Grid::make(12)->schema([
                             \Filament\Infolists\Components\ImageEntry::make('reported.avatar')
                                 ->label('')
-                                ->disk('r2')
                                 ->circular()
                                 ->size(64)
                                 ->columnSpan(3)
@@ -154,7 +153,6 @@ class UserReportResource extends Resource
                         Grid::make(12)->schema([
                             \Filament\Infolists\Components\ImageEntry::make('reporter.avatar')
                                 ->label('')
-                                ->disk('r2')
                                 ->circular()
                                 ->size(64)
                                 ->columnSpan(3)

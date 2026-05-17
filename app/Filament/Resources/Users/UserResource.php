@@ -129,7 +129,6 @@ class UserResource extends Resource
             ->columns([
                 ImageColumn::make('avatar')
                     ->label('')
-                    ->disk('r2')
                     ->circular()
                     ->size(36)
                     ->defaultImageUrl(fn ($record) =>

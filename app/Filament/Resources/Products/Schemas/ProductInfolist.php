@@ -26,9 +26,9 @@ class ProductInfolist
                     ->columnSpan(7)
                     ->compact()
                     ->schema([
-                        ImageEntry::make('images')
+                        ImageEntry::make('hero_image')
                             ->label('')
-                            ->disk('r2')
+                            ->state(fn ($record) => $record->images->first()?->url)
                             ->stacked(false)
                             ->square()
                             ->size(420)
@@ -36,9 +36,9 @@ class ProductInfolist
                             ->extraImgAttributes(['class' => 'object-cover w-full']),
 
                         // Thumbnail strip below hero image
-                        ImageEntry::make('images')
+                        ImageEntry::make('thumbnail_strip')
                             ->label('')
-                            ->disk('r2')
+                            ->state(fn ($record) => $record->images->pluck('url')->toArray())
                             ->stacked(false)
                             ->square()
                             ->size(72)
@@ -121,7 +121,6 @@ class ProductInfolist
                         Grid::make(12)->schema([
                             ImageEntry::make('seller.avatar')
                                 ->label('')
-                                ->disk('r2')
                                 ->circular()
                                 ->size(64)
                                 ->columnSpan(2)
