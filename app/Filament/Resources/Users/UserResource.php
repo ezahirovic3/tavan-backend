@@ -95,7 +95,7 @@ class UserResource extends Resource
                             ->required()
                             ->unique(ignoreRecord: true),
 
-                        TextInput::make('city')->label('Grad')->maxLength(80),
+                        TextInput::make('location')->label('Grad')->maxLength(80),
                     ]),
 
                 Section::make('Role i pravila')

@@ -122,7 +122,7 @@ class ViewUser extends ViewRecord
                                             ->trueColor('danger')
                                             ->falseIcon('heroicon-m-minus-circle')
                                             ->falseColor('gray'),
-                                        TextEntry::make('city')
+                                        TextEntry::make('location')
                                             ->label('Grad')
                                             ->icon('heroicon-m-map-pin')
                                             ->placeholder('—'),
