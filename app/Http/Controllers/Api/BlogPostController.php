@@ -11,7 +11,7 @@ class BlogPostController extends Controller
 {
     public function index(): JsonResponse
     {
-        $posts = BlogPost::published()->get();
+        $posts = BlogPost::published()->with('author')->get();
 
         return response()->json(BlogPostResource::collection($posts)->resolve());
     }
@@ -25,7 +25,7 @@ class BlogPostController extends Controller
 
     public function show(string $slug): JsonResponse
     {
-        $post = BlogPost::published()->where('slug', $slug)->first();
+        $post = BlogPost::published()->with('author')->where('slug', $slug)->first();
 
         if (! $post) {
             return response()->json(['message' => 'Post nije pronađen.'], 404);

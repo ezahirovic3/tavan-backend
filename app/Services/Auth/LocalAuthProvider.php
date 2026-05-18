@@ -3,8 +3,11 @@
 namespace App\Services\Auth;
 
 use App\Contracts\AuthProviderInterface;
+use App\Exceptions\EmailNotVerifiedException;
 use App\Models\User;
+use App\Notifications\EmailVerificationOtpNotification;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class LocalAuthProvider implements AuthProviderInterface
@@ -12,11 +15,17 @@ class LocalAuthProvider implements AuthProviderInterface
     public function register(array $data): array
     {
         $user = User::create($data);
-        $user->sendEmailVerificationNotification();
 
-        $token = $user->createToken('mobile')->plainTextToken;
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-        return ['user' => $user, 'token' => $token];
+        DB::table('email_verification_tokens')->updateOrInsert(
+            ['email' => $user->email],
+            ['token' => Hash::make($otp), 'sent_at' => now(), 'created_at' => now()],
+        );
+
+        $user->notify(new EmailVerificationOtpNotification($otp));
+
+        return ['status' => 'verification_required', 'email' => $user->email];
     }
 
     public function login(string $email, string $password): array
@@ -27,7 +36,10 @@ class LocalAuthProvider implements AuthProviderInterface
             throw new AuthenticationException();
         }
 
-        // Revoke previous mobile tokens so only one active session exists
+        if (! $user->email_verified_at) {
+            throw new EmailNotVerifiedException($user->email);
+        }
+
         $user->tokens()->where('name', 'mobile')->delete();
         $token = $user->createToken('mobile')->plainTextToken;
 

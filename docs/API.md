@@ -1,9 +1,11 @@
-# API Reference
+# Tavan API Reference
 
-Base URL: `https://api.tavan.store/api/v1`  
-Local: `http://localhost/api/v1`
+**Base URL:** `https://api.tavan.store/api/v1`  
+**Local:** `http://localhost/api/v1`
 
-All authenticated routes require: `Authorization: Bearer <firebase_id_token>`
+All authenticated routes require: `Authorization: Bearer <sanctum_token>`
+
+Auto-generated OpenAPI docs (Scramble): `http://localhost/docs/api`
 
 ---
 
@@ -11,16 +13,35 @@ All authenticated routes require: `Authorization: Bearer <firebase_id_token>`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/auth/login` | No | Verify Firebase token, create user if new, return user |
-| GET | `/auth/me` | Yes | Get current authenticated user |
-| DELETE | `/auth/logout` | Yes | Revoke push token for this device |
+| POST | `/auth/register` | No | Register with email + password |
+| POST | `/auth/login` | No | Login with email + password |
+| POST | `/auth/social/google` | No | Social login (Google id_token) |
+| POST | `/auth/social/apple` | No | Social login (Apple identityToken) |
+| POST | `/auth/forgot-password` | No | Request OTP to email |
+| POST | `/auth/verify-reset-otp` | No | Verify OTP, get reset token |
+| POST | `/auth/reset-password` | No | Reset password with token |
+| POST | `/auth/phone/send-otp` | No | Send phone verification OTP |
+| POST | `/auth/phone/verify-otp` | Yes | Verify phone OTP |
+| GET | `/auth/me` | Yes | Get current user |
+| POST | `/auth/logout` | Yes | Revoke Sanctum token |
+| POST | `/auth/change-password` | Yes | Change password |
+
+### POST /auth/register
+```json
+{ "name": "...", "username": "...", "email": "...", "password": "...", "password_confirmation": "..." }
+```
+Response: `{ "data": { "token": "...", "user": { ... } } }`
 
 ### POST /auth/login
-Body:
 ```json
-{ "firebase_token": "..." }
+{ "email": "...", "password": "..." }
 ```
-Response: `{ "data": { user } }`
+Response: `{ "data": { "token": "...", "user": { ... } } }`
+
+### POST /auth/social/{provider}
+Google: `{ "idToken": "..." }`  
+Apple: `{ "identityToken": "...", "givenName": "...", "familyName": "..." }`  
+Response: `{ "data": { "token": "...", "user": { ... } } }`
 
 ---
 
@@ -28,14 +49,24 @@ Response: `{ "data": { user } }`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/users/{id}` | Yes | Get user profile |
-| PATCH | `/users/{id}` | Yes (own) | Update profile (name, bio, avatar, location, phone) |
-| GET | `/users/{id}/preferences` | Yes (own) | Get feed preferences |
-| PUT | `/users/{id}/preferences` | Yes (own) | Save feed preferences |
-| GET | `/users/{id}/addresses` | Yes (own) | List shipping addresses |
-| POST | `/users/{id}/addresses` | Yes (own) | Create address |
-| PATCH | `/users/{id}/addresses/{addressId}` | Yes (own) | Update address |
-| DELETE | `/users/{id}/addresses/{addressId}` | Yes (own) | Delete address |
+| GET | `/users` | No | Search users |
+| GET | `/users/{username}` | No | Get public profile |
+| GET | `/users/{username}/products` | No | Get user's products |
+| GET | `/users/{username}/reviews` | No | Get user's reviews |
+| PATCH | `/users/me` | Yes | Update own profile |
+| DELETE | `/users/me` | Yes | Delete account |
+| POST | `/users/me/avatar` | Yes | Upload avatar (multipart) |
+| GET | `/users/me/preferences` | Yes | Get feed preferences |
+| PATCH | `/users/me/preferences` | Yes | Save feed preferences |
+| GET | `/users/me/notifications` | Yes | Get notification pref |
+| PATCH | `/users/me/notifications` | Yes | Set notification pref |
+| GET | `/users/me/addresses` | Yes | List shipping addresses |
+| POST | `/users/me/addresses` | Yes | Add address |
+| PATCH | `/users/me/addresses/{address}` | Yes | Update address |
+| DELETE | `/users/me/addresses/{address}` | Yes | Delete address |
+| POST | `/users/{user}/block` | Yes | Block user |
+| DELETE | `/users/{user}/block` | Yes | Unblock user |
+| POST | `/users/{user}/report` | Yes | Report user |
 
 ---
 
@@ -43,58 +74,29 @@ Response: `{ "data": { user } }`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/products` | No | List products (paginated, filtered) |
-| POST | `/products` | Yes | Create product |
-| GET | `/products/{id}` | No | Get single product |
-| PATCH | `/products/{id}` | Yes (owner) | Update product |
-| PATCH | `/products/{id}/status` | Yes (owner) | Update product status (draft/active/sold) |
-| DELETE | `/products/{id}` | Yes (owner) | Delete product |
-| POST | `/products/{id}/images` | Yes (owner) | Upload product images |
-| DELETE | `/products/{id}/images/{imageId}` | Yes (owner) | Delete product image |
+| GET | `/products` | No | List/filter products (paginated) |
+| GET | `/products/{product}` | No | Get single product (with seller) |
+| POST | `/products` | Yes | Create product (draft) |
+| PATCH | `/products/{product}` | Yes (owner) | Update product |
+| DELETE | `/products/{product}` | Yes (owner) | Delete product |
+| POST | `/products/{product}/publish` | Yes (owner) | Publish draft → active |
+| POST | `/products/{product}/images` | Yes (owner) | Upload image (multipart) |
+| DELETE | `/products/{product}/images/{image}` | Yes (owner) | Delete image |
+| PATCH | `/products/{product}/images/reorder` | Yes (owner) | Reorder images |
 
 ### GET /products query params
-- `category` — root category key (women/men)
+- `category` — root category key (`women`/`men`)
 - `subcategory` — subcategory key
 - `brand_id` — brand UUID
 - `condition` — condition key
 - `size` — size value
 - `color` — color key
-- `min_price`, `max_price` — decimal
-- `location` — city name
-- `allows_trades` — boolean
-- `allows_offers` — boolean
-- `sort` — `newest` | `price_asc` | `price_desc`
+- `material` — material key
+- `price_min` / `price_max`
+- `sort` — `newest` (default) | `price_asc` | `price_desc`
 - `page`, `per_page`
-
----
-
-## Feed
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/feed` | Yes | Personalized feed based on preferences |
-| GET | `/feed/suggested` | Yes | Suggested products (no preferences needed) |
-
----
-
-## Search
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/search/products` | No | Search products by query |
-| GET | `/search/users` | No | Search users by username/name |
-
-Query params: `q` (search term), `page`, `per_page`
-
----
-
-## Catalog (admin-managed, read-only for mobile)
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/catalog/brands` | No | List active brands |
-| GET | `/catalog/categories` | No | Category tree |
-| GET | `/catalog/shipping-options` | No | Shipping options |
+- `seller_id` — filter by seller
+- `query` — text search
 
 ---
 
@@ -102,39 +104,20 @@ Query params: `q` (search term), `page`, `per_page`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/wishlist` | Yes | Get current user's wishlist |
-| POST | `/wishlist/{productId}/toggle` | Yes | Add or remove product from wishlist |
+| GET | `/wishlist` | Yes | Get wishlisted product IDs |
+| POST | `/wishlist/{product}/toggle` | Yes | Toggle wishlist (on/off) |
+| POST | `/wishlist/{product}` | Yes | Add to wishlist |
+| DELETE | `/wishlist/{product}` | Yes | Remove from wishlist |
 
 ---
 
-## Conversations
+## Catalog
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/conversations` | Yes | List user's conversations |
-| POST | `/conversations` | Yes | Find or create conversation with another user |
-| GET | `/conversations/{id}` | Yes | Get single conversation |
-| POST | `/conversations/{id}/read` | Yes | Mark conversation as read |
+| GET | `/brands` | No | List all brands |
 
-### POST /conversations body
-```json
-{ "other_user_id": "...", "product_id": "..." }
-```
-
----
-
-## Messages
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/conversations/{id}/messages` | Yes | Get messages (paginated) |
-| POST | `/conversations/{id}/messages` | Yes | Send text message |
-| GET | `/messages/unread-count` | Yes | Get total unread count |
-
-### POST message body
-```json
-{ "body": "Hello!" }
-```
+> **Note:** Categories and shipping/delivery options are defined statically on the mobile client and are not served from the API.
 
 ---
 
@@ -142,20 +125,15 @@ Query params: `q` (search term), `page`, `per_page`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/offers/{id}` | Yes | Get single offer |
-| POST | `/offers` | Yes | Create offer (buyer) |
-| POST | `/offers/{id}/accept` | Yes (seller) | Accept offer → auto-creates order |
-| POST | `/offers/{id}/decline` | Yes (seller) | Decline offer |
-| POST | `/offers/{id}/counter` | Yes (seller) | Counter offer |
-| DELETE | `/offers/{id}` | Yes (buyer) | Cancel offer |
+| POST | `/offers` | Yes | Create offer |
+| GET | `/offers/{offer}` | Yes | Get offer |
+| POST | `/offers/{offer}/accept` | Yes (seller) | Accept offer (auto-creates order) |
+| POST | `/offers/{offer}/decline` | Yes (seller) | Decline offer |
+| POST | `/offers/{offer}/counter` | Yes (seller) | Counter offer |
 
-### POST /offers body
+### POST /offers
 ```json
-{
-  "product_id": "...",
-  "offered_price": 25.00,
-  "message": "Would you take 25?"
-}
+{ "product_id": "...", "offered_price": 25.00, "conversation_id": "..." }
 ```
 
 ---
@@ -164,19 +142,11 @@ Query params: `q` (search term), `page`, `per_page`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/trades/{id}` | Yes | Get single trade |
-| POST | `/trades` | Yes | Create trade proposal (buyer) |
-| POST | `/trades/{id}/accept` | Yes (seller) | Accept trade |
-| POST | `/trades/{id}/decline` | Yes (seller) | Decline trade |
-
-### POST /trades body
-```json
-{
-  "product_id": "...",
-  "offered_product_id": "...",
-  "message": "Want to trade?"
-}
-```
+| POST | `/trades` | Yes | Create trade proposal |
+| GET | `/trades/{trade}` | Yes | Get trade |
+| POST | `/trades/{trade}/accept` | Yes (seller) | Accept trade |
+| POST | `/trades/{trade}/decline` | Yes (seller) | Decline trade |
+| POST | `/trades/{trade}/counter` | Yes (seller) | Counter trade |
 
 ---
 
@@ -184,30 +154,19 @@ Query params: `q` (search term), `page`, `per_page`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/orders` | Yes | List user's orders (as buyer or seller) |
-| GET | `/orders/{id}` | Yes | Get single order |
-| POST | `/orders` | Yes | Create order (direct purchase) |
-| PATCH | `/orders/{id}/status` | Yes (seller) | Update order status |
+| GET | `/orders` | Yes | List orders (buyer or seller) |
+| POST | `/orders` | Yes | Create order (direct buy) |
+| GET | `/orders/{order}` | Yes | Get order (with product) |
+| POST | `/orders/{order}/accept` | Yes (seller) | Accept order |
+| POST | `/orders/{order}/ship` | Yes (seller) | Mark shipped |
+| POST | `/orders/{order}/deliver` | Yes (seller) | Mark delivered |
+| POST | `/orders/{order}/complete` | Yes (buyer) | Mark completed |
+| POST | `/orders/{order}/decline` | Yes (seller) | Decline order |
 
-### POST /orders body
-```json
-{
-  "product_id": "...",
-  "offer_id": null,
-  "shipping_name": "...",
-  "shipping_street": "...",
-  "shipping_city": "...",
-  "shipping_phone": "...",
-  "payment_method": "cash_on_delivery",
-  "delivery_method": "standard"
-}
-```
-
-### PATCH /orders/{id}/status body
-```json
-{ "status": "accepted" }
-```
-Valid transitions: `pending → accepted | declined`, `accepted → shipped`, `shipped → delivered`, `delivered → completed`
+### GET /orders query params
+- `role` — `buyer` | `seller`
+- `status` — filter by status
+- `page`, `per_page`
 
 ---
 
@@ -215,21 +174,35 @@ Valid transitions: `pending → accepted | declined`, `accepted → shipped`, `s
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/users/{id}/reviews` | No | Get reviews for a user |
-| POST | `/orders/{id}/review` | Yes | Leave review for an order |
-
-### POST review body
-```json
-{ "rating": 5, "comment": "Odlično pakovanje!" }
-```
+| GET | `/users/{username}/reviews` | No | List user's reviews |
+| GET | `/reviews/{review}` | Yes | Get single review |
+| POST | `/orders/{order}/reviews` | Yes | Create review for order |
 
 ---
 
-## Support
+## Conversations & Messages
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/support` | No | Submit support inquiry |
+| GET | `/conversations` | Yes | List conversations |
+| GET | `/conversations/unread` | Yes | Unread count |
+| POST | `/conversations` | Yes | Find or create conversation |
+| GET | `/conversations/{conversation}` | Yes | Get conversation with messages |
+| GET | `/conversations/{conversation}/info` | Yes | Get conversation metadata |
+| POST | `/conversations/{conversation}/messages` | Yes | Send message |
+| POST | `/conversations/{conversation}/read` | Yes | Mark as read |
+
+### POST /conversations
+```json
+{ "user_id": "...", "product_id": "..." }
+```
+Returns existing conversation if one already exists between the two users.
+
+### POST /conversations/{conversation}/messages
+```json
+{ "type": "text", "body": "..." }
+```
+System message types (`system_offer`, `system_trade`, etc.) are created automatically by their respective service actions — not sent by the mobile app directly.
 
 ---
 
@@ -237,19 +210,22 @@ Valid transitions: `pending → accepted | declined`, `accepted → shipped`, `s
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/push-tokens` | Yes | Register Expo push token |
-| DELETE | `/push-tokens/{token}` | Yes | Unregister token (logout) |
+| POST | `/push-tokens` | Yes | Register push token |
+| DELETE | `/push-tokens` | Yes | Remove push token |
+
+### POST /push-tokens
+```json
+{ "token": "ExponentPushToken[...]", "platform": "ios" }
+```
 
 ---
 
-## WebSocket Events (Laravel Reverb)
+## Misc
 
-Channels are private, authenticated via `Authorization` header.
-
-| Channel | Event | Triggered by |
-|---------|-------|-------------|
-| `private-user.{userId}` | `MessageSent` | New message in any conversation |
-| `private-user.{userId}` | `OfferUpdated` | Offer status change |
-| `private-user.{userId}` | `TradeUpdated` | Trade status change |
-| `private-user.{userId}` | `OrderUpdated` | Order status change |
-| `private-conversation.{conversationId}` | `MessageSent` | New message (for open chat screens) |
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/support` | Yes | Submit support inquiry |
+| POST | `/brand-suggestions` | Yes | Suggest a new brand |
+| GET | `/posts` | No | Blog posts list |
+| GET | `/posts/slugs` | No | All blog post slugs |
+| GET | `/posts/{slug}` | No | Single blog post |

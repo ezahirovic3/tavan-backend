@@ -30,7 +30,7 @@ class UserResource extends JsonResource
             'total_reviews'             => $this->total_reviews,
             'item_count'                => $this->when(isset($this->item_count), fn () => (int) $this->item_count),
             'last_active_at'            => $this->last_active_at?->toISOString(),
-            'created_at'                => $this->created_at->toISOString(),
+            'created_at'                => $this->created_at?->toISOString(),
         ];
     }
 }

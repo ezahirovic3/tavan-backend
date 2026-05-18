@@ -16,12 +16,28 @@ class Conversation extends Model
         'participant_one_id',
         'participant_two_id',
         'product_id',
+        'type',
+        'allow_replies',
+        'status',
         'last_message_at',
     ];
 
     protected function casts(): array
     {
-        return ['last_message_at' => 'datetime'];
+        return [
+            'last_message_at' => 'datetime',
+            'allow_replies'   => 'boolean',
+        ];
+    }
+
+    public function isAdminSupport(): bool
+    {
+        return $this->type === 'admin_support';
+    }
+
+    public function isOpen(): bool
+    {
+        return $this->status === 'open';
     }
 
     public function participantOne(): BelongsTo

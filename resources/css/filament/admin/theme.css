@@ -1,0 +1,392 @@
+@import '/vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../app/Filament/**/*.php';
+@source '../../../resources/views/filament/**/*.blade.php';
+@source '../../../vendor/filament/**/*.blade.php';
+
+@theme {
+    --font-display: 'Archivo Narrow', 'Archivo', 'Inter Tight', system-ui, sans-serif;
+}
+
+/* ---------------------------------------------------------------------------
+   Tavan brand tokens
+   Brand constants (pink, green, display face, radii) are mode-independent.
+   Surface tokens (paper, ink, line, mute) flip between light and dark.
+   --------------------------------------------------------------------------- */
+:root {
+    /* Brand — never changes */
+    --tavan-pink:        #FB5C90;
+    --tavan-pink-ink:    #C4275C;
+    --tavan-green:       #1D781C;
+
+    /* Ink scale — never changes (sidebar is always dark) */
+    --tavan-ink:         #0A0A0A;
+    --tavan-ink-2:       #161616;
+    --tavan-ink-3:       #232323;
+
+    /* Sharp editorial radii */
+    --tavan-radius-sm:   2px;
+    --tavan-radius-md:   4px;
+
+    /* Condensed display face for headings, mirrors the wordmark */
+    --tavan-display:     'Archivo Narrow', 'Archivo', 'Inter Tight', system-ui, sans-serif;
+
+    /* Surface tokens — LIGHT mode defaults */
+    --tavan-paper:       #FAFAFA;  /* page background */
+    --tavan-surface:     #FFFFFF;  /* cards, sections, inputs */
+    --tavan-surface-2:   #F5F5F5;  /* subtle / hovered rows */
+    --tavan-text:        #0A0A0A;
+    --tavan-text-2:      #404040;
+    --tavan-mute:        #737373;
+    --tavan-line:        #E5E5E5;
+    --tavan-line-strong: #D4D4D4;
+}
+
+/* Surface tokens — DARK mode overrides */
+.dark {
+    --tavan-paper:       #0A0A0A;  /* page bg matches sidebar so seams disappear */
+    --tavan-surface:     #161616;  /* cards/sections lift one step off paper */
+    --tavan-surface-2:   #1F1F1F;  /* hovered rows */
+    --tavan-text:        #FAFAFA;
+    --tavan-text-2:      #D4D4D4;
+    --tavan-mute:        #A3A3A3;
+    --tavan-line:        #262626;
+    --tavan-line-strong: #383838;
+}
+
+/* ---------------------------------------------------------------------------
+   Type — match the wordmark's confident, condensed energy
+   --------------------------------------------------------------------------- */
+.fi-header-heading,
+.fi-section-header-heading,
+.fi-page-header-heading,
+.fi-modal-heading,
+.fi-stats-overview-stat-value {
+    font-family: var(--tavan-display);
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    text-transform: none;
+}
+
+.fi-page-header-heading,
+.fi-header-heading {
+    font-size: 1.75rem;
+    line-height: 1.05;
+}
+
+/* Section, page, button, badge corners — sharp. */
+.fi-btn,
+.fi-badge,
+.fi-section,
+.fi-input,
+.fi-select-input,
+.fi-fo-textarea,
+.fi-modal-window,
+.fi-card,
+.fi-ta-cell,
+.fi-dropdown-panel {
+    border-radius: var(--tavan-radius-sm) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Sidebar — follows the theme.
+     Light mode: paper surface, dark ink text, hairline border.
+     Dark mode:  ink-black, soft-white text, low-contrast border.
+   The pink active-indicator bar is the one constant — it lives in both modes.
+   --------------------------------------------------------------------------- */
+.fi-sidebar {
+    background: var(--tavan-surface);
+    border-right: 1px solid var(--tavan-line);
+    color: var(--tavan-text-2);
+}
+
+.fi-sidebar-header {
+    background: inherit;
+    border-bottom: 1px solid var(--tavan-line);
+    padding-block: 1.25rem;
+}
+
+/* Wordmark — rendered as brandName text so it picks up currentColor. */
+.fi-sidebar-brand .fi-logo,
+.fi-sidebar-brand a > span {
+    color: var(--tavan-text);
+    font-family: var(--tavan-display);
+    font-weight: 900;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+}
+
+.fi-sidebar-group-label {
+    color: var(--tavan-mute);
+    font-family: var(--tavan-display);
+    font-weight: 700;
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding-inline: 1rem;
+    padding-block: 0.75rem 0.375rem;
+}
+
+.fi-sidebar-item-button {
+    color: var(--tavan-text-2);
+    border-radius: var(--tavan-radius-sm);
+    padding-block: 0.5rem;
+    transition: background-color 120ms ease, color 120ms ease;
+}
+
+.fi-sidebar-item-button:hover {
+    background: var(--tavan-surface-2);
+    color: var(--tavan-text);
+}
+
+.fi-sidebar-item-active .fi-sidebar-item-button {
+    background: var(--tavan-surface-2);
+    color: var(--tavan-text);
+    position: relative;
+}
+
+/* The pink active-indicator bar — the only living colour in the sidebar. */
+.fi-sidebar-item-active .fi-sidebar-item-button::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.25rem;
+    bottom: 0.25rem;
+    width: 3px;
+    background: var(--tavan-pink);
+}
+
+.fi-sidebar-item-icon { opacity: 0.7; }
+.fi-sidebar-item-active .fi-sidebar-item-icon,
+.fi-sidebar-item-button:hover .fi-sidebar-item-icon { color: currentColor; opacity: 1; }
+
+.fi-sidebar-item-badge {
+    background: var(--tavan-pink);
+    color: #fff;
+    font-weight: 700;
+    border-radius: var(--tavan-radius-sm);
+}
+
+/* Dark-mode sidebar overrides — ink scale, lighter text. */
+.dark .fi-sidebar {
+    background: var(--tavan-ink);
+    border-right-color: var(--tavan-ink-3);
+    color: rgba(255,255,255,0.78);
+}
+.dark .fi-sidebar-header {
+    border-bottom-color: var(--tavan-ink-3);
+}
+.dark .fi-sidebar-brand .fi-logo,
+.dark .fi-sidebar-brand a > span {
+    color: #fff;
+}
+.dark .fi-sidebar-group-label {
+    color: rgba(255,255,255,0.42);
+}
+.dark .fi-sidebar-item-button {
+    color: rgba(255,255,255,0.72);
+}
+.dark .fi-sidebar-item-button:hover,
+.dark .fi-sidebar-item-active .fi-sidebar-item-button {
+    background: var(--tavan-ink-2);
+    color: #fff;
+}
+
+/* ---------------------------------------------------------------------------
+   Topbar — light = white over pink-line, dark = ink over ink-3
+   --------------------------------------------------------------------------- */
+.fi-topbar {
+    background: var(--tavan-surface);
+    border-bottom: 1px solid var(--tavan-line);
+}
+
+.dark .fi-topbar {
+    background: var(--tavan-ink);
+    border-bottom: 1px solid var(--tavan-ink-3);
+}
+
+.dark .fi-topbar .fi-icon-btn,
+.dark .fi-topbar .fi-breadcrumbs-item,
+.dark .fi-topbar .fi-user-menu-trigger {
+    color: rgba(255,255,255,0.78);
+}
+.dark .fi-topbar .fi-icon-btn:hover {
+    background: var(--tavan-ink-2);
+    color: #fff;
+}
+
+/* ---------------------------------------------------------------------------
+   Surfaces — cards, sections, modals, dropdowns.
+   Drive both modes off the same tokens so the ink scale is consistent.
+   --------------------------------------------------------------------------- */
+.fi-section,
+.fi-card,
+.fi-wi-stats-overview-stat,
+.fi-modal-window,
+.fi-dropdown-panel {
+    background: var(--tavan-surface);
+    border-color: var(--tavan-line);
+}
+
+/* Section internal dividers (header / footer borders) */
+.fi-section-header,
+.fi-section-footer {
+    border-color: var(--tavan-line);
+}
+
+.dark .fi-section-content-ctn,
+.dark .fi-section-header,
+.dark .fi-section-footer {
+    background: transparent;
+}
+
+/* Inputs — sharp, mode-aware */
+.fi-input,
+.fi-select-input,
+.fi-fo-textarea {
+    background: var(--tavan-surface);
+    border-color: var(--tavan-line-strong);
+    color: var(--tavan-text);
+}
+
+.dark .fi-input,
+.dark .fi-select-input,
+.dark .fi-fo-textarea {
+    background: var(--tavan-ink-2);
+}
+
+.fi-input:focus,
+.fi-select-input:focus,
+.fi-fo-textarea:focus {
+    border-color: var(--tavan-pink);
+    box-shadow: 0 0 0 1px var(--tavan-pink);
+}
+
+/* ---------------------------------------------------------------------------
+   Tables — dense but breathable, hairlines only
+   --------------------------------------------------------------------------- */
+.fi-ta {
+    --fi-ta-row-border-color: var(--tavan-line);
+}
+
+.fi-ta-table thead th {
+    font-family: var(--tavan-display);
+    font-weight: 700;
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--tavan-mute);
+    background: transparent;
+    border-bottom: 1px solid var(--tavan-line-strong);
+    padding-block: 0.625rem;
+}
+
+.fi-ta-table tbody tr {
+    border-bottom: 1px solid var(--tavan-line);
+}
+
+.fi-ta-table tbody tr:hover {
+    background: rgba(251, 92, 144, 0.025);
+}
+
+.dark .fi-ta-table tbody tr:hover {
+    background: var(--tavan-surface-2);
+}
+
+/* The pink "primary KPI" card — only one widget gets this treatment. */
+.fi-wi-stats-overview-stat[data-tavan-primary="true"] {
+    background: var(--tavan-pink);
+    color: #fff;
+    border-color: var(--tavan-pink);
+}
+.fi-wi-stats-overview-stat[data-tavan-primary="true"] .fi-wi-stats-overview-stat-label,
+.fi-wi-stats-overview-stat[data-tavan-primary="true"] .fi-wi-stats-overview-stat-description {
+    color: rgba(255,255,255,0.85);
+}
+.fi-wi-stats-overview-stat[data-tavan-primary="true"] .fi-wi-stats-overview-stat-value {
+    color: #fff;
+}
+
+/* Buttons — sharp, confident, no soft-blue links. */
+.fi-btn-color-primary {
+    background: var(--tavan-pink);
+    border-color: var(--tavan-pink);
+    font-weight: 600;
+    letter-spacing: 0.005em;
+}
+.fi-btn-color-primary:hover { background: var(--tavan-pink-ink); border-color: var(--tavan-pink-ink); }
+
+/* Status badges — green only for the "alive" lane. */
+.fi-badge-color-success { background: var(--tavan-green); color: #fff; }
+
+/* ---------------------------------------------------------------------------
+   Page surface — the canvas behind every page.
+   Token-driven so dark mode flips automatically.
+   --------------------------------------------------------------------------- */
+.fi-main,
+.fi-body,
+.fi-layout {
+    background: var(--tavan-paper);
+    color: var(--tavan-text);
+}
+.fi-main-ctn > .fi-page { padding-block: 1.75rem; }
+
+/* Generic body text colour in dark mode (Filament defaults to gray-50 which is
+   slightly cooler than our neutral). */
+.dark body { color: var(--tavan-text); }
+
+/* ---------------------------------------------------------------------------
+   Sidebar collapse button + nested icon buttons — track sidebar mode.
+   --------------------------------------------------------------------------- */
+.fi-sidebar-collapse-button,
+.fi-sidebar .fi-icon-btn {
+    color: var(--tavan-mute);
+}
+.fi-sidebar-collapse-button:hover,
+.fi-sidebar .fi-icon-btn:hover {
+    background: var(--tavan-surface-2);
+    color: var(--tavan-text);
+}
+.dark .fi-sidebar-collapse-button,
+.dark .fi-sidebar .fi-icon-btn {
+    color: rgba(255,255,255,0.65);
+}
+.dark .fi-sidebar-collapse-button:hover,
+.dark .fi-sidebar .fi-icon-btn:hover {
+    background: var(--tavan-ink-2);
+    color: #fff;
+}
+
+/* ---------------------------------------------------------------------------
+   Links inside content — pink, not Filament's default blue
+   --------------------------------------------------------------------------- */
+.fi-prose a,
+.fi-link-color-primary {
+    color: var(--tavan-pink-ink);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+}
+.fi-prose a:hover { color: var(--tavan-pink); }
+
+/* ---------------------------------------------------------------------------
+   Scrollbars — quiet hairlines, mode-aware
+   --------------------------------------------------------------------------- */
+.fi-body ::-webkit-scrollbar,
+.fi-main ::-webkit-scrollbar { width: 10px; height: 10px; }
+.fi-body ::-webkit-scrollbar-thumb,
+.fi-main ::-webkit-scrollbar-thumb {
+    background: var(--tavan-line-strong);
+    border: 2px solid var(--tavan-paper);
+    border-radius: 999px;
+}
+.fi-body ::-webkit-scrollbar-track,
+.fi-main ::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------------------------------------------------------------------------
+   Default focus ring across the panel — pink, never browser-blue
+   --------------------------------------------------------------------------- */
+*:focus-visible {
+    outline: 2px solid var(--tavan-pink);
+    outline-offset: 2px;
+}

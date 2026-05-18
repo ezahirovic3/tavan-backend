@@ -29,8 +29,9 @@ class OrderResource extends JsonResource
             'buyer'           => new UserResource($this->whenLoaded('buyer')),
             'seller'          => new UserResource($this->whenLoaded('seller')),
             'offer'           => new OfferResource($this->whenLoaded('offer')),
+            'trade'           => new TradeResource($this->whenLoaded('trade')),
             'reviews'         => ReviewResource::collection($this->whenLoaded('reviews')),
-            'created_at'      => $this->created_at->toISOString(),
+            'created_at'      => $this->created_at?->toISOString(),
         ];
     }
 }

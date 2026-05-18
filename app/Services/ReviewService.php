@@ -22,6 +22,7 @@ class ReviewService
                 'rating'      => $data['rating'],
                 'comment'     => $data['comment'] ?? null,
                 'role'        => $role,
+                'created_at'  => now(),
             ]);
 
             $this->recalculateRating($review->reviewed_id);

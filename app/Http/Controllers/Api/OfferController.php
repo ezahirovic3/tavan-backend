@@ -7,6 +7,7 @@ use App\Http\Requests\Offer\AcceptOfferRequest;
 use App\Http\Requests\Offer\CounterOfferRequest;
 use App\Http\Requests\Offer\StoreOfferRequest;
 use App\Http\Resources\OfferResource;
+use App\Jobs\SendReminderNotificationJob;
 use App\Models\Offer;
 use App\Models\Product;
 use App\Services\ConversationService;
@@ -50,17 +51,20 @@ class OfferController extends Controller
             $product->seller_id,
             'Nova ponuda — ' . $product->title,
             $request->user()->name . ' nudi ' . number_format($request->offered_price, 2) . ' KM',
-            ['type' => 'offer', 'offerId' => $offer->id],
+            ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id],
         );
 
-        return response()->json(['data' => new OfferResource($offer->load('product', 'buyer', 'seller'))], 201);
+        SendReminderNotificationJob::dispatch('offer', $offer->id, 'pending_seller')
+            ->delay(now()->addHours(24));
+
+        return response()->json(['data' => new OfferResource($offer->load('product.images', 'buyer', 'seller'))], 201);
     }
 
     public function show(Request $request, Offer $offer): JsonResponse
     {
         $this->authorize('view', $offer);
 
-        return response()->json(['data' => new OfferResource($offer->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OfferResource($offer->load('product.images', 'buyer', 'seller'))]);
     }
 
     public function accept(AcceptOfferRequest $request, Offer $offer): JsonResponse
@@ -73,16 +77,16 @@ class OfferController extends Controller
         $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
             'offerId' => $offer->id,
             'status'  => 'accepted',
-        ]);
+        ], '@' . $request->user()->username . ' je prihvatio/la ponudu.');
 
         $this->push->sendToUser(
             $offer->buyer_id,
             'Ponuda prihvaćena! 🎉',
-            'Prodavač je prihvatio vašu ponudu. Nastavi na plaćanje.',
-            ['type' => 'offer', 'offerId' => $offer->id, 'status' => 'accepted'],
+            '@' . $request->user()->username . ' je prihvatio/la vašu ponudu. Nastavi na plaćanje.',
+            ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'accepted'],
         );
 
-        return response()->json(['data' => new OfferResource($offer->fresh()->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OfferResource($offer->fresh()->load('product.images', 'buyer', 'seller'))]);
     }
 
     public function decline(Request $request, Offer $offer): JsonResponse
@@ -92,16 +96,19 @@ class OfferController extends Controller
         $offer->update(['status' => 'declined']);
 
         $conversation = $this->conversations->findOrCreate($offer->buyer_id, $offer->seller_id);
-        $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', ['offerId' => $offer->id, 'status' => 'declined']);
+        $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_status', [
+            'offerId' => $offer->id,
+            'status'  => 'declined',
+        ], '@' . $request->user()->username . ' je odbio/la ponudu.');
 
         $this->push->sendToUser(
             $offer->buyer_id,
             'Ponuda odbijena',
-            'Prodavač je odbio vašu ponudu.',
-            ['type' => 'offer', 'offerId' => $offer->id, 'status' => 'declined'],
+            '@' . $request->user()->username . ' je odbio/la vašu ponudu.',
+            ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'declined'],
         );
 
-        return response()->json(['data' => new OfferResource($offer->fresh()->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OfferResource($offer->fresh()->load('product.images', 'buyer', 'seller'))]);
     }
 
     public function counter(CounterOfferRequest $request, Offer $offer): JsonResponse
@@ -114,15 +121,18 @@ class OfferController extends Controller
         ]);
 
         $conversation = $this->conversations->findOrCreate($offer->buyer_id, $offer->seller_id);
-        $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_offer', ['offerId' => $offer->id, 'status' => 'countered']);
+        $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_offer', ['offerId' => $offer->id, 'status' => 'countered'], '@' . $request->user()->username . ' je predložio/la kontra-ponudu.');
 
         $this->push->sendToUser(
             $offer->buyer_id,
             'Kontra-ponuda',
-            'Prodavač je ponudio ' . number_format($request->counter_price, 2) . ' KM.',
-            ['type' => 'offer', 'offerId' => $offer->id, 'status' => 'countered'],
+            '@' . $request->user()->username . ' nudi ' . number_format($request->counter_price, 2) . ' KM.',
+            ['type' => 'offer', 'offerId' => $offer->id, 'conversationId' => $conversation->id, 'status' => 'countered'],
         );
 
-        return response()->json(['data' => new OfferResource($offer->fresh()->load('product', 'buyer', 'seller'))]);
+        SendReminderNotificationJob::dispatch('offer', $offer->id, 'countered_buyer')
+            ->delay(now()->addHours(24));
+
+        return response()->json(['data' => new OfferResource($offer->fresh()->load('product.images', 'buyer', 'seller'))]);
     }
 }

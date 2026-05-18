@@ -20,6 +20,19 @@ class ReviewController extends Controller
         private readonly PushNotificationService $push,
     ) {}
 
+    public function show(Request $request, Review $review): JsonResponse
+    {
+        $user = $request->user();
+
+        abort_if(
+            $user->id !== $review->reviewer_id && $user->id !== $review->reviewed_id,
+            403,
+            'Nemate pristup ovoj recenziji.'
+        );
+
+        return response()->json(['data' => new ReviewResource($review->load('reviewer', 'reviewed'))]);
+    }
+
     public function store(StoreReviewRequest $request, Order $order): JsonResponse
     {
         $user = $request->user();

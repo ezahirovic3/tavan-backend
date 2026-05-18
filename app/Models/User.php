@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -10,10 +11,30 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Activitylog\Support\LogOptions;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
 
-class User extends Authenticatable implements MustVerifyEmail
+class User extends Authenticatable implements FilamentUser
 {
-    use HasApiTokens, HasFactory, HasUlids, Notifiable;
+    use HasApiTokens, HasFactory, HasUlids, LogsActivity, Notifiable;
+
+    /** Memoized block list — native PHP property so Eloquent doesn't treat it as a DB attribute. */
+    protected ?array $cachedBlockedUserIds = null;
+
+    protected static function booting(): void
+    {
+        static::creating(function (self $user) {
+            $user->listings_require_review ??= config('tavan.listings_require_review');
+        });
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'email', 'role', 'is_verified', 'listings_require_review'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     protected $fillable = [
         'name',
@@ -24,8 +45,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'location',
         'bio',
         'phone',
+        'email_verified_at',
         'phone_verified_at',
         'is_verified',
+        'role',
         'profile_setup_done',
         'feed_setup_done',
         'first_listing_coach_seen',
@@ -34,6 +57,10 @@ class User extends Authenticatable implements MustVerifyEmail
         'rating',
         'total_reviews',
         'last_active_at',
+        'google_id',
+        'apple_id',
+        'listings_require_review',
+        'is_system',
     ];
 
     protected $hidden = [
@@ -52,9 +79,26 @@ class User extends Authenticatable implements MustVerifyEmail
             'feed_setup_done'           => 'boolean',
             'first_listing_coach_seen'  => 'boolean',
             'first_draft_coach_seen'    => 'boolean',
-            'notifications_enabled'     => 'boolean',
+            'notifications_enabled'       => 'boolean',
+            'listings_require_review'    => 'boolean',
+            'is_system'                  => 'boolean',
             'rating'            => 'decimal:2',
         ];
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    public function isAdmin(): bool
+    {
+        return in_array($this->role, ['admin', 'super_admin']);
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->isAdmin();
     }
 
     public function products(): HasMany
@@ -80,5 +124,53 @@ class User extends Authenticatable implements MustVerifyEmail
     public function preference(): HasOne
     {
         return $this->hasOne(UserPreference::class);
+    }
+
+    public function brandSuggestions(): HasMany
+    {
+        return $this->hasMany(BrandSuggestion::class);
+    }
+
+    public function ordersAsBuyer(): HasMany
+    {
+        return $this->hasMany(Order::class, 'buyer_id');
+    }
+
+    public function ordersAsSeller(): HasMany
+    {
+        return $this->hasMany(Order::class, 'seller_id');
+    }
+
+    public function blocks(): HasMany
+    {
+        return $this->hasMany(UserBlock::class, 'blocker_id');
+    }
+
+    public function blocksMade(): HasMany
+    {
+        return $this->hasMany(UserBlock::class, 'blocker_id');
+    }
+
+    /**
+     * Returns all user IDs that are in a block relationship with this user —
+     * either this user blocked them, or they blocked this user.
+     * Used to filter products, conversations, and profiles.
+     *
+     * Memoized per model instance so multiple calls within the same request
+     * only hit the DB once.
+     */
+    public function blockedUserIds(): array
+    {
+        if ($this->cachedBlockedUserIds !== null) {
+            return $this->cachedBlockedUserIds;
+        }
+
+        $this->cachedBlockedUserIds = UserBlock::where('blocker_id', $this->id)
+            ->orWhere('blocked_id', $this->id)
+            ->get()
+            ->map(fn ($b) => $b->blocker_id === $this->id ? $b->blocked_id : $b->blocker_id)
+            ->toArray();
+
+        return $this->cachedBlockedUserIds;
     }
 }

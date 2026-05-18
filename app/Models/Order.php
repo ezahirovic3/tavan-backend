@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Order extends Model
 {
-    use HasFactory, HasUlids;
+    use HasFactory, HasUlids, SoftDeletes;
 
     protected $fillable = [
         'order_number',
@@ -18,6 +20,7 @@ class Order extends Model
         'seller_id',
         'product_id',
         'offer_id',
+        'trade_id',
         'subtotal',
         'discount',
         'shipping_cost',
@@ -59,6 +62,11 @@ class Order extends Model
     public function offer(): BelongsTo
     {
         return $this->belongsTo(Offer::class);
+    }
+
+    public function trade(): BelongsTo
+    {
+        return $this->belongsTo(Trade::class);
     }
 
     public function reviews(): HasMany

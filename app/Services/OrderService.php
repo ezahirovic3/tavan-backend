@@ -6,6 +6,7 @@ use App\Models\Offer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ShippingOption;
+use App\Models\Trade;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -14,7 +15,7 @@ class OrderService
     public function createDirect(User $buyer, Product $product, array $data): Order
     {
         return DB::transaction(function () use ($buyer, $product, $data) {
-            $shippingCost = $this->resolveShippingCost($product->shipping_size);
+            $shippingCost = $this->resolveShippingCost($product, $data['delivery_method'] ?? 'delivery');
 
             // Apply offer discount if an accepted offer is referenced
             $offerId  = $data['offer_id'] ?? null;
@@ -42,6 +43,10 @@ class OrderService
                 'shipping_phone'  => $data['shipping_phone'] ?? null,
             ]);
 
+            if ($offer) {
+                $offer->update(['status' => 'ordered']);
+            }
+
             // Reserved = buyer committed, but seller hasn't confirmed yet
             $product->update(['status' => 'reserved']);
 
@@ -53,7 +58,7 @@ class OrderService
     {
         return DB::transaction(function () use ($offer, $shippingData) {
             $product      = $offer->product;
-            $shippingCost = $this->resolveShippingCost($product->shipping_size);
+            $shippingCost = $this->resolveShippingCost($product, $shippingData['delivery_method'] ?? 'delivery');
             $subtotal     = $product->price;
             $discount     = max(0, $subtotal - $offer->offered_price);
 
@@ -76,16 +81,56 @@ class OrderService
                 'shipping_phone'  => $shippingData['shipping_phone'],
             ]);
 
-            $offer->update(['status' => 'accepted']);
+            $offer->update(['status' => 'ordered']);
             $product->update(['status' => 'reserved']);
 
             return $order;
         });
     }
 
-    private function resolveShippingCost(string $size): float
+    public function createFromTrade(Trade $trade): Order
     {
-        $option = ShippingOption::where('size', $size)->where('is_active', true)->first();
+        return DB::transaction(function () use ($trade) {
+            $product = $trade->product;
+
+            $order = Order::create([
+                'order_number'    => $this->generateOrderNumber(),
+                'buyer_id'        => $trade->buyer_id,
+                'seller_id'       => $trade->seller_id,
+                'product_id'      => $product->id,
+                'trade_id'        => $trade->id,
+                'subtotal'        => 0,
+                'discount'        => 0,
+                'shipping_cost'   => 0,
+                'total'           => 0,
+                'payment_method'  => 'trade',
+                'delivery_method' => 'pickup',
+                'status'          => 'accepted',
+            ]);
+
+            // Reserve both products until the trade is completed
+            Product::whereIn('id', [$trade->product_id, $trade->offered_product_id])
+                ->update(['status' => 'reserved']);
+
+            return $order;
+        });
+    }
+
+    private function resolveShippingCost(Product $product, string $deliveryMethod): float
+    {
+        if ($deliveryMethod === 'pickup') {
+            return 0.0;
+        }
+
+        if ($product->free_shipping) {
+            return 0.0;
+        }
+
+        if ($product->exact_shipping_price !== null) {
+            return (float) $product->exact_shipping_price;
+        }
+
+        $option = ShippingOption::where('size', $product->shipping_size)->where('is_active', true)->first();
 
         return $option ? (float) $option->price : 0.0;
     }

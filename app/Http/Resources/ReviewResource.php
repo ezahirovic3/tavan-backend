@@ -18,7 +18,7 @@ class ReviewResource extends JsonResource
             'role'        => $this->role,
             'reviewer'    => new UserResource($this->whenLoaded('reviewer')),
             'reviewed'    => new UserResource($this->whenLoaded('reviewed')),
-            'created_at'  => $this->created_at->toISOString(),
+            'created_at'  => $this->created_at?->toISOString(),
         ];
     }
 }

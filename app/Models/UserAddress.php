@@ -11,7 +11,7 @@ class UserAddress extends Model
 {
     use HasFactory, HasUlids;
 
-    protected $fillable = ['user_id', 'name', 'street', 'city', 'phone', 'is_default'];
+    protected $fillable = ['user_id', 'label', 'name', 'street', 'city', 'postcode', 'phone', 'is_default'];
 
     protected function casts(): array
     {

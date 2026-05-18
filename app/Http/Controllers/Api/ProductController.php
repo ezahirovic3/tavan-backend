@@ -23,6 +23,14 @@ class ProductController extends Controller
         $query = Product::active()
             ->with(['images', 'brand', 'seller']);
 
+        // Hide products from users in a block relationship with the viewer
+        if ($authUser) {
+            $blockedIds = $authUser->blockedUserIds();
+            if (! empty($blockedIds)) {
+                $query->whereNotIn('seller_id', $blockedIds);
+            }
+        }
+
         // ── Category filters ───────────────────────────────────────────────────
         if ($request->filled('root_category')) {
             $query->where('root_category', $request->root_category);
@@ -100,8 +108,11 @@ class ProductController extends Controller
         };
 
         // Personalized feed — filter by the authenticated user's saved preferences.
-        // personalized=true  → products matching ANY preference (size OR root_category OR city)
+        // personalized=true    → products matching preferences
         // personalized=exclude → products matching NONE of the preferences ("Ostali artikli")
+        //
+        // City is AND-ed with sizes/categories when both are set, so it narrows results
+        // to local items rather than independently pulling in all items from that city.
         $personalizedParam = $request->query('personalized');
 
         if ($personalizedParam && $authUser) {
@@ -115,24 +126,67 @@ class ProductController extends Controller
                 );
                 $categories = $prefs->categories ?? [];
                 $cities     = $prefs->cities     ?? [];
+                $brands     = $prefs->brands     ?? [];
 
-                $hasFilter = ! empty($sizes) || ! empty($categories) || ! empty($cities);
+                // Parse subcategory preference keys like "men-tops" → {root, category} pairs.
+                // Keys are always "{rootId}-{categoryKey}" with no hyphens in either segment.
+                $subcategoryPairs = collect($prefs->subcategories ?? [])
+                    ->map(function (string $key) {
+                        $dash = strpos($key, '-');
+                        return $dash !== false
+                            ? ['root' => substr($key, 0, $dash), 'category' => substr($key, $dash + 1)]
+                            : null;
+                    })
+                    ->filter()
+                    ->values();
+
+                $hasSizesOrCategories = ! empty($sizes) || $subcategoryPairs->isNotEmpty() || ! empty($categories);
+                $hasBrands            = ! empty($brands);
+                $hasCities            = ! empty($cities);
+                $hasFilter            = $hasSizesOrCategories || $hasBrands || $hasCities;
+
+                // Closure that applies the size + category + brand OR block.
+                $applyPreferences = function ($q) use ($sizes, $categories, $subcategoryPairs, $brands) {
+                    if (! empty($sizes)) $q->orWhereIn('size', $sizes);
+
+                    if ($subcategoryPairs->isNotEmpty()) {
+                        $q->orWhere(function ($sq) use ($subcategoryPairs) {
+                            foreach ($subcategoryPairs as $pair) {
+                                $sq->orWhere(function ($pq) use ($pair) {
+                                    $pq->where('root_category', $pair['root'])
+                                       ->where('category', $pair['category']);
+                                });
+                            }
+                        });
+                    } elseif (! empty($categories)) {
+                        $q->orWhereIn('root_category', $categories);
+                    }
+
+                    if (! empty($brands)) {
+                        $q->orWhereHas('brand', fn ($bq) => $bq->whereIn('id', $brands));
+                    }
+                };
+
+                // Build the match condition depending on which preference types are set.
+                // When sizes/categories/brands AND cities are both set, city is AND-ed so it
+                // restricts to local matches rather than independently including all city items.
+                $hasSizesOrCategoriesOrBrands = $hasSizesOrCategories || $hasBrands;
+
+                $applyMatch = function ($q) use ($hasSizesOrCategoriesOrBrands, $hasCities, $cities, $applyPreferences) {
+                    if ($hasSizesOrCategoriesOrBrands && $hasCities) {
+                        $q->where($applyPreferences)->whereIn('location', $cities);
+                    } elseif ($hasSizesOrCategoriesOrBrands) {
+                        $q->where($applyPreferences);
+                    } else {
+                        $q->whereIn('location', $cities);
+                    }
+                };
 
                 if ($hasFilter) {
                     if ($personalizedParam === 'true' || $personalizedParam === '1') {
-                        // Include products that match ANY preference (OR logic)
-                        $query->where(function ($q) use ($sizes, $categories, $cities) {
-                            if (! empty($sizes))      $q->orWhereIn('size', $sizes);
-                            if (! empty($categories)) $q->orWhereIn('root_category', $categories);
-                            if (! empty($cities))     $q->orWhereIn('location', $cities);
-                        });
+                        $query->where($applyMatch);
                     } elseif ($personalizedParam === 'exclude') {
-                        // Exclude products that match ANY preference — the complement bucket
-                        $query->whereNot(function ($q) use ($sizes, $categories, $cities) {
-                            if (! empty($sizes))      $q->orWhereIn('size', $sizes);
-                            if (! empty($categories)) $q->orWhereIn('root_category', $categories);
-                            if (! empty($cities))     $q->orWhereIn('location', $cities);
-                        });
+                        $query->whereNot($applyMatch);
                     }
                 }
             }
@@ -163,7 +217,18 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request): JsonResponse
     {
-        $product = $request->user()->products()->create($request->validated());
+        $seller = $request->user();
+        $data   = $request->validated();
+
+        // If the client did not explicitly save as draft, determine the correct
+        // published status from the seller's trust level:
+        //   - listings_require_review = true  → pending_review (awaits admin approval)
+        //   - listings_require_review = false → active (trusted seller, goes live immediately)
+        if (($data['status'] ?? null) !== 'draft') {
+            $data['status'] = $seller->listings_require_review ? 'pending_review' : 'active';
+        }
+
+        $product = $seller->products()->create($data);
 
         return response()->json(['data' => new ProductResource($product->load('images', 'brand'))], 201);
     }
@@ -172,13 +237,37 @@ class ProductController extends Controller
     {
         $product->load(['images', 'brand', 'seller']);
 
-        if ($request->user()) {
-            $product->is_wishlisted = WishlistItem::where('user_id', $request->user()->id)
+        $authUser = $request->user() ?? \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
+
+        if ($authUser) {
+            $product->is_wishlisted = WishlistItem::where('user_id', $authUser->id)
                 ->where('product_id', $product->id)
                 ->exists();
         }
 
-        return response()->json(['data' => new ProductResource($product)]);
+        $sellerProducts = Product::where('seller_id', $product->seller_id)
+            ->where('id', '!=', $product->id)
+            ->where('status', 'active')
+            ->with('images')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $similarProducts = Product::where('category', $product->category)
+            ->where('root_category', $product->root_category)
+            ->where('id', '!=', $product->id)
+            ->where('seller_id', '!=', $product->seller_id)
+            ->where('status', 'active')
+            ->with('images')
+            ->latest()
+            ->take(5)
+            ->get();
+
+        return response()->json([
+            'data'            => new ProductResource($product),
+            'sellerProducts'  => ProductResource::collection($sellerProducts),
+            'similarProducts' => ProductResource::collection($similarProducts),
+        ]);
     }
 
     public function update(UpdateProductRequest $request, Product $product): JsonResponse
@@ -203,7 +292,11 @@ class ProductController extends Controller
     {
         $this->authorize('publish', $product);
 
-        abort_if($product->status !== 'draft', 422, 'Samo draft proizvodi mogu biti objavljeni.');
+        abort_if(
+            ! in_array($product->status, ['draft', 'pending_review']),
+            422,
+            'Samo draft ili pending_review proizvodi mogu biti objavljeni.'
+        );
 
         $product->update(['status' => 'active']);
 

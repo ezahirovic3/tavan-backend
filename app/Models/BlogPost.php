@@ -4,17 +4,31 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\Support\LogOptions;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
 
 class BlogPost extends Model
 {
+    use LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['title', 'slug', 'is_published', 'published_at'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
     protected $fillable = [
         'title',
         'slug',
         'tag',
         'excerpt',
         'content',
+        'blocks',
         'cover_image',
         'cover_color',
+        'blog_author_id',
         'read_time',
         'is_published',
         'published_at',
@@ -23,6 +37,7 @@ class BlogPost extends Model
     protected $casts = [
         'is_published'  => 'boolean',
         'published_at'  => 'datetime',
+        'blocks'        => 'array',
     ];
 
     protected static function boot(): void
@@ -37,7 +52,29 @@ class BlogPost extends Model
             if (! $post->is_published) {
                 $post->published_at = null;
             }
+
+            if ($post->isDirty('cover_image') && $post->getOriginal('cover_image')) {
+                app(\App\Services\ImageService::class)->deleteByUrl($post->getOriginal('cover_image'));
+            }
         });
+
+        static::deleting(function (BlogPost $post) {
+            $imageService = app(\App\Services\ImageService::class);
+
+            $imageService->deleteByUrl($post->cover_image);
+
+            // Inline images embedded in the blocks JSON array
+            foreach ($post->blocks ?? [] as $block) {
+                if (($block['type'] ?? null) === 'image' && ! empty($block['file'])) {
+                    $imageService->deleteByUrl($block['file']);
+                }
+            }
+        });
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(BlogAuthor::class, 'blog_author_id');
     }
 
     public function scopePublished(Builder $query): Builder

@@ -14,10 +14,18 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Reject requests missing the shared app key (mobile + landing page set X-App-Key)
+        $middleware->prependToGroup('api', \App\Http\Middleware\VerifyAppKey::class);
+
         // Requests:  camelCase keys → snake_case (mobile sends camelCase, Laravel expects snake_case)
         // Responses: snake_case keys → camelCase (Laravel returns snake_case, mobile expects camelCase)
         $middleware->appendToGroup('api', \App\Http\Middleware\ConvertCamelToSnakeCase::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\ConvertResponseKeysToCamelCase::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastActiveAt::class);
+    })
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
+        // Remove activity log entries older than the configured retention period (default: 365 days)
+        $schedule->command('activitylog:clean')->weekly();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

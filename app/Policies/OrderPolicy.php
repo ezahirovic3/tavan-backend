@@ -21,4 +21,10 @@ class OrderPolicy
     {
         return $user->id === $order->buyer_id;
     }
+
+    /** Buyer can cancel (pending only); seller can decline (pending or accepted). */
+    public function decline(User $user, Order $order): bool
+    {
+        return $user->id === $order->buyer_id || $user->id === $order->seller_id;
+    }
 }

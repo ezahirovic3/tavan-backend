@@ -53,29 +53,7 @@
 | is_active | boolean default true | |
 | sort_order | int default 0 | |
 
-### categories
-| Column | Type | Notes |
-|--------|------|-------|
-| id | ULID (PK) | |
-| parent_id | ULID null (FK categories) | null = root level |
-| name | varchar(255) | display name |
-| key | varchar(255) unique | e.g. "women-tops-bluze" |
-| icon | varchar(64) null | icon name |
-| is_active | boolean default true | |
-| sort_order | int default 0 | |
-
-3-level hierarchy: `women/men` → `tops/shoes/etc.` → `Bluze/Trenerke/etc.`
-
-### shipping_options
-| Column | Type | Notes |
-|--------|------|-------|
-| id | ULID (PK) | |
-| size | enum('S','M','L') | |
-| label | varchar(128) | display name |
-| price | decimal(8,2) | |
-| description | varchar(255) null | |
-| is_active | boolean default true | |
-| sort_order | int default 0 | |
+> **Note:** `categories` and `shipping_options` tables exist in the database from earlier migrations but are no longer used by the API or admin panel. Categories and shipping/delivery options are defined statically in the mobile client (`src/constants/`).
 
 ### products
 | Column | Type | Notes |

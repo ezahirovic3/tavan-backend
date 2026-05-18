@@ -22,21 +22,23 @@ class ProductResource extends JsonResource
             'root_category' => $this->root_category,
             'category'      => $this->category,
             'subcategory'   => $this->subcategory,
-            'shipping_size' => $this->shipping_size,
-            'location'      => $this->location,
-            'allows_trades' => $this->allows_trades,
-            'allows_offers' => $this->allows_offers,
+            'shipping_size'        => $this->shipping_size,
+            'location'             => $this->location,
+            'pickup_enabled'       => $this->pickup_enabled,
+            'free_shipping'        => $this->free_shipping,
+            'exact_shipping_price' => $this->exact_shipping_price !== null ? (float) $this->exact_shipping_price : null,
+            'allows_trades'        => $this->allows_trades,
+            'allows_offers'        => $this->allows_offers,
             'likes'         => $this->likes,
             'measurements'  => $this->measurements,
             'brand'         => new BrandResource($this->whenLoaded('brand')),
-            'brand_custom'  => $this->brand_custom,
             'images'        => ProductImageResource::collection($this->whenLoaded('images')),
             'seller'        => new UserResource($this->whenLoaded('seller')),
             'is_wishlisted' => $this->when(
                 isset($this->is_wishlisted),
                 fn () => (bool) $this->is_wishlisted
             ),
-            'created_at'    => $this->created_at->toISOString(),
+            'created_at'    => $this->created_at?->toISOString(),
         ];
     }
 }

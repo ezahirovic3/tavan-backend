@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\StoreOrderRequest;
 use App\Http\Resources\OrderResource;
+use App\Jobs\SendReminderNotificationJob;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\User;
 use App\Services\ConversationService;
 use App\Services\OrderService;
 use App\Services\PushNotificationService;
@@ -62,9 +64,12 @@ class OrderController extends Controller
         $this->push->sendToUser(
             $product->seller_id,
             'Nova narudžba! 🛍️',
-            $request->user()->name . ' je kupio/la "' . $product->title . '".',
+            $request->user()->name . ' je naručio/la "' . $product->title . '".',
             ['type' => 'order', 'orderId' => $order->id],
         );
+
+        SendReminderNotificationJob::dispatch('order', $order->id, 'pending_seller')
+            ->delay(now()->addHours(24));
 
         return response()->json(['data' => new OrderResource($order->load('product', 'buyer', 'seller'))], 201);
     }
@@ -73,7 +78,7 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        return response()->json(['data' => new OrderResource($order->load('product.images', 'buyer', 'seller', 'offer', 'reviews.reviewer'))]);
+        return response()->json(['data' => new OrderResource($order->load('product.images', 'buyer', 'seller', 'offer', 'trade.offeredProduct.images', 'reviews.reviewer'))]);
     }
 
     public function accept(Request $request, Order $order): JsonResponse
@@ -82,7 +87,13 @@ class OrderController extends Controller
         abort_if($order->status !== 'pending', 422, 'Narudžba nije u statusu čekanja.');
 
         $order->update(['status' => 'accepted']);
-        $this->systemStatus($order, $request->user()->id, 'accepted');
+        $this->systemStatus($order, $request->user(), 'accepted');
+
+        // Remind seller to ship (delivery), or buyer to complete (pickup)
+        SendReminderNotificationJob::dispatch('order', $order->id, 'accepted_seller')
+            ->delay(now()->addHours(24));
+        SendReminderNotificationJob::dispatch('order', $order->id, 'accepted_buyer_pickup')
+            ->delay(now()->addHours(24));
 
         return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
     }
@@ -93,7 +104,10 @@ class OrderController extends Controller
         abort_if($order->status !== 'accepted', 422, 'Narudžba mora biti prihvaćena prije slanja.');
 
         $order->update(['status' => 'shipped']);
-        $this->systemStatus($order, $request->user()->id, 'shipped');
+        $this->systemStatus($order, $request->user(), 'shipped');
+
+        SendReminderNotificationJob::dispatch('order', $order->id, 'shipped_buyer')
+            ->delay(now()->addHours(48));
 
         return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
     }
@@ -104,7 +118,7 @@ class OrderController extends Controller
         abort_if($order->status !== 'shipped', 422, 'Narudžba još nije poslana.');
 
         $order->update(['status' => 'delivered']);
-        $this->systemStatus($order, $request->user()->id, 'delivered');
+        $this->systemStatus($order, $request->user(), 'delivered');
 
         return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
     }
@@ -112,51 +126,94 @@ class OrderController extends Controller
     public function complete(Request $request, Order $order): JsonResponse
     {
         $this->authorize('buyerAction', $order);
-        abort_if($order->status !== 'delivered', 422, 'Narudžba još nije isporučena.');
+
+        $isPickup = $order->delivery_method === 'pickup';
+        $validStatuses = $isPickup ? ['accepted'] : ['shipped', 'delivered'];
+        abort_if(! in_array($order->status, $validStatuses), 422, $isPickup ? 'Narudžba nije prihvaćena.' : 'Narudžba još nije poslana.');
 
         $order->update(['status' => 'completed']);
         $order->product->update(['status' => 'sold']);
-        $this->systemStatus($order, $request->user()->id, 'completed');
 
-        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
+        if ($order->trade_id) {
+            $order->trade->offeredProduct()->update(['status' => 'sold']);
+            $order->trade->update(['status' => 'completed']);
+        }
+
+        $this->systemStatus($order, $request->user(), 'completed');
+
+        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller', 'trade.offeredProduct.images'))]);
     }
 
     public function decline(Request $request, Order $order): JsonResponse
     {
-        $this->authorize('sellerAction', $order);
-        abort_if($order->status !== 'pending', 422, 'Može se odbiti samo narudžba u čekanju.');
+        $this->authorize('decline', $order);
+
+        $isBuyer = $request->user()->id === $order->buyer_id;
+
+        if ($isBuyer) {
+            // Buyer can only cancel while the order is still pending
+            abort_if($order->status !== 'pending', 422, 'Možeš otkazati samo narudžbu u čekanju.');
+        } else {
+            // Seller can decline pending orders or accepted ones (e.g. buyer never showed up)
+            abort_if(! in_array($order->status, ['pending', 'accepted']), 422, 'Ova narudžba ne može biti odbijena.');
+        }
 
         $order->update(['status' => 'declined']);
         $order->product->update(['status' => 'active']);
-        $this->systemStatus($order, $request->user()->id, 'declined');
 
-        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
+        if ($order->trade_id) {
+            $order->trade->offeredProduct()->update(['status' => 'active']);
+            $order->trade->update(['status' => 'declined']);
+        }
+
+        $this->systemStatus($order, $request->user(), 'declined');
+
+        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller', 'trade.offeredProduct.images'))]);
     }
 
-    private function systemStatus(Order $order, string $actorId, string $status): void
+    private function systemStatus(Order $order, User $actor, string $status): void
     {
+        $isBuyerActor = $actor->id === $order->buyer_id;
+        $handle       = '@' . $actor->username;
+
+        $statusText = match ($status) {
+            'accepted'  => $handle . ' je prihvatio/la narudžbu.',
+            'shipped'   => $handle . ' je poslao/la paket.',
+            'delivered' => $handle . ' je potvrdio/la dostavu.',
+            'completed' => $handle . ' je potvrdio/la završetak narudžbe.',
+            'declined'  => $isBuyerActor
+                            ? $handle . ' je otkazao/la narudžbu.'
+                            : $handle . ' je odbio/la narudžbu.',
+            default     => 'Status narudžbe je promijenjen.',
+        };
+
         $conversation = $this->conversations->findOrCreate($order->buyer_id, $order->seller_id);
-        $this->conversations->sendSystemMessage($conversation, $actorId, 'system_status', [
-            'orderId' => $order->id,
-            'status'  => $status,
-        ]);
+        $this->conversations->sendSystemMessage(
+            $conversation,
+            $actor->id,
+            'system_status',
+            ['orderId' => $order->id, 'status' => $status],
+            $statusText,
+        );
 
-        // Notify the OTHER party (not the actor)
-        $recipientId = $actorId === $order->seller_id ? $order->buyer_id : $order->seller_id;
+        // Push notification to the OTHER party
+        $recipientId = $isBuyerActor ? $order->seller_id : $order->buyer_id;
 
-        [$title, $body] = match ($status) {
-            'accepted'  => ['Narudžba prihvaćena ✅', 'Prodavač je prihvatio vašu narudžbu.'],
+        [$title, $pushBody] = match ($status) {
+            'accepted'  => ['Narudžba prihvaćena ✅', $handle . ' je prihvatio/la vašu narudžbu.'],
             'shipped'   => ['Paket poslan 📦', 'Vaša narudžba je na putu!'],
-            'delivered' => ['Potvrda dostave', 'Kupac je potvrdio dostavu.'],
+            'delivered' => ['Potvrda dostave', $handle . ' je potvrdio/la dostavu.'],
             'completed' => ['Narudžba završena 🎉', 'Narudžba je uspješno završena.'],
-            'declined'  => ['Narudžba odbijena', 'Prodavač je odbio vašu narudžbu.'],
+            'declined'  => $isBuyerActor
+                            ? ['Narudžba otkazana', $handle . ' je otkazao/la narudžbu.']
+                            : ['Narudžba odbijena', $handle . ' je odbio/la vašu narudžbu.'],
             default     => ['Ažuriranje narudžbe', 'Status vaše narudžbe je promijenjen.'],
         };
 
         $this->push->sendToUser(
             $recipientId,
             $title,
-            $body,
+            $pushBody,
             ['type' => 'order', 'orderId' => $order->id, 'status' => $status],
         );
     }
