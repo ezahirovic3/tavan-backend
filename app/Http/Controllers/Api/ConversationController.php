@@ -8,6 +8,7 @@ use App\Http\Requests\Conversation\StartConversationRequest;
 use App\Http\Resources\ConversationResource;
 use App\Http\Resources\MessageResource;
 use App\Models\Conversation;
+use App\Models\Message;
 use App\Services\ConversationService;
 use App\Services\ImageService;
 use App\Services\PushNotificationService;
@@ -47,9 +48,17 @@ class ConversationController extends Controller
             ->orderByDesc('last_message_at')
             ->paginate(30);
 
-        // Attach unread counts
-        $conversations->each(function ($c) use ($userId) {
-            $c->unread_count = $this->conversations->unreadCount($c, $userId);
+        // Attach unread counts — single bulk query instead of one per conversation.
+        $conversationIds = $conversations->pluck('id');
+        $unreadCounts = Message::whereIn('conversation_id', $conversationIds)
+            ->where('sender_id', '!=', $userId)
+            ->whereNull('read_at')
+            ->groupBy('conversation_id')
+            ->selectRaw('conversation_id, count(*) as count')
+            ->pluck('count', 'conversation_id');
+
+        $conversations->each(function ($c) use ($unreadCounts) {
+            $c->unread_count = $unreadCounts[$c->id] ?? 0;
         });
 
         return response()->json([
