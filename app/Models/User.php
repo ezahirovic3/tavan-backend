@@ -18,6 +18,9 @@ class User extends Authenticatable implements FilamentUser
 {
     use HasApiTokens, HasFactory, HasUlids, LogsActivity, Notifiable;
 
+    /** Memoized block list — native PHP property so Eloquent doesn't treat it as a DB attribute. */
+    protected ?array $cachedBlockedUserIds = null;
+
     protected static function booting(): void
     {
         static::creating(function (self $user) {
@@ -158,7 +161,7 @@ class User extends Authenticatable implements FilamentUser
      */
     public function blockedUserIds(): array
     {
-        if (isset($this->cachedBlockedUserIds)) {
+        if ($this->cachedBlockedUserIds !== null) {
             return $this->cachedBlockedUserIds;
         }
 
