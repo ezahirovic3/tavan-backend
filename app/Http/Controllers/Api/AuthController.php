@@ -230,14 +230,14 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        if (! Hash::check($request->currentPassword, $user->password)) {
+        if (! Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'message' => 'Trenutna lozinka nije ispravna.',
                 'errors'  => ['currentPassword' => ['Trenutna lozinka nije ispravna.']],
             ], 422);
         }
 
-        $user->update(['password' => Hash::make($request->newPassword)]);
+        $user->update(['password' => Hash::make($request->new_password)]);
 
         return response()->json(['message' => 'Lozinka je uspješno promijenjena.']);
     }

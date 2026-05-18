@@ -23,7 +23,7 @@ class ProductTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'data' => [['id', 'title', 'price']],
-                'meta' => ['current_page', 'last_page', 'per_page', 'total'],
+                'meta' => ['currentPage', 'lastPage', 'perPage', 'total'],
             ]);
 
         $this->assertCount(3, $response->json('data'));
@@ -174,7 +174,7 @@ class ProductTest extends TestCase
             ->deleteJson("/api/v1/products/{$product->id}")
             ->assertStatus(204);
 
-        $this->assertSoftDeleted('products', ['id' => $product->id]);
+        $this->assertDatabaseMissing('products', ['id' => $product->id]);
     }
 
     public function test_user_cannot_delete_someone_elses_product(): void
@@ -235,7 +235,7 @@ class ProductTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertCount(1, $response->json('data'));
-        $this->assertEquals('women', $response->json('data.0.root_category'));
+        $this->assertEquals('women', $response->json('data.0.rootCategory'));
     }
 
     public function test_products_can_be_searched_by_title(): void

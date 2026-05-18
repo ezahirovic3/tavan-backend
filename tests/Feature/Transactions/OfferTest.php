@@ -31,7 +31,7 @@ class OfferTest extends TestCase
         ]);
 
         $response->assertStatus(201)
-            ->assertJsonStructure(['data' => ['id', 'offered_price', 'status']])
+            ->assertJsonStructure(['data' => ['id', 'offeredPrice', 'status']])
             ->assertJsonPath('data.status', 'pending');
 
         $this->assertDatabaseHas('offers', [

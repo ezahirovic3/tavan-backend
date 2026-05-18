@@ -31,7 +31,7 @@ class OrderTest extends TestCase
         ]);
 
         $response->assertStatus(201)
-            ->assertJsonStructure(['data' => ['id', 'order_number', 'status', 'total']])
+            ->assertJsonStructure(['data' => ['id', 'orderNumber', 'status', 'total']])
             ->assertJsonPath('data.status', 'pending');
 
         $this->assertDatabaseHas('orders', [
@@ -180,10 +180,10 @@ class OrderTest extends TestCase
         $response = $this->actingAs($user)->getJson('/api/v1/orders');
 
         $response->assertStatus(200)
-            ->assertJsonStructure(['data', 'meta']);
+            ->assertJsonStructure(['data', 'meta'])
+            ->assertJsonPath('meta.total', 5);
 
-        // Should see only orders where user is buyer or seller (5 total)
-        $this->assertEquals(5, $response->json('meta.total'));
+        // Should see only orders where user is buyer or seller (5 total, asserted above)
     }
 
     public function test_user_can_filter_orders_by_role(): void
@@ -197,6 +197,7 @@ class OrderTest extends TestCase
 
         $this->assertEquals(2, $buyerResponse->json('meta.total'));
         $this->assertEquals(3, $sellerResponse->json('meta.total'));
+        // meta keys are camelCase via response middleware (e.g. currentPage, lastPage)
     }
 
     public function test_user_cannot_view_someone_elses_order(): void

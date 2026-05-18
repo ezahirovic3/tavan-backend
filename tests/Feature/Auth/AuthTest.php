@@ -160,11 +160,12 @@ class AuthTest extends TestCase
 
     public function test_user_can_logout(): void
     {
-        $user = User::factory()->create();
+        $user  = User::factory()->create();
+        $token = $user->createToken('mobile')->plainTextToken;
 
-        $response = $this->actingAs($user)->postJson('/api/v1/auth/logout');
-
-        $response->assertStatus(200);
+        $this->withToken($token)
+            ->postJson('/api/v1/auth/logout')
+            ->assertStatus(200);
     }
 
     // ─── Change password ─────────────────────────────────────────────────────

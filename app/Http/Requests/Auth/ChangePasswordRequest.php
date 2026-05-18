@@ -14,18 +14,18 @@ class ChangePasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'currentPassword' => ['required', 'string'],
-            'newPassword'     => ['required', 'string', 'min:8', 'confirmed'],
+            'current_password' => ['required', 'string'],
+            'new_password'     => ['required', 'string', 'min:8', 'confirmed'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'currentPassword.required' => 'Trenutna lozinka je obavezna.',
-            'newPassword.required'     => 'Nova lozinka je obavezna.',
-            'newPassword.min'          => 'Nova lozinka mora imati najmanje 8 karaktera.',
-            'newPassword.confirmed'    => 'Nova lozinka i potvrda se ne poklapaju.',
+            'current_password.required' => 'Trenutna lozinka je obavezna.',
+            'new_password.required'     => 'Nova lozinka je obavezna.',
+            'new_password.min'          => 'Nova lozinka mora imati najmanje 8 karaktera.',
+            'new_password.confirmed'    => 'Nova lozinka i potvrda se ne poklapaju.',
         ];
     }
 }
