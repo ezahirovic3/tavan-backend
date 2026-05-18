@@ -35,16 +35,21 @@ class CachedPersonalAccessToken extends PersonalAccessToken
 
         [$id, $plainText] = explode('|', $token, 2);
 
-        /** @var static|null $instance */
-        $instance = Cache::remember(
+        // Cache raw attributes (plain array) to avoid Eloquent model serialization issues.
+        $attributes = Cache::remember(
             "sanctum_token_{$id}",
             now()->addMinutes(5),
-            fn () => static::find($id),
+            fn () => static::find($id)?->getAttributes(),
         );
 
-        if (! $instance) {
+        if (! $attributes) {
             return null;
         }
+
+        // Reconstruct a model instance from the cached attributes.
+        $instance = new static();
+        $instance->setRawAttributes($attributes);
+        $instance->exists = true;
 
         return hash_equals($instance->token, hash('sha256', $plainText))
             ? $instance
