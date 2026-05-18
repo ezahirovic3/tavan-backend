@@ -10,9 +10,9 @@ Route::get('/', function () {
 Route::get('/health', function () {
     return response()->json([
         'ok'                 => true,
-        'minVersion'         => env('APP_MIN_VERSION', '0.0.1'),
-        'recommendedVersion' => env('APP_RECOMMENDED_VERSION', '0.0.1'),
-        'iosStoreUrl'        => env('APP_IOS_STORE_URL', 'https://apps.apple.com/app/tavan/id123456789'),
-        'androidStoreUrl'    => env('APP_ANDROID_STORE_URL', 'https://play.google.com/store/apps/details?id=ba.tavan.app'),
+        'minVersion'         => config('app.min_version'),
+        'recommendedVersion' => config('app.recommended_version'),
+        'iosStoreUrl'        => config('app.ios_store_url'),
+        'androidStoreUrl'    => config('app.android_store_url'),
     ]);
 });
