@@ -126,4 +126,9 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'min_version'         => env('APP_MIN_VERSION', '0.0.1'),
+    'recommended_version' => env('APP_RECOMMENDED_VERSION', '0.0.1'),
+    'ios_store_url'       => env('APP_IOS_STORE_URL', 'https://apps.apple.com/app/tavan/id123456789'),
+    'android_store_url'   => env('APP_ANDROID_STORE_URL', 'https://play.google.com/store/apps/details?id=ba.tavan.app'),
+
 ];
