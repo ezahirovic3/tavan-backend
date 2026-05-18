@@ -13,6 +13,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  */
 class CachedPersonalAccessToken extends PersonalAccessToken
 {
+    protected $table = 'personal_access_tokens';
+
     protected static function booted(): void
     {
         static::deleted(function (self $token) {
