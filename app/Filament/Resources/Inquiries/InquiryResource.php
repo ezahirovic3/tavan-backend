@@ -5,12 +5,13 @@ namespace App\Filament\Resources\Inquiries;
 use App\Filament\Resources\Inquiries\Pages\ListInquiries;
 use App\Filament\Resources\Inquiries\Pages\ViewInquiry;
 use App\Models\SupportInquiry;
+use App\Services\ConversationService;
+use App\Services\PushNotificationService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -20,7 +21,6 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Mail;
 
 class InquiryResource extends Resource
 {
@@ -141,19 +141,30 @@ class InquiryResource extends Resource
                     ->icon('heroicon-m-paper-airplane')
                     ->color('primary')
                     ->schema([
-                        TextInput::make('subject')
-                            ->label('Naslov')
-                            ->required()
-                            ->default(fn ($record) => 'RE: ' . $record->subject),
                         Textarea::make('body')
                             ->label('Poruka')
                             ->required()
                             ->rows(8),
                     ])
-                    ->modalHeading('Pošalji email odgovor')
+                    ->modalHeading('Pošalji odgovor korisniku')
                     ->modalSubmitActionLabel('Pošalji')
+                    ->visible(fn ($record) => (bool) $record->user_id)
                     ->action(function (array $data, $record) {
-                        // Mail::to($record->email)->send(new InquiryReply($record, $data));
+                        $conversations = app(ConversationService::class);
+                        $push = app(PushNotificationService::class);
+
+                        $conversation = $conversations->findOrCreateSupportConversation($record->user_id);
+                        $conversations->sendSupportReply($conversation, auth()->user(), $data['body']);
+
+                        $push->sendToUser(
+                            $record->user_id,
+                            'Tavan Podrška',
+                            $data['body'],
+                            ['type' => 'support_message', 'conversationId' => $conversation->id],
+                        );
+
+                        $record->update(['status' => 'resolved']);
+
                         Notification::make()->success()->title('Odgovor poslan')->send();
                     }),
 

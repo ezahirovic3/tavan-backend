@@ -29,12 +29,12 @@ class ConversationService
      */
     public function findOrCreateSupportConversation(string $userId): Conversation
     {
-        $systemId = config('tavan.system_user_id');
-        [$one, $two] = collect([$systemId, $userId])->sort()->values()->all();
-
         return Conversation::firstOrCreate(
-            ['participant_one_id' => $one, 'participant_two_id' => $two],
-            ['type' => 'admin_support', 'allow_replies' => true, 'status' => 'open']
+            [
+                'participant_one_id' => $userId,
+                'participant_two_id' => config('tavan.system_user_id'),
+            ],
+            ['type' => 'admin_support', 'allow_replies' => true, 'status' => 'open', 'last_message_at' => now()]
         );
     }
 
