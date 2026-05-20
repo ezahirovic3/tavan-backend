@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Products\Tables;
 
 use App\Models\Brand;
+use App\Services\ConversationService;
+use App\Services\PushNotificationService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -153,7 +155,7 @@ class ProductsTable
                             ->label('Razlog odbijanja')
                             ->required()
                             ->rows(3)
-                            ->helperText('Šalje se prodavcu kao notifikacija.'),
+                            ->helperText('Šalje se prodavcu kao poruka u support konverzaciji.'),
                     ])
                     ->modalHeading('Odbaci oglas')
                     ->action(function (array $data, $record) {
@@ -163,7 +165,22 @@ class ProductsTable
                             'rejected_at' => now(),
                             'rejected_by' => auth()->id(),
                         ]);
-                        Notification::make()->success()->title('Oglas odbačen')->send();
+
+                        $conversations = app(ConversationService::class);
+                        $push = app(PushNotificationService::class);
+
+                        $conversation = $conversations->findOrCreateSupportConversation($record->seller_id);
+                        $messageBody = "Tvoj oglas \"{$record->title}\" je odbijen.\n\nRazlog: {$data['reason']}";
+                        $conversations->sendSupportReply($conversation, auth()->user(), $messageBody);
+
+                        $push->sendToUser(
+                            $record->seller_id,
+                            'Oglas odbijen',
+                            "Tvoj oglas \"{$record->title}\" je odbijen. Otvori poruke za detalje.",
+                            ['type' => 'support_message', 'conversationId' => $conversation->id],
+                        );
+
+                        Notification::make()->success()->title('Oglas odbačen, poruka poslana prodavcu')->send();
                     }),
 
                 ActionGroup::make([
