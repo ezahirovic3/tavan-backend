@@ -58,6 +58,18 @@ class UserController extends Controller
     {
         $user = $this->findByUsernameOrId($username);
 
+        $authUser = $request->user() ?? \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
+
+        if ($authUser && $authUser->id !== $user->id) {
+            $blocked = \App\Models\UserBlock::where(function ($q) use ($authUser, $user) {
+                $q->where('blocker_id', $authUser->id)->where('blocked_id', $user->id);
+            })->orWhere(function ($q) use ($authUser, $user) {
+                $q->where('blocker_id', $user->id)->where('blocked_id', $authUser->id);
+            })->exists();
+
+            abort_if($blocked, 404);
+        }
+
         $viewCount->incrementProfileView($request, $user);
 
         return response()->json(['data' => new UserResource($user)]);
