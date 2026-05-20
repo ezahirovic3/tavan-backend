@@ -102,13 +102,16 @@ class ProductsTable
                 ])->multiple(),
 
                 SelectFilter::make('category')->options([
-                    'jakne' => 'Jakne',
-                    'majice' => 'Majice',
-                    'pantalone' => 'Pantalone',
-                    'haljine' => 'Haljine',
-                    'cipele' => 'Cipele',
-                    'torbe' => 'Torbe',
-                    'aksesoari' => 'Aksesoari',
+                    'tops'        => 'Tops',
+                    'bottoms'     => 'Bottoms',
+                    'jackets'     => 'Jackets',
+                    'dresses'     => 'Dresses',
+                    'shoes'       => 'Shoes',
+                    'bags'        => 'Bags',
+                    'accessories' => 'Accessories',
+                    'jewelry'     => 'Jewelry',
+                    'activewear'  => 'Activewear',
+                    'occasion'    => 'Occasion',
                 ])->multiple(),
 
                 SelectFilter::make('brand_id')
