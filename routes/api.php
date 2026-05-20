@@ -64,6 +64,9 @@ Route::prefix('v1')->group(function () {
     // Support — public so the landing page (unauthenticated) can submit inquiries
     Route::post('support', [SupportInquiryController::class, 'store']);
 
+    // Announcements — public; guests see only target_group=all, no read tracking
+    Route::get('announcements', [AnnouncementController::class, 'index']);
+
     // Tracking — public, gated by VerifyAppKey (applied to all /api/v1/ routes)
     Route::middleware('throttle:60,1')->group(function () {
         Route::post('tracking/share-view', [TrackingController::class, 'shareView']);
@@ -147,8 +150,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('push-tokens', [PushTokenController::class, 'destroy']);
         Route::post('push-tokens/badge/reset', [PushTokenController::class, 'resetBadge']);
 
-        // Announcements
-        Route::get('announcements', [AnnouncementController::class, 'index']);
+        // Announcements (index is public; read-tracking routes require auth)
         Route::get('announcements/unread-count', [AnnouncementController::class, 'unreadCount']);
         Route::post('announcements/{announcement}/read', [AnnouncementController::class, 'markRead']);
 
