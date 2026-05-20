@@ -5,7 +5,7 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateAnnouncement extends CreateRecord {
     protected static string $resource = AnnouncementResource::class;
     protected function mutateFormDataBeforeCreate(array $data): array {
-        $data['sent_by'] = auth()->id();
+        $data['created_by'] = auth()->id();
         $data['sent_at'] = now();
         return $data;
     }
