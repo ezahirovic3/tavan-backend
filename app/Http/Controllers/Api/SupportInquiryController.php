@@ -28,10 +28,12 @@ class SupportInquiryController extends Controller
         $body    = $data['message'] ?? $data['body'] ?? '';
         $subject = $data['subject'] ?? Str::limit(strip_tags($body), 80, '…');
 
+        $user = Auth::guard('sanctum')->user();
+
         $inquiry = SupportInquiry::create([
-            'user_id' => Auth::guard('sanctum')->user()?->id,
-            'name'    => $data['name'] ?? null,
-            'email'   => $data['email'] ?? null,
+            'user_id' => $user?->id,
+            'name'    => $data['name'] ?? $user?->name,
+            'email'   => $data['email'] ?? $user?->email,
             'subject' => $subject,
             'body'    => $body,
             'status'  => 'open',
