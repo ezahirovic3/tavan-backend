@@ -77,6 +77,13 @@ class ProductsTable
                         default          => $state,
                     }),
 
+                TextColumn::make('view_count')
+                    ->label('Pregledi')
+                    ->sortable()
+                    ->alignEnd()
+                    ->color('gray')
+                    ->size('sm'),
+
                 TextColumn::make('created_at')
                     ->label('Datum')
                     ->date('d.m.Y.')

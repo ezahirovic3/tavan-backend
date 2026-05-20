@@ -28,6 +28,7 @@ class UserResource extends JsonResource
             'notifications_enabled'     => (bool) ($this->notifications_enabled ?? true),
             'rating'                    => $this->rating,
             'total_reviews'             => $this->total_reviews,
+            'profile_view_count'        => (int) ($this->profile_view_count ?? 0),
             'item_count'                => $this->when(isset($this->item_count), fn () => (int) $this->item_count),
             'last_active_at'            => $this->last_active_at?->toISOString(),
             'created_at'                => $this->created_at?->toISOString(),

@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\UserPreferenceController;
 use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\BlogPostController;
 use App\Http\Controllers\Api\WishlistController;
+use App\Http\Controllers\Api\TrackingController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -62,6 +63,13 @@ Route::prefix('v1')->group(function () {
 
     // Support — public so the landing page (unauthenticated) can submit inquiries
     Route::post('support', [SupportInquiryController::class, 'store']);
+
+    // Tracking — public, gated by VerifyAppKey (applied to all /api/v1/ routes)
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::post('tracking/share-view', [TrackingController::class, 'shareView']);
+        Route::get('tracking/campaign/{id}', [TrackingController::class, 'campaign']);
+        Route::post('tracking/campaign-event', [TrackingController::class, 'campaignEvent']);
+    });
 
     // ── Authenticated ─────────────────────────────────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {

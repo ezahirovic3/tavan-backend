@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Services\ConversationService;
 use App\Services\ImageService;
+use App\Services\ViewCountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -53,9 +54,11 @@ class UserController extends Controller
             ->firstOrFail();
     }
 
-    public function show(string $username): JsonResponse
+    public function show(Request $request, string $username, ViewCountService $viewCount): JsonResponse
     {
         $user = $this->findByUsernameOrId($username);
+
+        $viewCount->incrementProfileView($request, $user);
 
         return response()->json(['data' => new UserResource($user)]);
     }

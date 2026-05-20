@@ -62,6 +62,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Trgovina'),
                 NavigationGroup::make('Moderacija'),
                 NavigationGroup::make('Komunikacija'),
+                NavigationGroup::make('Analitika'),
                 NavigationGroup::make('Sistem'),
             ])
             ->pages([

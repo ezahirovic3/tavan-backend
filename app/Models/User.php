@@ -61,6 +61,7 @@ class User extends Authenticatable implements FilamentUser
         'apple_id',
         'listings_require_review',
         'is_system',
+        'acquired_via_campaign_id',
     ];
 
     protected $hidden = [

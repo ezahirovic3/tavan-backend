@@ -175,6 +175,13 @@ class UserResource extends Resource
                     ->falseIcon('heroicon-m-minus-small')
                     ->falseColor('gray'),
 
+                TextColumn::make('profile_view_count')
+                    ->label('Pregledi')
+                    ->sortable()
+                    ->alignEnd()
+                    ->color('gray')
+                    ->size('sm'),
+
                 TextColumn::make('rating')
                     ->label('Rating')
                     ->numeric(decimalPlaces: 2)

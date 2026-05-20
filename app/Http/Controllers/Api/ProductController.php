@@ -8,6 +8,7 @@ use App\Http\Requests\Product\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Models\WishlistItem;
+use App\Services\ViewCountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -233,8 +234,10 @@ class ProductController extends Controller
         return response()->json(['data' => new ProductResource($product->load('images', 'brand'))], 201);
     }
 
-    public function show(Request $request, Product $product): JsonResponse
+    public function show(Request $request, Product $product, ViewCountService $viewCount): JsonResponse
     {
+        $viewCount->incrementProductView($request, $product);
+
         $product->load(['images', 'brand', 'seller']);
 
         $authUser = $request->user() ?? \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
