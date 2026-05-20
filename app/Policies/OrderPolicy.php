@@ -22,6 +22,16 @@ class OrderPolicy
         return $user->id === $order->buyer_id;
     }
 
+    /** Trade orders: either party can complete. Direct orders: buyer only. */
+    public function complete(User $user, Order $order): bool
+    {
+        if ($order->trade_id) {
+            return $user->id === $order->buyer_id || $user->id === $order->seller_id;
+        }
+
+        return $user->id === $order->buyer_id;
+    }
+
     /** Buyer can cancel (pending only); seller can decline (pending or accepted). */
     public function decline(User $user, Order $order): bool
     {
