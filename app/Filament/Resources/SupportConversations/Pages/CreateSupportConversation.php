@@ -15,11 +15,11 @@ class CreateSupportConversation extends CreateRecord
     {
         $convo = Conversation::create([
             'participant_one_id' => $data['participant_one_id'],
+            'participant_two_id' => config('tavan.system_user_id'),
             'allow_replies'      => $data['allow_replies'] ?? true,
             'status'             => 'open',
             'type'               => 'admin_support',
-            'created_by'         => auth()->id(),
-            'last_activity_at'   => now(),
+            'last_message_at'    => now(),
         ]);
 
         Message::create([
