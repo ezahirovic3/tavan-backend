@@ -95,10 +95,12 @@ class ProductForm
                             ->multiple()
                             ->image()
                             ->disk('r2')
-                            ->directory('products')
+                            ->directory('products/admin')
                             ->reorderable()
                             ->panelLayout('grid')
-                            ->maxFiles(8),
+                            ->deletable()
+                            ->downloadable()
+                            ->maxFiles(10),
                     ]),
             ]);
     }

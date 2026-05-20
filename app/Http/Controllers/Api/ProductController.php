@@ -301,7 +301,10 @@ class ProductController extends Controller
             'Samo draft ili pending_review proizvodi mogu biti objavljeni.'
         );
 
-        $product->update(['status' => 'active']);
+        $seller = $product->seller;
+        $status = $seller->listings_require_review ? 'pending_review' : 'active';
+
+        $product->update(['status' => $status]);
 
         return response()->json(['data' => new ProductResource($product->fresh()->load('images', 'brand'))]);
     }
