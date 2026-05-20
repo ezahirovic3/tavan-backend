@@ -4,16 +4,18 @@
         <div class="flex flex-wrap items-center gap-3">
             <div class="flex items-center gap-3">
                 @if ($record->participantOne?->avatar)
-                    <img src="{{ $record->participantOne->avatar }}"
-                         class="h-10 w-10 rounded-full object-cover ring-2 ring-neutral-200 dark:ring-neutral-700" />
+                    <div class="shrink-0 rounded-full overflow-hidden ring-2 ring-neutral-200 dark:ring-neutral-700" style="width:40px;height:40px;min-width:40px;">
+                        <img src="{{ $record->participantOne->avatar }}"
+                             style="width:40px;height:40px;object-fit:cover;" />
+                    </div>
                 @else
-                    <div class="h-10 w-10 rounded-full bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white grid place-items-center font-display font-extrabold text-sm shrink-0">
+                    <div class="shrink-0 rounded-full bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white grid place-items-center font-display font-extrabold text-sm" style="width:40px;height:40px;min-width:40px;">
                         {{ strtoupper(substr($record->participantOne?->name ?? '?', 0, 1)) }}
                     </div>
                 @endif
                 <div>
                     <p class="font-display font-extrabold tracking-tight leading-tight">{{ $record->participantOne?->name }}</p>
-                    <p class="font-mono text-xs text-neutral-400">@{{ $record->participantOne?->username }} · {{ $record->participantOne?->email }}</p>
+                    <p class="font-mono text-xs text-neutral-400">{{ '@' . ($record->participantOne?->username ?? '') }} · {{ $record->participantOne?->email }}</p>
                 </div>
             </div>
 
