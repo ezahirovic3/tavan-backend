@@ -21,6 +21,7 @@ class UserResource extends JsonResource
             'phone'               => $this->phone,
             'phone_verified'      => $this->phone_verified_at !== null,
             'is_verified'               => $this->is_verified,
+            'is_anonymized'             => (bool) $this->is_anonymized,
             'profile_setup_done'        => (bool) ($this->profile_setup_done ?? false),
             'feed_setup_done'           => (bool) ($this->feed_setup_done ?? false),
             'first_listing_coach_seen'  => (bool) ($this->first_listing_coach_seen ?? false),

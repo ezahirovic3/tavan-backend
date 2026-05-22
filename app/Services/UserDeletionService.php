@@ -71,6 +71,7 @@ class UserDeletionService
             'bio'                    => null,
             'phone'                  => null,
             'deletion_requested_at'  => null,
+            'is_anonymized'          => true,
         ]);
     }
 }

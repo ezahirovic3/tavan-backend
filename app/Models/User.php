@@ -61,6 +61,7 @@ class User extends Authenticatable implements FilamentUser
         'apple_id',
         'listings_require_review',
         'is_system',
+        'is_anonymized',
         'acquired_via_campaign_id',
         'deletion_requested_at',
     ];
@@ -85,6 +86,7 @@ class User extends Authenticatable implements FilamentUser
             'notifications_enabled'       => 'boolean',
             'listings_require_review'    => 'boolean',
             'is_system'                  => 'boolean',
+            'is_anonymized'              => 'boolean',
             'rating'            => 'decimal:2',
         ];
     }

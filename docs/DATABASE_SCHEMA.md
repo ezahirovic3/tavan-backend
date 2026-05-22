@@ -15,6 +15,7 @@
 | apple_id | varchar(255) unique null | |
 | role | enum('user','admin','super_admin') default 'user' | |
 | is_system | boolean default false | reserved for the internal support bot user |
+| is_anonymized | boolean default false | set to true after `UserDeletionService::anonymize()` runs; row is kept for order/review history but all PII is wiped and the admin panel treats the record as read-only |
 | avatar | varchar(2048) null | Cloudflare R2 URL |
 | location | varchar(128) null | city name |
 | bio | text null | |

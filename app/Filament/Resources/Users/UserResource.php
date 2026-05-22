@@ -66,7 +66,8 @@ class UserResource extends Resource
      */
     public static function isLocked(User $record): bool
     {
-        return $record->role === 'super_admin'
+        return $record->is_anonymized
+            || $record->role === 'super_admin'
             || $record->id === auth()->id(); // self-demotion disabled
     }
 
@@ -197,15 +198,25 @@ class UserResource extends Resource
                     ->color('gray')
                     ->size('sm'),
 
-                TextColumn::make('deletion_requested_at')
-                    ->label('Brisanje')
+                TextColumn::make('account_status')
+                    ->label('Status')
                     ->badge()
-                    ->color('danger')
-                    ->formatStateUsing(fn ($state) => $state
-                        ? 'Briše se ' . \Carbon\Carbon::parse($state)->addDays(30)->format('d.m.Y.')
-                        : null)
-                    ->placeholder('—')
-                    ->sortable(),
+                    ->state(fn ($record) => match (true) {
+                        $record->is_anonymized          => 'anonymized',
+                        (bool) $record->deletion_requested_at => 'pending_deletion',
+                        default                         => null,
+                    })
+                    ->formatStateUsing(fn ($state, $record) => match ($state) {
+                        'anonymized'      => 'Obrisan',
+                        'pending_deletion' => 'Briše se ' . \Carbon\Carbon::parse($record->deletion_requested_at)->addDays(30)->format('d.m.Y.'),
+                        default           => null,
+                    })
+                    ->color(fn ($state) => match ($state) {
+                        'anonymized'       => 'gray',
+                        'pending_deletion' => 'danger',
+                        default            => null,
+                    })
+                    ->placeholder('—'),
 
                 TextColumn::make('created_at')
                     ->label('Pridružio se')
@@ -236,12 +247,12 @@ class UserResource extends Resource
                         ? $q->whereNotNull('deletion_requested_at')
                         : $q),
 
-                Filter::make('hide_deleted')
+                Filter::make('hide_anonymized')
                     ->label('Sakrij obrisane')
                     ->toggle()
                     ->default(true)
                     ->query(fn (Builder $q, array $data) => $data['isActive']
-                        ? $q->whereNull('deleted_at')
+                        ? $q->where('is_anonymized', false)
                         : $q),
             ])
             ->recordActions([

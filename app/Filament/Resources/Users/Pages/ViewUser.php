@@ -153,14 +153,25 @@ class ViewUser extends ViewRecord
                                             ->label('Grad')
                                             ->icon('heroicon-m-map-pin')
                                             ->placeholder('—'),
-                                        TextEntry::make('deletion_requested_at')
+                                        TextEntry::make('account_status_badge')
                                             ->label('Status računa')
                                             ->badge()
                                             ->columnSpan(2)
-                                            ->formatStateUsing(fn ($state) => $state
-                                                ? 'Briše se ' . \Carbon\Carbon::parse($state)->addDays(30)->format('d.m.Y.')
-                                                : 'Aktivan')
-                                            ->color(fn ($state) => $state ? 'danger' : 'success'),
+                                            ->state(fn ($record) => match (true) {
+                                                $record->is_anonymized                => 'anonymized',
+                                                (bool) $record->deletion_requested_at => 'pending_deletion',
+                                                default                               => 'active',
+                                            })
+                                            ->formatStateUsing(fn ($state, $record) => match ($state) {
+                                                'anonymized'       => 'Obrisan',
+                                                'pending_deletion' => 'Briše se ' . \Carbon\Carbon::parse($record->deletion_requested_at)->addDays(30)->format('d.m.Y.'),
+                                                default            => 'Aktivan',
+                                            })
+                                            ->color(fn ($state) => match ($state) {
+                                                'anonymized'       => 'gray',
+                                                'pending_deletion' => 'danger',
+                                                default            => 'success',
+                                            }),
                                     ]),
                                 ]),
                         ]),
