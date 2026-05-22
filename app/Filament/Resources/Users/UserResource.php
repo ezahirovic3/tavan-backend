@@ -247,13 +247,6 @@ class UserResource extends Resource
                         ? $q->whereNotNull('deletion_requested_at')
                         : $q),
 
-                Filter::make('hide_anonymized')
-                    ->label('Sakrij obrisane')
-                    ->toggle()
-                    ->default(true)
-                    ->query(fn (Builder $q, array $data) => $data['isActive']
-                        ? $q->where('is_anonymized', false)
-                        : $q),
             ])
             ->recordActions([
                 ViewAction::make(),
