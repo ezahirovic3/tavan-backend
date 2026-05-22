@@ -162,6 +162,13 @@ class ProductInfolist
                                         ->formatStateUsing(fn ($state) => $state ? 'FLAGGED' : 'OK')
                                         ->color(fn ($state) => $state ? 'danger' : 'gray')
                                         ->extraAttributes(['class' => 'font-mono text-[10px] tracking-widest']),
+                                    TextEntry::make('seller.deletion_requested_at')
+                                        ->label('Status računa')
+                                        ->badge()
+                                        ->formatStateUsing(fn ($state) => $state
+                                            ? 'Briše se ' . \Carbon\Carbon::parse($state)->addDays(30)->format('d.m.Y.')
+                                            : 'Aktivan')
+                                        ->color(fn ($state) => $state ? 'danger' : 'success'),
                                 ]),
                         ]),
 

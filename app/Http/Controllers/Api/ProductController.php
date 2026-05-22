@@ -236,9 +236,14 @@ class ProductController extends Controller
 
     public function show(Request $request, Product $product, ViewCountService $viewCount): JsonResponse
     {
-        $viewCount->incrementProductView($request, $product);
-
         $product->load(['images', 'brand', 'seller']);
+
+        // Hide products whose seller has requested deletion
+        if ($product->seller?->deletion_requested_at) {
+            abort(404);
+        }
+
+        $viewCount->incrementProductView($request, $product);
 
         $authUser = $request->user() ?? \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
 
@@ -248,19 +253,19 @@ class ProductController extends Controller
                 ->exists();
         }
 
-        $sellerProducts = Product::where('seller_id', $product->seller_id)
+        $sellerProducts = Product::active()
+            ->where('seller_id', $product->seller_id)
             ->where('id', '!=', $product->id)
-            ->where('status', 'active')
             ->with('images')
             ->latest()
             ->take(5)
             ->get();
 
-        $similarProducts = Product::where('category', $product->category)
+        $similarProducts = Product::active()
+            ->where('category', $product->category)
             ->where('root_category', $product->root_category)
             ->where('id', '!=', $product->id)
             ->where('seller_id', '!=', $product->seller_id)
-            ->where('status', 'active')
             ->with('images')
             ->latest()
             ->take(5)

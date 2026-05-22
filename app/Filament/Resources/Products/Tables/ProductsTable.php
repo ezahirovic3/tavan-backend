@@ -46,7 +46,10 @@ class ProductsTable
                     ->label('Prodavac')
                     ->prefix('@')
                     ->searchable()
-                    ->color('gray')
+                    ->color(fn ($record) => $record->seller?->deletion_requested_at ? 'danger' : 'gray')
+                    ->description(fn ($record) => $record->seller?->deletion_requested_at
+                        ? 'Briše se ' . \Carbon\Carbon::parse($record->seller->deletion_requested_at)->addDays(30)->format('d.m.Y.')
+                        : null)
                     ->extraAttributes(['class' => 'font-mono text-xs']),
 
                 TextColumn::make('brand.name')
@@ -119,6 +122,13 @@ class ProductsTable
                     ->relationship('brand', 'name')
                     ->searchable()
                     ->preload(),
+
+                Filter::make('seller_pending_deletion')
+                    ->label('Prodavac na brisanju')
+                    ->toggle()
+                    ->query(fn (Builder $q, array $data) => $data['isActive']
+                        ? $q->whereHas('seller', fn ($q) => $q->whereNotNull('deletion_requested_at'))
+                        : $q),
 
                 Filter::make('created_at')
                     ->label('Datum')

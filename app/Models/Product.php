@@ -110,7 +110,9 @@ class Product extends Model
 
     public function scopeActive($query)
     {
-        return $query->where('status', 'active');
+        return $query
+            ->where('status', 'active')
+            ->whereHas('seller', fn ($q) => $q->whereNull('deletion_requested_at'));
     }
 
     /**

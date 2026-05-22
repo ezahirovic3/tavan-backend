@@ -3,6 +3,7 @@
 namespace App\Services\Auth;
 
 use App\Contracts\AuthProviderInterface;
+use App\Exceptions\AccountPendingDeletionException;
 use App\Exceptions\EmailNotVerifiedException;
 use App\Models\User;
 use App\Notifications\EmailVerificationOtpNotification;
@@ -38,6 +39,14 @@ class LocalAuthProvider implements AuthProviderInterface
 
         if (! $user->email_verified_at) {
             throw new EmailNotVerifiedException($user->email);
+        }
+
+        if ($user->deletion_requested_at) {
+            $recoveryToken = $user->createToken('recovery')->plainTextToken;
+            throw new AccountPendingDeletionException(
+                $user->deletion_requested_at->addDays(30),
+                $recoveryToken,
+            );
         }
 
         $user->tokens()->where('name', 'mobile')->delete();

@@ -89,6 +89,7 @@ Route::prefix('v1')->group(function () {
 
         Route::patch('users/me', [UserController::class, 'update']);
         Route::delete('users/me', [UserController::class, 'destroy']);
+        Route::delete('users/me/deletion', [UserController::class, 'cancelDeletion']);
         Route::post('users/me/avatar', [UserAvatarController::class, 'update']);
         Route::get('users/me/preferences', [UserPreferenceController::class, 'show']);
         Route::patch('users/me/preferences', [UserPreferenceController::class, 'update']);

@@ -17,9 +17,11 @@ Auto-generated OpenAPI docs (Scramble): `http://localhost/docs/api`
 | POST | `/auth/login` | No | Login with email + password |
 | POST | `/auth/social/google` | No | Social login (Google id_token) |
 | POST | `/auth/social/apple` | No | Social login (Apple identityToken) |
-| POST | `/auth/forgot-password` | No | Request OTP to email |
-| POST | `/auth/verify-reset-otp` | No | Verify OTP, get reset token |
-| POST | `/auth/reset-password` | No | Reset password with token |
+| POST | `/auth/email/verify` | No | Verify email OTP (issued at registration) |
+| POST | `/auth/email/resend` | No | Resend email verification OTP (60 s cooldown) |
+| POST | `/auth/forgot-password` | No | Request password reset OTP to email |
+| POST | `/auth/verify-reset-otp` | No | Verify reset OTP, receive short-lived reset token |
+| POST | `/auth/reset-password` | No | Reset password using reset token |
 | POST | `/auth/phone/send-otp` | No | Send phone verification OTP |
 | POST | `/auth/phone/verify-otp` | Yes | Verify phone OTP |
 | GET | `/auth/me` | Yes | Get current user |
@@ -38,6 +40,16 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 ```
 Response: `{ "data": { "token": "...", "user": { ... } } }`
 
+**423 Locked** — account is in the 30-day deletion grace period:
+```json
+{
+  "error": "account_pending_deletion",
+  "deletionDate": "2026-06-20T14:32:00.000000Z",
+  "recoveryToken": "1|abc..."
+}
+```
+Mobile shows a recovery screen. `recoveryToken` is a Sanctum token scoped only to `DELETE /users/me/deletion` — use it as the Bearer token to cancel deletion. A full session token is re-issued in the cancel-deletion response.
+
 ### POST /auth/social/{provider}
 Google: `{ "idToken": "..." }`  
 Apple: `{ "identityToken": "...", "givenName": "...", "familyName": "..." }`  
@@ -54,16 +66,18 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 | GET | `/users/{username}/products` | No | Get user's products |
 | GET | `/users/{username}/reviews` | No | Get user's reviews |
 | PATCH | `/users/me` | Yes | Update own profile |
-| DELETE | `/users/me` | Yes | Delete account |
+| DELETE | `/users/me` | Yes | Request account deletion (starts 30-day grace period) |
+| DELETE | `/users/me/deletion` | Yes (recovery token) | Cancel pending deletion and re-issue session token |
 | POST | `/users/me/avatar` | Yes | Upload avatar (multipart) |
 | GET | `/users/me/preferences` | Yes | Get feed preferences |
 | PATCH | `/users/me/preferences` | Yes | Save feed preferences |
-| GET | `/users/me/notifications` | Yes | Get notification pref |
-| PATCH | `/users/me/notifications` | Yes | Set notification pref |
+| GET | `/users/me/notifications` | Yes | Get notification preference |
+| PATCH | `/users/me/notifications` | Yes | Set notification preference |
 | GET | `/users/me/addresses` | Yes | List shipping addresses |
 | POST | `/users/me/addresses` | Yes | Add address |
 | PATCH | `/users/me/addresses/{address}` | Yes | Update address |
 | DELETE | `/users/me/addresses/{address}` | Yes | Delete address |
+| GET | `/users/me/blocks` | Yes | List blocked users |
 | POST | `/users/{user}/block` | Yes | Block user |
 | DELETE | `/users/{user}/block` | Yes | Unblock user |
 | POST | `/users/{user}/report` | Yes | Report user |
@@ -83,6 +97,7 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 | POST | `/products/{product}/images` | Yes (owner) | Upload image (multipart) |
 | DELETE | `/products/{product}/images/{image}` | Yes (owner) | Delete image |
 | PATCH | `/products/{product}/images/reorder` | Yes (owner) | Reorder images |
+| POST | `/products/{product}/report` | Yes | Report a product |
 
 ### GET /products query params
 - `category` — root category key (`women`/`men`)
@@ -168,6 +183,10 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 - `status` — filter by status
 - `page`, `per_page`
 
+Order statuses: `pending` | `accepted` | `shipped` | `delivered` | `completed` | `declined` | `cancelled`
+
+`cancelled` is set automatically when either party initiates account deletion while the order is still active (`pending`, `accepted`, or `shipped`). The other party receives a system message in the conversation.
+
 ---
 
 ## Reviews
@@ -180,6 +199,16 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 
 ---
 
+## Announcements
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/announcements` | No | List active announcements (guests see target_group=all only) |
+| GET | `/announcements/unread-count` | Yes | Count of unread announcements for current user |
+| POST | `/announcements/{announcement}/read` | Yes | Mark announcement as read |
+
+---
+
 ## Conversations & Messages
 
 | Method | Endpoint | Auth | Description |
@@ -187,6 +216,7 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 | GET | `/conversations` | Yes | List conversations |
 | GET | `/conversations/unread` | Yes | Unread count |
 | POST | `/conversations` | Yes | Find or create conversation |
+| POST | `/conversations/support` | Yes | Find or create support conversation with the system user |
 | GET | `/conversations/{conversation}` | Yes | Get conversation with messages |
 | GET | `/conversations/{conversation}/info` | Yes | Get conversation metadata |
 | POST | `/conversations/{conversation}/messages` | Yes | Send message |
@@ -212,6 +242,7 @@ System message types (`system_offer`, `system_trade`, etc.) are created automati
 |--------|----------|------|-------------|
 | POST | `/push-tokens` | Yes | Register push token |
 | DELETE | `/push-tokens` | Yes | Remove push token |
+| POST | `/push-tokens/badge/reset` | Yes | Reset app badge count to zero |
 
 ### POST /push-tokens
 ```json
@@ -220,11 +251,23 @@ System message types (`system_offer`, `system_trade`, etc.) are created automati
 
 ---
 
+## Tracking
+
+Public routes for marketing analytics. Gated by `X-App-Key` header (same as all `/api/v1/` routes), rate-limited to 60 req/min.
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/tracking/share-view` | No | Record a share-link view (product or profile) |
+| GET | `/tracking/campaign/{id}` | No | Get campaign metadata by ID (used by the share landing page) |
+| POST | `/tracking/campaign-event` | No | Record a campaign event (link_click, app_install) |
+
+---
+
 ## Misc
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/support` | Yes | Submit support inquiry |
+| POST | `/support` | No | Submit support inquiry (anonymous or authenticated) |
 | POST | `/brand-suggestions` | Yes | Suggest a new brand |
 | GET | `/posts` | No | Blog posts list |
 | GET | `/posts/slugs` | No | All blog post slugs |

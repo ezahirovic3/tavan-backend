@@ -49,6 +49,33 @@ class ViewUser extends ViewRecord
                     $record->update(['listings_require_review' => ! $record->listings_require_review]);
                     Notification::make()->success()->title('Auto-review flag ažuriran')->send();
                 }),
+
+            Action::make('cancelDeletion')
+                ->label('Poništi brisanje')
+                ->icon('heroicon-m-arrow-uturn-left')
+                ->color('success')
+                ->visible(fn ($record) => auth()->user()->isSuperAdmin() && $record->deletion_requested_at)
+                ->requiresConfirmation()
+                ->modalHeading('Poništi brisanje računa')
+                ->modalDescription('Datum brisanja će biti uklonjen i račun postaje aktivan.')
+                ->action(function ($record) {
+                    $record->update(['deletion_requested_at' => null]);
+                    Notification::make()->success()->title('Brisanje poništeno')->send();
+                }),
+
+            Action::make('forceAnonymize')
+                ->label('Odmah obriši')
+                ->icon('heroicon-m-trash')
+                ->color('danger')
+                ->visible(fn ($record) => auth()->user()->isSuperAdmin() && ! UserResource::isLocked($record))
+                ->requiresConfirmation()
+                ->modalHeading('Trajno obriši račun')
+                ->modalDescription('Ovo će odmah anonimizirati ovaj račun i obrisati sve podatke. Akcija je nepovratna.')
+                ->action(function ($record) {
+                    app(\App\Services\UserDeletionService::class)->anonymize($record);
+                    Notification::make()->success()->title('Račun je trajno obrisan')->send();
+                    return redirect(UserResource::getUrl('index'));
+                }),
         ];
     }
 
@@ -126,6 +153,14 @@ class ViewUser extends ViewRecord
                                             ->label('Grad')
                                             ->icon('heroicon-m-map-pin')
                                             ->placeholder('—'),
+                                        TextEntry::make('deletion_requested_at')
+                                            ->label('Status računa')
+                                            ->badge()
+                                            ->columnSpan(2)
+                                            ->formatStateUsing(fn ($state) => $state
+                                                ? 'Briše se ' . \Carbon\Carbon::parse($state)->addDays(30)->format('d.m.Y.')
+                                                : 'Aktivan')
+                                            ->color(fn ($state) => $state ? 'danger' : 'success'),
                                     ]),
                                 ]),
                         ]),

@@ -9,6 +9,7 @@ use App\Models\User;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -119,6 +120,14 @@ class UserResource extends Resource
                             ->helperText('Svaki novi oglas ovog korisnika ide u pending_review.')
                             ->onColor('danger')
                             ->disabled(fn ($record) => $record && self::isLocked($record)),
+
+                        DateTimePicker::make('deletion_requested_at')
+                            ->label('Datum zahtjeva za brisanje')
+                            ->helperText('Račun se trajno briše 30 dana nakon ovog datuma. Ostavi prazno za aktivan račun.')
+                            ->nullable()
+                            ->native(false)
+                            ->visible(fn () => auth()->user()?->isSuperAdmin())
+                            ->columnSpan(2),
                     ]),
             ]);
     }
@@ -188,6 +197,16 @@ class UserResource extends Resource
                     ->color('gray')
                     ->size('sm'),
 
+                TextColumn::make('deletion_requested_at')
+                    ->label('Brisanje')
+                    ->badge()
+                    ->color('danger')
+                    ->formatStateUsing(fn ($state) => $state
+                        ? 'Briše se ' . \Carbon\Carbon::parse($state)->addDays(30)->format('d.m.Y.')
+                        : null)
+                    ->placeholder('—')
+                    ->sortable(),
+
                 TextColumn::make('created_at')
                     ->label('Pridružio se')
                     ->date('d.m.Y.')
@@ -210,6 +229,13 @@ class UserResource extends Resource
                 TernaryFilter::make('listings_require_review')
                     ->label('Auto-review flag')
                     ->placeholder('Svi'),
+                Filter::make('pending_deletion')
+                    ->label('Na čekanju brisanja')
+                    ->toggle()
+                    ->query(fn (Builder $q, array $data) => $data['isActive']
+                        ? $q->whereNotNull('deletion_requested_at')
+                        : $q),
+
                 Filter::make('hide_deleted')
                     ->label('Sakrij obrisane')
                     ->toggle()

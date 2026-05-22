@@ -62,6 +62,7 @@ class User extends Authenticatable implements FilamentUser
         'listings_require_review',
         'is_system',
         'acquired_via_campaign_id',
+        'deletion_requested_at',
     ];
 
     protected $hidden = [
@@ -71,9 +72,10 @@ class User extends Authenticatable implements FilamentUser
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'phone_verified_at' => 'datetime',
-            'last_active_at'    => 'datetime',
+            'email_verified_at'      => 'datetime',
+            'phone_verified_at'      => 'datetime',
+            'last_active_at'         => 'datetime',
+            'deletion_requested_at'  => 'datetime',
             'password'          => 'hashed',
             'is_verified'               => 'boolean',
             'profile_setup_done'        => 'boolean',
