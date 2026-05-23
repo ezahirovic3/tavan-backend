@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\UserPreferenceController;
 use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\BlogPostController;
 use App\Http\Controllers\Api\WishlistController;
+use App\Http\Controllers\Api\TrackingController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -63,6 +64,16 @@ Route::prefix('v1')->group(function () {
     // Support — public so the landing page (unauthenticated) can submit inquiries
     Route::post('support', [SupportInquiryController::class, 'store']);
 
+    // Announcements — public; guests see only target_group=all, no read tracking
+    Route::get('announcements', [AnnouncementController::class, 'index']);
+
+    // Tracking — public, gated by VerifyAppKey (applied to all /api/v1/ routes)
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::post('tracking/share-view', [TrackingController::class, 'shareView']);
+        Route::get('tracking/campaign/{id}', [TrackingController::class, 'campaign']);
+        Route::post('tracking/campaign-event', [TrackingController::class, 'campaignEvent']);
+    });
+
     // ── Authenticated ─────────────────────────────────────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
 
@@ -78,6 +89,7 @@ Route::prefix('v1')->group(function () {
 
         Route::patch('users/me', [UserController::class, 'update']);
         Route::delete('users/me', [UserController::class, 'destroy']);
+        Route::delete('users/me/deletion', [UserController::class, 'cancelDeletion']);
         Route::post('users/me/avatar', [UserAvatarController::class, 'update']);
         Route::get('users/me/preferences', [UserPreferenceController::class, 'show']);
         Route::patch('users/me/preferences', [UserPreferenceController::class, 'update']);
@@ -139,8 +151,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('push-tokens', [PushTokenController::class, 'destroy']);
         Route::post('push-tokens/badge/reset', [PushTokenController::class, 'resetBadge']);
 
-        // Announcements
-        Route::get('announcements', [AnnouncementController::class, 'index']);
+        // Announcements (index is public; read-tracking routes require auth)
         Route::get('announcements/unread-count', [AnnouncementController::class, 'unreadCount']);
         Route::post('announcements/{announcement}/read', [AnnouncementController::class, 'markRead']);
 

@@ -3,11 +3,13 @@
 namespace App\Filament\Resources\Announcements;
 
 use App\Filament\Resources\Announcements\Pages\CreateAnnouncement;
+use App\Filament\Resources\Announcements\Pages\EditAnnouncement;
 use App\Filament\Resources\Announcements\Pages\ListAnnouncements;
 use App\Filament\Resources\Announcements\Pages\ViewAnnouncement;
 use App\Models\Announcement;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -36,10 +38,10 @@ class AnnouncementResource extends Resource
     protected static ?int $navigationSort = 62;
 
     public const TARGETS = [
-        'all'             => 'Svi',
-        'verified'        => 'Verificirani',
-        'city'            => 'Grad',
-        'pending_review'  => 'Pregled oglasa',
+        'all'                    => 'Svi',
+        'verified'               => 'Verificirani',
+        'city'                   => 'Grad',
+        'listings_require_review' => 'Pregled oglasa',
     ];
 
     public static function form(Schema $schema): Schema
@@ -73,7 +75,7 @@ class AnnouncementResource extends Resource
                             ->native(false)
                             ->default('all'),
 
-                        TextInput::make('target_city')
+                        TextInput::make('target_value')
                             ->label('Grad')
                             ->placeholder('npr. Sarajevo')
                             ->visible(fn ($get) => $get('target_group') === 'city')
@@ -116,7 +118,7 @@ class AnnouncementResource extends Resource
                     ->size('sm')
                     ->alignEnd(),
 
-                TextColumn::make('sentBy.name')
+                TextColumn::make('creator.name')
                     ->label('Poslao')
                     ->color('gray')
                     ->size('sm'),
@@ -133,6 +135,7 @@ class AnnouncementResource extends Resource
             ])
             ->recordActions([
                 ViewAction::make(),
+                EditAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
@@ -142,15 +145,13 @@ class AnnouncementResource extends Resource
             ->defaultSort('sent_at', 'desc');
     }
 
-    /** Announcements are immutable once sent. */
-    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool { return false; }
-
     public static function getPages(): array
     {
         return [
             'index'  => ListAnnouncements::route('/'),
             'create' => CreateAnnouncement::route('/create'),
             'view'   => ViewAnnouncement::route('/{record}'),
+            'edit'   => EditAnnouncement::route('/{record}/edit'),
         ];
     }
 }

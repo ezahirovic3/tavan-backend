@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SupportInquiry;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class SupportInquiryController extends Controller
@@ -27,10 +28,12 @@ class SupportInquiryController extends Controller
         $body    = $data['message'] ?? $data['body'] ?? '';
         $subject = $data['subject'] ?? Str::limit(strip_tags($body), 80, '…');
 
+        $user = Auth::guard('sanctum')->user();
+
         $inquiry = SupportInquiry::create([
-            'user_id' => $request->user()?->id,
-            'name'    => $data['name'] ?? null,
-            'email'   => $data['email'] ?? null,
+            'user_id' => $user?->id,
+            'name'    => $data['name'] ?? $user?->name,
+            'email'   => $data['email'] ?? $user?->email,
             'subject' => $subject,
             'body'    => $body,
             'status'  => 'open',

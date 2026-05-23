@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Contracts\AuthProviderInterface;
+use App\Exceptions\AccountPendingDeletionException;
 use App\Exceptions\EmailNotVerifiedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
@@ -48,6 +49,12 @@ class AuthController extends Controller
     {
         try {
             $result = $this->auth->login($request->email, $request->password);
+        } catch (AccountPendingDeletionException $e) {
+            return response()->json([
+                'error'         => 'account_pending_deletion',
+                'deletionDate'  => $e->deletionDate->toISOString(),
+                'recoveryToken' => $e->recoveryToken,
+            ], 423);
         } catch (EmailNotVerifiedException $e) {
             return response()->json([
                 'message' => 'Email adresa nije potvrđena.',

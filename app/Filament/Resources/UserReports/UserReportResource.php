@@ -293,11 +293,7 @@ class UserReportResource extends Resource
                     ->icon('heroicon-m-x-mark')
                     ->color('gray')
                     ->visible(fn ($record) => $record->status === 'pending')
-                    ->action(fn ($record) => $record->update([
-                        'status' => 'dismissed',
-                        'reviewed_by' => auth()->id(),
-                        'reviewed_at' => now(),
-                    ])),
+                    ->action(fn ($record) => $record->update(['status' => 'dismissed'])),
 
                 Action::make('warn')
                     ->label('Upozori (placeholder)')
@@ -321,12 +317,7 @@ class UserReportResource extends Resource
                         if ($record->reported) {
                             $record->reported->update(['listings_require_review' => true]);
                         }
-                        $record->update([
-                            'status' => 'restricted',
-                            'admin_note' => $data['admin_note'] ?? null,
-                            'reviewed_by' => auth()->id(),
-                            'reviewed_at' => now(),
-                        ]);
+                        $record->update(['status' => 'reviewed']);
                         Notification::make()->success()->title('Korisnik ograničen')->send();
                     }),
 

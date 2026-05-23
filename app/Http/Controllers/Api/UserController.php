@@ -6,11 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\User\UpdateProfileRequest;
 use App\Http\Resources\ProductResource;
 use App\Http\Resources\UserResource;
-use App\Models\Conversation;
-use App\Models\Order;
 use App\Models\User;
-use App\Services\ConversationService;
-use App\Services\ImageService;
+use App\Services\UserDeletionService;
+use App\Services\ViewCountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -22,6 +20,7 @@ class UserController extends Controller
 
         $users = User::query()
             ->where('email', 'not like', '%@deleted.tavan')
+            ->whereNull('deletion_requested_at')
             ->withCount(['products as item_count' => fn ($q) => $q->where('status', 'active')])
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($inner) use ($query) {
@@ -53,9 +52,27 @@ class UserController extends Controller
             ->firstOrFail();
     }
 
-    public function show(string $username): JsonResponse
+    public function show(Request $request, string $username, ViewCountService $viewCount): JsonResponse
     {
         $user = $this->findByUsernameOrId($username);
+
+        $authUser = $request->user() ?? \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
+
+        if ($authUser && $authUser->id !== $user->id) {
+            $blocked = \App\Models\UserBlock::where(function ($q) use ($authUser, $user) {
+                $q->where('blocker_id', $authUser->id)->where('blocked_id', $user->id);
+            })->orWhere(function ($q) use ($authUser, $user) {
+                $q->where('blocker_id', $user->id)->where('blocked_id', $authUser->id);
+            })->exists();
+
+            abort_if($blocked, 404);
+        }
+
+        if ($user->deletion_requested_at) {
+            abort(404);
+        }
+
+        $viewCount->incrementProfileView($request, $user);
 
         return response()->json(['data' => new UserResource($user)]);
     }
@@ -85,67 +102,33 @@ class UserController extends Controller
         ]);
     }
 
-    public function destroy(Request $request): JsonResponse
+    public function destroy(Request $request, UserDeletionService $deletion): JsonResponse
     {
         $user = $request->user();
-        $conversations = app(ConversationService::class);
 
-        // 1. Cancel all active orders and notify the other party via system message
-        $activeOrders = Order::where(function ($q) use ($user) {
-                $q->where('buyer_id', $user->id)->orWhere('seller_id', $user->id);
-            })
-            ->whereIn('status', ['pending', 'accepted', 'shipped'])
-            ->with('product')
-            ->get();
+        $deletion->cancelActiveOrders($user);
 
-        foreach ($activeOrders as $order) {
-            $order->update(['status' => 'cancelled']);
-
-            // Restore the product to active if the deleted user was the buyer
-            // (seller's own products will be deleted below anyway)
-            if ($order->buyer_id === $user->id && $order->product?->status === 'reserved') {
-                $order->product->update(['status' => 'active']);
-            }
-
-            $conversation = $conversations->findOrCreate($order->buyer_id, $order->seller_id);
-            $conversations->sendSystemMessage(
-                $conversation,
-                $user->id,
-                'system_status',
-                ['orderId' => $order->id, 'status' => 'cancelled'],
-                'Narudžba je otkazana jer je korisnik obrisao račun.',
-            );
-        }
-
-        // 2. Lock all conversations this user is part of — preserve history, block new messages
-        Conversation::where('participant_one_id', $user->id)
-            ->orWhere('participant_two_id', $user->id)
-            ->update(['allow_replies' => false]);
-
-        // 3. Revoke all tokens
+        $user->update(['deletion_requested_at' => now()]);
         $user->tokens()->delete();
 
-        // 4. Delete avatar from R2
-        if ($user->avatar) {
-            app(ImageService::class)->deleteByUrl($user->avatar);
-        }
-
-        // 5. Delete non-sold products + their R2 images and wishlisted entries
-        //    (the Product deleting hook handles R2 and wishlist cleanup)
-        $user->products()->whereNotIn('status', ['sold'])->get()
-            ->each(fn ($product) => $product->delete());
-
-        // 6. Anonymize instead of hard-delete to preserve order/review history
-        $user->update([
-            'name'     => 'Obrisani korisnik',
-            'username' => 'deleted_' . $user->id,
-            'email'    => 'deleted_' . $user->id . '@deleted.tavan',
-            'avatar'   => null,
-            'bio'      => null,
-            'phone'    => null,
-        ]);
-
         return response()->json(null, 204);
+    }
+
+    public function cancelDeletion(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $user->update(['deletion_requested_at' => null]);
+
+        $user->tokens()->delete();
+        $token = $user->createToken('mobile')->plainTextToken;
+
+        return response()->json([
+            'data' => [
+                'user'  => new UserResource($user->fresh()),
+                'token' => $token,
+            ],
+        ]);
     }
 
     public function products(Request $request, string $username): JsonResponse

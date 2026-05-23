@@ -125,7 +125,7 @@ class OrderController extends Controller
 
     public function complete(Request $request, Order $order): JsonResponse
     {
-        $this->authorize('buyerAction', $order);
+        $this->authorize('complete', $order);
 
         $isPickup = $order->delivery_method === 'pickup';
         $validStatuses = $isPickup ? ['accepted'] : ['shipped', 'delivered'];

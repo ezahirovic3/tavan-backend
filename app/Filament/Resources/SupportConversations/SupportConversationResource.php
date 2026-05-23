@@ -6,6 +6,7 @@ use App\Filament\Resources\SupportConversations\Pages\CreateSupportConversation;
 use App\Filament\Resources\SupportConversations\Pages\ListSupportConversations;
 use App\Filament\Resources\SupportConversations\Pages\ViewSupportConversation;
 use App\Models\Conversation;
+use App\Models\User;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
@@ -54,11 +55,15 @@ class SupportConversationResource extends Resource
                     ->schema([
                         Select::make('participant_one_id')
                             ->label('Korisnik')
-                            ->relationship('participantOne', 'username')
-                            ->searchable(['username', 'name', 'email'])
-                            ->preload()
-                            ->required()
-                            ->getOptionLabelFromRecordUsing(fn ($r) => '@' . ($r->username ?? '?') . ' · ' . ($r->name ?? '—')),
+                            ->options(fn () => User::where('is_system', false)
+                                ->whereNotIn('role', ['admin', 'super_admin'])
+                                ->orderBy('username')
+                                ->limit(500)
+                                ->get()
+                                ->mapWithKeys(fn ($u) => [$u->id => '@' . ($u->username ?? '?') . ' · ' . ($u->name ?? '—')])
+                            )
+                            ->searchable()
+                            ->required(),
 
                         Textarea::make('initial_message')
                             ->label('Otvarajuća poruka')

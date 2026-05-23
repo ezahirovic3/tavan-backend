@@ -61,6 +61,9 @@ class User extends Authenticatable implements FilamentUser
         'apple_id',
         'listings_require_review',
         'is_system',
+        'is_anonymized',
+        'acquired_via_campaign_id',
+        'deletion_requested_at',
     ];
 
     protected $hidden = [
@@ -70,9 +73,10 @@ class User extends Authenticatable implements FilamentUser
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'phone_verified_at' => 'datetime',
-            'last_active_at'    => 'datetime',
+            'email_verified_at'      => 'datetime',
+            'phone_verified_at'      => 'datetime',
+            'last_active_at'         => 'datetime',
+            'deletion_requested_at'  => 'datetime',
             'password'          => 'hashed',
             'is_verified'               => 'boolean',
             'profile_setup_done'        => 'boolean',
@@ -82,6 +86,7 @@ class User extends Authenticatable implements FilamentUser
             'notifications_enabled'       => 'boolean',
             'listings_require_review'    => 'boolean',
             'is_system'                  => 'boolean',
+            'is_anonymized'              => 'boolean',
             'rating'            => 'decimal:2',
         ];
     }

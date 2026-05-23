@@ -104,9 +104,19 @@ Controllers parse request, call service, return resource. Business logic lives i
 - `ReviewService` — create, rating recalculation on user
 - `ImageService` — upload, delete, reorder
 - `PushNotificationService` — send via Expo Push API
+- `UserDeletionService` — cancel active orders on deletion request; full anonymization (purge job + admin force-delete)
+- `ViewCountService` — debounced increment of `products.view_count` and `users.profile_view_count`
 - `app/Services/Auth/` — auth providers (LocalAuthProvider, SmsProvider, etc.)
 
-### 10. Authorization via Policies
+### 10. 30-Day Account Deletion Grace Period
+
+When a user deletes their account, `deletion_requested_at` is set to `now()` and all active orders are immediately cancelled (the other party is notified via system message). The account and all its products are hidden from public feeds and search instantly — no products visible, seller profile returns 404.
+
+If the user tries to log in during the grace period, the API returns `423` with `account_pending_deletion`, a `deletionDate`, and a short-lived `recoveryToken`. The mobile app shows a recovery screen; the user can call `DELETE /users/me/deletion` (authenticated with the recovery token) to clear `deletion_requested_at` and resume normally.
+
+After 30 days, the `users:purge-pending-deletions` Artisan command (scheduled daily) runs `UserDeletionService::anonymize()` which locks conversations, deletes R2 assets, removes non-sold products, and overwrites all PII. The user row is kept to preserve order/review history for the other party (same pattern as Vinted/Depop; anonymized data is outside GDPR scope).
+
+### 11. Authorization via Policies
 
 All authenticated resource routes use Laravel policies. Users can only modify their own resources. Policy checks happen in the controller via `$this->authorize()`.
 

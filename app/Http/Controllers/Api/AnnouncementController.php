@@ -17,19 +17,20 @@ class AnnouncementController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
-        $user   = $request->user();
-
-        // Fetch IDs of announcements already read by this user
-        $readIds = AnnouncementRead::where('user_id', $userId)->pluck('announcement_id')->flip();
+        $user    = $request->user();
+        $readIds = $user
+            ? AnnouncementRead::where('user_id', $user->id)->pluck('announcement_id')->flip()
+            : collect();
 
         $announcements = Announcement::whereNotNull('sent_at')
             ->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
             ->where(function ($q) use ($user) {
-                $q->where('target_group', 'all')
-                  ->orWhere(fn ($s) => $s->where('target_group', 'verified')->where(fn () => $user->is_verified))
-                  ->orWhere(fn ($s) => $s->where('target_group', 'city')->where('target_value', $user->location))
-                  ->orWhere(fn ($s) => $s->where('target_group', 'listings_require_review')->where(fn () => $user->listings_require_review));
+                $q->where('target_group', 'all');
+                if ($user) {
+                    $q->orWhere(fn ($s) => $s->where('target_group', 'verified')->where(fn () => $user->is_verified))
+                      ->orWhere(fn ($s) => $s->where('target_group', 'city')->where('target_value', $user->location))
+                      ->orWhere(fn ($s) => $s->where('target_group', 'listings_require_review')->where(fn () => $user->listings_require_review));
+                }
             })
             ->orderByDesc('sent_at')
             ->paginate(30);

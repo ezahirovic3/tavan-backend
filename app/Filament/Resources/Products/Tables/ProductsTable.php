@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Products\Tables;
 
 use App\Models\Brand;
+use App\Services\ConversationService;
+use App\Services\PushNotificationService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -44,7 +46,10 @@ class ProductsTable
                     ->label('Prodavac')
                     ->prefix('@')
                     ->searchable()
-                    ->color('gray')
+                    ->color(fn ($record) => $record->seller?->deletion_requested_at ? 'danger' : 'gray')
+                    ->description(fn ($record) => $record->seller?->deletion_requested_at
+                        ? 'Briše se ' . \Carbon\Carbon::parse($record->seller->deletion_requested_at)->addDays(30)->format('d.m.Y.')
+                        : null)
                     ->extraAttributes(['class' => 'font-mono text-xs']),
 
                 TextColumn::make('brand.name')
@@ -77,6 +82,13 @@ class ProductsTable
                         default          => $state,
                     }),
 
+                TextColumn::make('view_count')
+                    ->label('Pregledi')
+                    ->sortable()
+                    ->alignEnd()
+                    ->color('gray')
+                    ->size('sm'),
+
                 TextColumn::make('created_at')
                     ->label('Datum')
                     ->date('d.m.Y.')
@@ -93,13 +105,16 @@ class ProductsTable
                 ])->multiple(),
 
                 SelectFilter::make('category')->options([
-                    'jakne' => 'Jakne',
-                    'majice' => 'Majice',
-                    'pantalone' => 'Pantalone',
-                    'haljine' => 'Haljine',
-                    'cipele' => 'Cipele',
-                    'torbe' => 'Torbe',
-                    'aksesoari' => 'Aksesoari',
+                    'tops'        => 'Tops',
+                    'bottoms'     => 'Bottoms',
+                    'jackets'     => 'Jackets',
+                    'dresses'     => 'Dresses',
+                    'shoes'       => 'Shoes',
+                    'bags'        => 'Bags',
+                    'accessories' => 'Accessories',
+                    'jewelry'     => 'Jewelry',
+                    'activewear'  => 'Activewear',
+                    'occasion'    => 'Occasion',
                 ])->multiple(),
 
                 SelectFilter::make('brand_id')
@@ -107,6 +122,13 @@ class ProductsTable
                     ->relationship('brand', 'name')
                     ->searchable()
                     ->preload(),
+
+                Filter::make('seller_pending_deletion')
+                    ->label('Prodavac na brisanju')
+                    ->toggle()
+                    ->query(fn (Builder $q, array $data) => $data['isActive']
+                        ? $q->whereHas('seller', fn ($q) => $q->whereNotNull('deletion_requested_at'))
+                        : $q),
 
                 Filter::make('created_at')
                     ->label('Datum')
@@ -146,7 +168,7 @@ class ProductsTable
                             ->label('Razlog odbijanja')
                             ->required()
                             ->rows(3)
-                            ->helperText('Šalje se prodavcu kao notifikacija.'),
+                            ->helperText('Šalje se prodavcu kao poruka u support konverzaciji.'),
                     ])
                     ->modalHeading('Odbaci oglas')
                     ->action(function (array $data, $record) {
@@ -156,7 +178,22 @@ class ProductsTable
                             'rejected_at' => now(),
                             'rejected_by' => auth()->id(),
                         ]);
-                        Notification::make()->success()->title('Oglas odbačen')->send();
+
+                        $conversations = app(ConversationService::class);
+                        $push = app(PushNotificationService::class);
+
+                        $conversation = $conversations->findOrCreateSupportConversation($record->seller_id);
+                        $messageBody = "Tvoj oglas \"{$record->title}\" je odbijen.\n\nRazlog: {$data['reason']}";
+                        $conversations->sendSupportReply($conversation, auth()->user(), $messageBody);
+
+                        $push->sendToUser(
+                            $record->seller_id,
+                            'Oglas odbijen',
+                            "Tvoj oglas \"{$record->title}\" je odbijen. Otvori poruke za detalje.",
+                            ['type' => 'support_message', 'conversationId' => $conversation->id],
+                        );
+
+                        Notification::make()->success()->title('Oglas odbačen, poruka poslana prodavcu')->send();
                     }),
 
                 ActionGroup::make([

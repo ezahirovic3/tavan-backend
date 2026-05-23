@@ -13,15 +13,26 @@ class ListUsers extends ListRecords
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('Svi'),
+            'all' => Tab::make('Svi')
+                ->modifyQueryUsing(fn ($query) => $query->where('is_anonymized', false)),
             'admins' => Tab::make('Adminovi')
-                ->modifyQueryUsing(fn ($query) => $query->whereIn('role', ['admin', 'super_admin'])),
+                ->modifyQueryUsing(fn ($query) => $query
+                    ->where('is_anonymized', false)
+                    ->whereIn('role', ['admin', 'super_admin'])),
             'flagged' => Tab::make('Flagged za review')
-                ->modifyQueryUsing(fn ($query) => $query->where('listings_require_review', true))
+                ->modifyQueryUsing(fn ($query) => $query
+                    ->where('is_anonymized', false)
+                    ->where('listings_require_review', true))
                 ->badge(fn () => \App\Models\User::where('listings_require_review', true)->count())
                 ->badgeColor('primary'),
             'verified' => Tab::make('Verificirani')
-                ->modifyQueryUsing(fn ($query) => $query->where('is_verified', true)),
+                ->modifyQueryUsing(fn ($query) => $query
+                    ->where('is_anonymized', false)
+                    ->where('is_verified', true)),
+            'obrisani' => Tab::make('Obrisani')
+                ->modifyQueryUsing(fn ($query) => $query->where('is_anonymized', true))
+                ->badge(fn () => \App\Models\User::where('is_anonymized', true)->count())
+                ->badgeColor('gray'),
         ];
     }
 }

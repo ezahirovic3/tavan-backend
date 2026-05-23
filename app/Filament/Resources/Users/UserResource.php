@@ -9,6 +9,7 @@ use App\Models\User;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -65,7 +66,8 @@ class UserResource extends Resource
      */
     public static function isLocked(User $record): bool
     {
-        return $record->role === 'super_admin'
+        return $record->is_anonymized
+            || $record->role === 'super_admin'
             || $record->id === auth()->id(); // self-demotion disabled
     }
 
@@ -119,6 +121,14 @@ class UserResource extends Resource
                             ->helperText('Svaki novi oglas ovog korisnika ide u pending_review.')
                             ->onColor('danger')
                             ->disabled(fn ($record) => $record && self::isLocked($record)),
+
+                        DateTimePicker::make('deletion_requested_at')
+                            ->label('Datum zahtjeva za brisanje')
+                            ->helperText('Račun se trajno briše 30 dana nakon ovog datuma. Ostavi prazno za aktivan račun.')
+                            ->nullable()
+                            ->native(false)
+                            ->visible(fn () => auth()->user()?->isSuperAdmin())
+                            ->columnSpan(2),
                     ]),
             ]);
     }
@@ -175,11 +185,38 @@ class UserResource extends Resource
                     ->falseIcon('heroicon-m-minus-small')
                     ->falseColor('gray'),
 
+                TextColumn::make('profile_view_count')
+                    ->label('Pregledi')
+                    ->sortable()
+                    ->alignEnd()
+                    ->color('gray')
+                    ->size('sm'),
+
                 TextColumn::make('rating')
                     ->label('Rating')
                     ->numeric(decimalPlaces: 2)
                     ->color('gray')
                     ->size('sm'),
+
+                TextColumn::make('account_status')
+                    ->label('Status')
+                    ->badge()
+                    ->state(fn ($record) => match (true) {
+                        $record->is_anonymized          => 'anonymized',
+                        (bool) $record->deletion_requested_at => 'pending_deletion',
+                        default                         => null,
+                    })
+                    ->formatStateUsing(fn ($state, $record) => match ($state) {
+                        'anonymized'      => 'Obrisan',
+                        'pending_deletion' => 'Briše se ' . \Carbon\Carbon::parse($record->deletion_requested_at)->addDays(30)->format('d.m.Y.'),
+                        default           => null,
+                    })
+                    ->color(fn ($state) => match ($state) {
+                        'anonymized'       => 'gray',
+                        'pending_deletion' => 'danger',
+                        default            => null,
+                    })
+                    ->placeholder('—'),
 
                 TextColumn::make('created_at')
                     ->label('Pridružio se')
@@ -203,13 +240,13 @@ class UserResource extends Resource
                 TernaryFilter::make('listings_require_review')
                     ->label('Auto-review flag')
                     ->placeholder('Svi'),
-                Filter::make('hide_deleted')
-                    ->label('Sakrij obrisane')
+                Filter::make('pending_deletion')
+                    ->label('Na čekanju brisanja')
                     ->toggle()
-                    ->default(true)
                     ->query(fn (Builder $q, array $data) => $data['isActive']
-                        ? $q->whereNull('deleted_at')
+                        ? $q->whereNotNull('deletion_requested_at')
                         : $q),
+
             ])
             ->recordActions([
                 ViewAction::make(),

@@ -30,6 +30,7 @@ class ProductResource extends JsonResource
             'allows_trades'        => $this->allows_trades,
             'allows_offers'        => $this->allows_offers,
             'likes'         => $this->likes,
+            'view_count'    => (int) $this->view_count,
             'measurements'  => $this->measurements,
             'brand'         => new BrandResource($this->whenLoaded('brand')),
             'images'        => ProductImageResource::collection($this->whenLoaded('images')),

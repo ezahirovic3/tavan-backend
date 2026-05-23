@@ -33,13 +33,16 @@ class ProductForm
                             Select::make('category')
                                 ->label('Kategorija')
                                 ->options([
-                                    'jakne' => 'Jakne',
-                                    'majice' => 'Majice',
-                                    'pantalone' => 'Pantalone',
-                                    'haljine' => 'Haljine',
-                                    'cipele' => 'Cipele',
-                                    'torbe' => 'Torbe',
-                                    'aksesoari' => 'Aksesoari',
+                                    'tops'       => 'Tops (majice, bluze, košulje)',
+                                    'bottoms'    => 'Bottoms (pantalone, suknje)',
+                                    'jackets'    => 'Jackets (jakne, kaputi)',
+                                    'dresses'    => 'Dresses (haljine)',
+                                    'shoes'      => 'Shoes (cipele)',
+                                    'bags'       => 'Bags (torbe)',
+                                    'accessories'=> 'Accessories (aksesoari)',
+                                    'jewelry'    => 'Jewelry (nakit)',
+                                    'activewear' => 'Activewear (sportska odjeća)',
+                                    'occasion'   => 'Occasion (svečana odjeća)',
                                 ])
                                 ->searchable(),
                             Select::make('size')
@@ -48,10 +51,10 @@ class ProductForm
                             Select::make('condition')
                                 ->label('Stanje')
                                 ->options([
-                                    'new_with_tags' => 'Novo s etiketom',
-                                    'like_new'      => 'Kao novo',
-                                    'good'          => 'Dobro',
-                                    'fair'          => 'Solidno',
+                                    'new'       => 'Novo/Nenošeno',
+                                    'very_good' => 'Vrlo dobro',
+                                    'good'      => 'Dobro',
+                                    'worn'      => 'Vidljivo nošeno',
                                 ]),
                             TextInput::make('price')
                                 ->label('Cijena')
@@ -92,10 +95,12 @@ class ProductForm
                             ->multiple()
                             ->image()
                             ->disk('r2')
-                            ->directory('products')
+                            ->directory('products/admin')
                             ->reorderable()
                             ->panelLayout('grid')
-                            ->maxFiles(8),
+                            ->deletable()
+                            ->downloadable()
+                            ->maxFiles(10),
                     ]),
             ]);
     }
