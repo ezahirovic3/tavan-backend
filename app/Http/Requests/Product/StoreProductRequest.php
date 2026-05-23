@@ -50,7 +50,7 @@ class StoreProductRequest extends FormRequest
             'size'          => ['nullable', 'string', 'max:32'],
             'color'         => ['nullable', 'string', 'max:64'],
             'material'      => ['nullable', 'string', 'max:128'],
-            'shipping_size' => [$isDraft ? 'nullable' : 'required', 'nullable', Rule::in(['S', 'M', 'L'])],
+            'shipping_size' => ['nullable', Rule::in(['S', 'M', 'L'])],
             'location'      => [$isDraft ? 'nullable' : 'required', 'nullable', 'string', 'max:128'],
             'brand_id'      => ['nullable', 'ulid', 'exists:brands,id'],
             'allows_trades'        => ['boolean'],
