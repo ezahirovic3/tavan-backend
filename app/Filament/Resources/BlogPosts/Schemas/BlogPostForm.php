@@ -171,6 +171,7 @@ class BlogPostForm
                         TextInput::make('read_time')
                             ->label('Vrijeme čitanja')
                             ->numeric()
+                            ->default(3)
                             ->suffix('min')
                             ->minValue(1)
                             ->maxValue(60),
