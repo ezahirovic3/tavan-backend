@@ -82,6 +82,23 @@ class ProductsTable
                         default          => $state,
                     }),
 
+                TextColumn::make('vintage_status')
+                    ->label('Vintage')
+                    ->badge()
+                    ->color(fn ($state) => match ($state) {
+                        'approved' => 'warning',
+                        'pending'  => 'gray',
+                        'rejected' => 'danger',
+                        default    => null,
+                    })
+                    ->formatStateUsing(fn ($state) => match ($state) {
+                        'approved' => '✦ Vintage',
+                        'pending'  => 'Na čekanju',
+                        'rejected' => 'Odbijeno',
+                        default    => null,
+                    })
+                    ->placeholder('—'),
+
                 TextColumn::make('view_count')
                     ->label('Pregledi')
                     ->sortable()
@@ -122,6 +139,14 @@ class ProductsTable
                     ->relationship('brand', 'name')
                     ->searchable()
                     ->preload(),
+
+                SelectFilter::make('vintage_status')
+                    ->label('Vintage status')
+                    ->options([
+                        'pending'  => 'Na čekanju',
+                        'approved' => 'Odobreno',
+                        'rejected' => 'Odbijeno',
+                    ]),
 
                 Filter::make('seller_pending_deletion')
                     ->label('Prodavac na brisanju')

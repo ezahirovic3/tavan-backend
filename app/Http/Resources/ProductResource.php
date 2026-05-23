@@ -32,6 +32,13 @@ class ProductResource extends JsonResource
             'likes'         => $this->likes,
             'view_count'    => (int) $this->view_count,
             'measurements'  => $this->measurements,
+            'vintage'       => $this->vintage_status === 'approved' ? [
+                'era'         => $this->vintage_era,
+                'notes'       => $this->vintage_notes,
+                'provenance'  => $this->vintage_provenance,
+            ] : null,
+            'vintage_status'        => $this->vintage_status,
+            'vintage_reject_reason' => $this->vintage_reject_reason,
             'brand'         => new BrandResource($this->whenLoaded('brand')),
             'images'        => ProductImageResource::collection($this->whenLoaded('images')),
             'seller'        => new UserResource($this->whenLoaded('seller')),

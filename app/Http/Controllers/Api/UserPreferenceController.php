@@ -21,6 +21,7 @@ class UserPreferenceController extends Controller
                 'subcategories' => [],
                 'brands'        => [],
                 'cities'        => [],
+                'vintage_only'  => false,
             ]
         );
 
@@ -37,6 +38,7 @@ class UserPreferenceController extends Controller
             'subcategories' => ['sometimes', 'array'],
             'brands'        => ['sometimes', 'array'],
             'cities'        => ['sometimes', 'array'],
+            'vintage_only'  => ['sometimes', 'boolean'],
         ]);
 
         $prefs = UserPreference::updateOrCreate(
@@ -58,6 +60,7 @@ class UserPreferenceController extends Controller
             'subcategories' => $prefs->subcategories ?? [],
             'brands'        => $prefs->brands        ?? [],
             'cities'        => $prefs->cities        ?? [],
+            'vintageOnly'   => (bool) ($prefs->vintage_only ?? false),
         ];
     }
 }

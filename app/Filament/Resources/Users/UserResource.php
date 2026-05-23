@@ -116,6 +116,12 @@ class UserResource extends Resource
                             ->onColor('success')
                             ->disabled(fn ($record) => $record && self::isLocked($record)),
 
+                        Toggle::make('is_vintage_seller')
+                            ->label('Vintage Proved seller')
+                            ->helperText('Sve vintage prijave ovog prodavca se automatski odobravaju.')
+                            ->onColor('warning')
+                            ->disabled(fn ($record) => $record && self::isLocked($record)),
+
                         Toggle::make('listings_require_review')
                             ->label('Listings zahtijevaju pregled')
                             ->helperText('Svaki novi oglas ovog korisnika ide u pending_review.')
@@ -182,6 +188,14 @@ class UserResource extends Resource
                     ->boolean()
                     ->trueIcon('heroicon-m-shield-exclamation')
                     ->trueColor('danger')
+                    ->falseIcon('heroicon-m-minus-small')
+                    ->falseColor('gray'),
+
+                IconColumn::make('is_vintage_seller')
+                    ->label('Vintage')
+                    ->boolean()
+                    ->trueIcon('heroicon-m-sparkles')
+                    ->trueColor('warning')
                     ->falseIcon('heroicon-m-minus-small')
                     ->falseColor('gray'),
 
@@ -271,6 +285,21 @@ class UserResource extends Resource
                     ->action(function ($record) {
                         $record->update(['listings_require_review' => ! $record->listings_require_review]);
                         Notification::make()->success()->title('Auto-review flag ažuriran')->send();
+                    }),
+
+                Action::make('toggleVintageSeller')
+                    ->label(fn ($record) => $record->is_vintage_seller ? 'Ukloni Vintage Proved' : 'Označi Vintage Proved')
+                    ->icon('heroicon-m-sparkles')
+                    ->color(fn ($record) => $record->is_vintage_seller ? 'gray' : 'warning')
+                    ->visible(fn ($record) => ! self::isLocked($record))
+                    ->requiresConfirmation()
+                    ->modalHeading(fn ($record) => $record->is_vintage_seller ? 'Ukloni Vintage Proved status' : 'Označi kao Vintage Proved')
+                    ->modalDescription(fn ($record) => $record->is_vintage_seller
+                        ? 'Buduće vintage prijave ovog prodavca neće se više automatski odobravati.'
+                        : 'Sve buduće vintage prijave ovog prodavca će se automatski odobravati.')
+                    ->action(function ($record) {
+                        $record->update(['is_vintage_seller' => ! $record->is_vintage_seller]);
+                        Notification::make()->success()->title('Vintage Proved status ažuriran')->send();
                     }),
 
                 EditAction::make()

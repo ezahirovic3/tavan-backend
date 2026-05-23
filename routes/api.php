@@ -105,6 +105,7 @@ Route::prefix('v1')->group(function () {
         Route::patch('products/{product}', [ProductController::class, 'update']);
         Route::delete('products/{product}', [ProductController::class, 'destroy']);
         Route::post('products/{product}/publish', [ProductController::class, 'publish']);
+        Route::post('products/{product}/vintage', [ProductController::class, 'applyVintage']);
         Route::post('products/{product}/report', [ProductReportController::class, 'store']);
         Route::post('products/{product}/images', [ProductImageController::class, 'store']);
         Route::delete('products/{product}/images/{image}', [ProductImageController::class, 'destroy']);

@@ -6,6 +6,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -85,6 +86,52 @@ class ProductForm
                             ->searchable()
                             ->preload()
                             ->disabled(),
+                    ]),
+
+                Section::make('Vintage')
+                    ->columnSpan(12)
+                    ->schema([
+                        Grid::make(3)->schema([
+                            Select::make('vintage_status')
+                                ->label('Vintage status')
+                                ->options([
+                                    'pending'  => 'Na čekanju',
+                                    'approved' => 'Odobreno',
+                                    'rejected' => 'Odbijeno',
+                                ])
+                                ->placeholder('— Nije vintage —')
+                                ->native(false)
+                                ->helperText('Postavi na "Odobreno" da odmah dobiješ badge bez review procesa.'),
+
+                            Select::make('vintage_era')
+                                ->label('Era')
+                                ->options([
+                                    '50s' => '1950s',
+                                    '60s' => '1960s',
+                                    '70s' => '1970s',
+                                    '80s' => '1980s',
+                                    '90s' => '1990s',
+                                    'y2k' => 'Y2K (2000s)',
+                                ])
+                                ->placeholder('—')
+                                ->native(false),
+
+                            TextInput::make('vintage_reject_reason')
+                                ->label('Razlog odbijanja')
+                                ->maxLength(500)
+                                ->placeholder('Ostavi prazno ako nema odbijanja'),
+                        ]),
+
+                        Textarea::make('vintage_notes')
+                            ->label('Opis (od prodavca)')
+                            ->rows(3)
+                            ->maxLength(1000)
+                            ->columnSpanFull(),
+
+                        TextInput::make('vintage_provenance')
+                            ->label('Porijeklo (od prodavca)')
+                            ->maxLength(500)
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make('Slike')
