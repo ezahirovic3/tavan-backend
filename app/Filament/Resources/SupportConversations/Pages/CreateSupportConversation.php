@@ -26,6 +26,10 @@ class CreateSupportConversation extends CreateRecord
             ]
         );
 
+        if (!$convo->wasRecentlyCreated && $convo->status === 'closed') {
+            $convo->update(['status' => 'open', 'allow_replies' => true]);
+        }
+
         Message::create([
             'conversation_id' => $convo->id,
             'sender_id'       => auth()->id(),
