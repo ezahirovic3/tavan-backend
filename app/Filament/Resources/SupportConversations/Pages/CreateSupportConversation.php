@@ -13,14 +13,18 @@ class CreateSupportConversation extends CreateRecord
 
     protected function handleRecord(array $data): Conversation
     {
-        $convo = Conversation::create([
-            'participant_one_id' => $data['participant_one_id'],
-            'participant_two_id' => config('tavan.system_user_id'),
-            'allow_replies'      => $data['allow_replies'] ?? true,
-            'status'             => 'open',
-            'type'               => 'admin_support',
-            'last_message_at'    => now(),
-        ]);
+        $convo = Conversation::firstOrCreate(
+            [
+                'participant_one_id' => $data['participant_one_id'],
+                'participant_two_id' => config('tavan.system_user_id'),
+            ],
+            [
+                'allow_replies'   => $data['allow_replies'] ?? true,
+                'status'          => 'open',
+                'type'            => 'admin_support',
+                'last_message_at' => now(),
+            ]
+        );
 
         Message::create([
             'conversation_id' => $convo->id,
