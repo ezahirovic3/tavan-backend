@@ -21,6 +21,7 @@ class BlogPostResource extends JsonResource
             'coverImage'   => $this->cover_image ? Storage::disk('r2')->url($this->cover_image) : null,
             'coverColor'   => $this->cover_color,
             'authorName'   => $this->author?->name,
+            'authorBio'    => $this->author?->bio,
             'authorAvatar' => $this->author?->avatar ? Storage::disk('r2')->url($this->author->avatar) : null,
         ];
     }
