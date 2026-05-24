@@ -55,7 +55,7 @@ class BlogPostForm
                     ->description('Block builder · heading, subheading, paragraph, image, Instagram embed, YouTube embed')
                     ->columnSpan(8)
                     ->schema([
-                        Builder::make('body')
+                        Builder::make('blocks')
                             ->label('')
                             ->blockNumbers(false)
                             ->collapsible()
@@ -126,7 +126,7 @@ class BlogPostForm
                 Section::make('Status')
                     ->columnSpan(4)
                     ->schema([
-                        Toggle::make('published')
+                        Toggle::make('is_published')
                             ->label('Objavljen')
                             ->onColor('success')
                             ->live()
