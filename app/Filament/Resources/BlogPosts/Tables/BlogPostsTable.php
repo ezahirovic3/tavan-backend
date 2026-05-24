@@ -39,14 +39,14 @@ class BlogPostsTable
                     ->color('gray')
                     ->extraAttributes(['class' => 'font-mono uppercase tracking-wider text-[10px]']),
 
-                TextColumn::make('published')
+                TextColumn::make('is_published')
                     ->label('Status')
                     ->badge()
                     ->icon(fn ($state) => $state ? 'heroicon-m-check-circle' : 'heroicon-m-pencil-square')
                     ->color(fn ($state) => $state ? 'success' : 'gray')
                     ->formatStateUsing(fn ($state) => $state ? 'Objavljen' : 'Draft'),
 
-                TextColumn::make('author_name')
+                TextColumn::make('author.name')
                     ->label('Autor')
                     ->color('gray')
                     ->size('sm'),
@@ -59,7 +59,7 @@ class BlogPostsTable
                     ->sortable(),
             ])
             ->filters([
-                TernaryFilter::make('published')
+                TernaryFilter::make('is_published')
                     ->label('Status')
                     ->trueLabel('Samo objavljeni')
                     ->falseLabel('Samo draft')

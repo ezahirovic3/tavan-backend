@@ -70,7 +70,7 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 | DELETE | `/users/me/deletion` | Yes (recovery token) | Cancel pending deletion and re-issue session token |
 | POST | `/users/me/avatar` | Yes | Upload avatar (multipart) |
 | GET | `/users/me/preferences` | Yes | Get feed preferences |
-| PATCH | `/users/me/preferences` | Yes | Save feed preferences |
+| PATCH | `/users/me/preferences` | Yes | Save feed preferences (accepts `vintageOnly: bool`) |
 | GET | `/users/me/notifications` | Yes | Get notification preference |
 | PATCH | `/users/me/notifications` | Yes | Set notification preference |
 | GET | `/users/me/addresses` | Yes | List shipping addresses |
@@ -98,6 +98,7 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 | DELETE | `/products/{product}/images/{image}` | Yes (owner) | Delete image |
 | PATCH | `/products/{product}/images/reorder` | Yes (owner) | Reorder images |
 | POST | `/products/{product}/report` | Yes | Report a product |
+| POST | `/products/{product}/vintage` | Yes (owner) | Submit vintage badge application |
 
 ### GET /products query params
 - `category` — root category key (`women`/`men`)
@@ -112,6 +113,32 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 - `page`, `per_page`
 - `seller_id` — filter by seller
 - `query` — text search
+- `vintageOnly` — `true` to return only vintage-approved products
+
+### POST /products/{product}/vintage
+Submits a Vintage badge application for a product the authenticated user owns. If the seller has `is_vintage_seller = true`, the badge is approved immediately. Otherwise it enters the admin review queue (`pending`). A product can only have one active application (returns 422 if already `pending` or `approved`). A rejected product cannot re-apply.
+
+```json
+{ "era": "90s", "notes": "Originalni Levi's...", "provenance": "Kupljeno u Italiji" }
+```
+
+`era` values: `50s` | `60s` | `70s` | `80s` | `90s` | `y2k`
+
+Returns the updated product resource.
+
+### Product response — vintage fields
+```json
+{
+  "vintage_status": "approved",
+  "vintage_reject_reason": null,
+  "vintage": {
+    "era": "90s",
+    "notes": "Originalni Levi's 501...",
+    "provenance": "Kupljeno u Italiji"
+  }
+}
+```
+`vintage` is `null` unless `vintage_status === "approved"`. `vintage_status` is always present (`null` = no claim submitted).
 
 ---
 

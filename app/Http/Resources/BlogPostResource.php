@@ -16,13 +16,28 @@ class BlogPostResource extends JsonResource
             'title'        => $this->title,
             'excerpt'      => $this->excerpt,
             'date'         => $this->formatted_date,
-            'readTime'     => $this->read_time,
+            'readTime'     => $this->formatReadTime(),
             'blocks'       => $this->resolveBlocks(),
             'coverImage'   => $this->cover_image ? Storage::disk('r2')->url($this->cover_image) : null,
             'coverColor'   => $this->cover_color,
             'authorName'   => $this->author?->name,
+            'authorBio'    => $this->author?->bio,
             'authorAvatar' => $this->author?->avatar ? Storage::disk('r2')->url($this->author->avatar) : null,
         ];
+    }
+
+    /**
+     * Always returns "X min" — handles both legacy "5 min" strings and
+     * newer numeric values saved by the Filament form (which renders the
+     * "min" suffix as UI only, not as part of the stored value).
+     */
+    private function formatReadTime(): ?string
+    {
+        if ($this->read_time === null || $this->read_time === '') {
+            return null;
+        }
+        $value = trim((string) $this->read_time);
+        return str_contains($value, 'min') ? $value : "{$value} min";
     }
 
     /**

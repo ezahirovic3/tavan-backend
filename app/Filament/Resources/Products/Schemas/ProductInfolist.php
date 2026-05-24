@@ -222,6 +222,66 @@ class ProductInfolist
                             ->prose(),
                     ]),
 
+                // ─────────────────────────────── VINTAGE (12/12)
+                Section::make('Vintage')
+                    ->columnSpan(12)
+                    ->compact()
+                    ->visible(fn ($record) => $record->vintage_status !== null)
+                    ->schema([
+                        Grid::make(4)->schema([
+                            TextEntry::make('vintage_status')
+                                ->label('Status')
+                                ->badge()
+                                ->color(fn ($state) => match ($state) {
+                                    'approved' => 'warning',
+                                    'pending'  => 'gray',
+                                    'rejected' => 'danger',
+                                    default    => 'gray',
+                                })
+                                ->formatStateUsing(fn ($state) => match ($state) {
+                                    'approved' => '✦ Odobreno',
+                                    'pending'  => 'Na čekanju',
+                                    'rejected' => 'Odbijeno',
+                                    default    => $state,
+                                }),
+
+                            TextEntry::make('vintage_era')
+                                ->label('Era')
+                                ->formatStateUsing(fn ($state) => match ($state) {
+                                    '50s' => '1950s',
+                                    '60s' => '1960s',
+                                    '70s' => '1970s',
+                                    '80s' => '1980s',
+                                    '90s' => '1990s',
+                                    'y2k' => 'Y2K (2000s)',
+                                    default => $state ?? '—',
+                                })
+                                ->placeholder('—'),
+
+                            TextEntry::make('vintage_reviewed_at')
+                                ->label('Pregledano')
+                                ->dateTime('d.m.Y. H:i')
+                                ->placeholder('—'),
+
+                            TextEntry::make('vintage_reject_reason')
+                                ->label('Razlog odbijanja')
+                                ->color('danger')
+                                ->placeholder('—'),
+                        ]),
+
+                        Grid::make(2)->schema([
+                            TextEntry::make('vintage_notes')
+                                ->label('Opis (od prodavca)')
+                                ->prose()
+                                ->placeholder('—'),
+
+                            TextEntry::make('vintage_provenance')
+                                ->label('Porijeklo (od prodavca)')
+                                ->prose()
+                                ->placeholder('—'),
+                        ]),
+                    ]),
+
                 // ─────────────────────────────── TABS: ORDERS / REPORTS / ACTIVITY (12/12)
                 Tabs::make('Povezano')
                     ->columnSpan(12)

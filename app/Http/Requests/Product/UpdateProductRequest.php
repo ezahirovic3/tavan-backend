@@ -50,7 +50,7 @@ class UpdateProductRequest extends FormRequest
             'size'          => ['sometimes', 'nullable', 'string', 'max:32'],
             'color'         => ['sometimes', 'nullable', 'string', 'max:64'],
             'material'      => ['sometimes', 'nullable', 'string', 'max:128'],
-            'shipping_size' => ['sometimes', Rule::in(['S', 'M', 'L'])],
+            'shipping_size' => ['sometimes', 'nullable', Rule::in(['S', 'M', 'L'])],
             'location'      => ['sometimes', 'string', 'max:128'],
             'brand_id'      => ['sometimes', 'nullable', 'ulid', 'exists:brands,id'],
             'allows_trades'        => ['sometimes', 'boolean'],

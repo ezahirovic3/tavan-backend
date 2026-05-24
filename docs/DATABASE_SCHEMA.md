@@ -22,6 +22,7 @@
 | phone | varchar(32) unique null | |
 | phone_verified_at | timestamp null | |
 | is_verified | boolean default false | admin-toggled seller badge |
+| is_vintage_seller | boolean default false | all vintage claims auto-approved; set by admin for known vintage dealers |
 | listings_require_review | boolean default true | all new listings go to pending_review when true |
 | notifications_enabled | boolean default true | push notification opt-out |
 | profile_setup_done | boolean default false | onboarding flag |
@@ -49,6 +50,7 @@
 | subcategories | json null | |
 | brands | json null | array of brand ULIDs |
 | cities | json null | array of city names |
+| vintage_only | boolean default false | when true, personalized feed filters to vintage-approved products only |
 
 ### user_addresses
 | Column | Type | Notes |
@@ -132,6 +134,13 @@ Unique: (blocker_id, blocked_id)
 | likes | int default 0 | cached wishlist count |
 | view_count | unsigned int default 0 | |
 | measurements | json null | { chest, length, shoulder, … } |
+| vintage_status | varchar(20) null | `pending` \| `approved` \| `rejected`; null means no claim submitted |
+| vintage_era | varchar(10) null | `50s` \| `60s` \| `70s` \| `80s` \| `90s` \| `y2k` |
+| vintage_notes | text null | seller's description of why the item qualifies |
+| vintage_provenance | varchar(500) null | origin / previous owner (optional, seller-supplied) |
+| vintage_reject_reason | varchar(500) null | admin rejection message sent to seller via support conversation |
+| vintage_reviewed_by | varchar(26) null | ULID of the admin who approved/rejected |
+| vintage_reviewed_at | timestamp null | |
 | created_at / updated_at | timestamps | |
 
 ### product_images

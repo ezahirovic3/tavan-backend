@@ -2,12 +2,14 @@
 
 namespace App\Filament\Resources\BlogPosts\Schemas;
 
+use App\Models\BlogAuthor;
 use Filament\Forms\Components\Builder;
 use Filament\Forms\Components\Builder\Block;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -53,7 +55,7 @@ class BlogPostForm
                     ->description('Block builder · heading, subheading, paragraph, image, Instagram embed, YouTube embed')
                     ->columnSpan(8)
                     ->schema([
-                        Builder::make('body')
+                        Builder::make('blocks')
                             ->label('')
                             ->blockNumbers(false)
                             ->collapsible()
@@ -124,7 +126,7 @@ class BlogPostForm
                 Section::make('Status')
                     ->columnSpan(4)
                     ->schema([
-                        Toggle::make('published')
+                        Toggle::make('is_published')
                             ->label('Objavljen')
                             ->onColor('success')
                             ->live()
@@ -169,6 +171,7 @@ class BlogPostForm
                         TextInput::make('read_time')
                             ->label('Vrijeme čitanja')
                             ->numeric()
+                            ->default(3)
                             ->suffix('min')
                             ->minValue(1)
                             ->maxValue(60),
@@ -177,18 +180,13 @@ class BlogPostForm
                 Section::make('Autor')
                     ->columnSpan(4)
                     ->schema([
-                        TextInput::make('author_name')
-                            ->label('Ime autora')
+                        Select::make('blog_author_id')
+                            ->label('Autor')
+                            ->relationship('author', 'name')
+                            ->searchable()
+                            ->preload()
                             ->required()
-                            ->maxLength(120),
-
-                        FileUpload::make('author_avatar')
-                            ->label('Avatar autora')
-                            ->image()
-                            ->avatar()
-                            ->disk('r2')
-                            ->directory('blog/authors')
-                            ->circleCropper(),
+                            ->helperText('Autori se upravljaju na stranici Autori.'),
                     ]),
             ]);
     }

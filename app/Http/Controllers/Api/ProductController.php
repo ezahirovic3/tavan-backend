@@ -11,6 +11,7 @@ use App\Models\WishlistItem;
 use App\Services\ViewCountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -91,6 +92,11 @@ class ProductController extends Controller
             $query->where('price', '<=', $request->price_max);
         }
 
+        // ── Vintage filter ─────────────────────────────────────────────────────
+        if ($request->boolean('vintage_only')) {
+            $query->where('vintage_status', 'approved');
+        }
+
         // ── Search ─────────────────────────────────────────────────────────────
         if ($request->filled('q')) {
             $query->where(fn ($q) => $q
@@ -145,6 +151,7 @@ class ProductController extends Controller
                 $hasBrands            = ! empty($brands);
                 $hasCities            = ! empty($cities);
                 $hasFilter            = $hasSizesOrCategories || $hasBrands || $hasCities;
+                $hasVintageOnly       = $prefs->vintage_only ?? false;
 
                 // Closure that applies the size + category + brand OR block.
                 $applyPreferences = function ($q) use ($sizes, $categories, $subcategoryPairs, $brands) {
@@ -183,11 +190,28 @@ class ProductController extends Controller
                     }
                 };
 
-                if ($hasFilter) {
+                // When vintageOnly is set, it acts as the primary split:
+                //   included  → vintage products (+ matching other prefs when set)
+                //   excluded  → non-vintage products (the complement of the included feed)
+                // When vintageOnly is not set, the split is purely pref-based (sizes/cats/brands/cities).
+                if ($hasFilter || $hasVintageOnly) {
                     if ($personalizedParam === 'true' || $personalizedParam === '1') {
-                        $query->where($applyMatch);
+                        if ($hasFilter) {
+                            $query->where($applyMatch);
+                        }
+                        if ($hasVintageOnly) {
+                            $query->where('vintage_status', 'approved');
+                        }
                     } elseif ($personalizedParam === 'exclude') {
-                        $query->whereNot($applyMatch);
+                        if ($hasVintageOnly) {
+                            // Excluded = non-vintage (NULL or anything other than approved)
+                            $query->where(fn ($q) => $q
+                                ->whereNull('vintage_status')
+                                ->orWhere('vintage_status', '!=', 'approved')
+                            );
+                        } elseif ($hasFilter) {
+                            $query->whereNot($applyMatch);
+                        }
                     }
                 }
             }
@@ -294,6 +318,38 @@ class ProductController extends Controller
         $product->delete();
 
         return response()->json(null, 204);
+    }
+
+    public function applyVintage(Request $request, Product $product): JsonResponse
+    {
+        $this->authorize('update', $product);
+
+        abort_if(
+            in_array($product->vintage_status, ['pending', 'approved']),
+            422,
+            'Vintage zahtjev je već poslan ili odobren.'
+        );
+
+        $data = $request->validate([
+            'era'        => ['required', Rule::in(['50s', '60s', '70s', '80s', '90s', 'y2k'])],
+            'notes'      => ['required', 'string', 'max:1000'],
+            'provenance' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $seller          = $request->user();
+        $vintageStatus   = $seller->is_vintage_seller ? 'approved' : 'pending';
+
+        $product->update([
+            'vintage_status'    => $vintageStatus,
+            'vintage_era'       => $data['era'],
+            'vintage_notes'     => $data['notes'],
+            'vintage_provenance'=> $data['provenance'] ?? null,
+            'vintage_reject_reason'  => null,
+            'vintage_reviewed_by'    => $seller->is_vintage_seller ? $seller->id : null,
+            'vintage_reviewed_at'    => $seller->is_vintage_seller ? now() : null,
+        ]);
+
+        return response()->json(['data' => new ProductResource($product->fresh()->load('images', 'brand'))]);
     }
 
     public function publish(Request $request, Product $product): JsonResponse

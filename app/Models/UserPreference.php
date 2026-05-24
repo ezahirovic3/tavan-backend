@@ -21,6 +21,7 @@ class UserPreference extends Model
         'subcategories',
         'brands',
         'cities',
+        'vintage_only',
     ];
 
     protected function casts(): array
@@ -33,6 +34,7 @@ class UserPreference extends Model
             'subcategories'=> 'array',
             'brands'       => 'array',
             'cities'       => 'array',
+            'vintage_only' => 'boolean',
         ];
     }
 

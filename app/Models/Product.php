@@ -46,6 +46,13 @@ class Product extends Model
         'status',
         'likes',
         'measurements',
+        'vintage_status',
+        'vintage_era',
+        'vintage_notes',
+        'vintage_provenance',
+        'vintage_reject_reason',
+        'vintage_reviewed_by',
+        'vintage_reviewed_at',
     ];
 
     protected function casts(): array
@@ -58,6 +65,7 @@ class Product extends Model
             'free_shipping'        => 'boolean',
             'exact_shipping_price' => 'decimal:2',
             'measurements'         => 'array',
+            'vintage_reviewed_at'  => 'datetime',
         ];
     }
 
