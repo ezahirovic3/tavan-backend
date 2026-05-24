@@ -67,8 +67,7 @@ class BrandResource extends Resource
                     ->image()
                     ->disk('r2')
                     ->directory('brands/logos')
-                    ->imageEditor()
-                    ->imageCropAspectRatio('1:1'),
+                    ->imageEditor(),
 
                 Grid::make(2)->schema([
                     Toggle::make('is_active')

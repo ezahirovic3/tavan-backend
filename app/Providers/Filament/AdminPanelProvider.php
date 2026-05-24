@@ -32,6 +32,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->profile()
             // Brand mark is rendered as text — styled by theme.css so it
             // tracks currentColor across light/dark modes.
             ->brandName('TAVAN')
