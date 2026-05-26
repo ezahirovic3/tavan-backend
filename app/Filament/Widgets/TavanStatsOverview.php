@@ -62,11 +62,19 @@ class TavanStatsOverview extends BaseWidget
     /** Returns 12 weekly counts for sparkline. */
     private function weeklySeries(string $model): array
     {
+        $start = now()->subWeeks(11)->startOfWeek();
+
+        $counts = $model::query()
+            ->where('created_at', '>=', $start)
+            ->selectRaw('YEARWEEK(created_at, 3) as yw, COUNT(*) as c')
+            ->groupBy('yw')
+            ->pluck('c', 'yw');
+
         $series = [];
         for ($i = 11; $i >= 0; $i--) {
-            $start = now()->subWeeks($i)->startOfWeek();
-            $end   = now()->subWeeks($i)->endOfWeek();
-            $series[] = $model::whereBetween('created_at', [$start, $end])->count();
+            $week = now()->subWeeks($i);
+            $key = (int) ($week->format('o') . $week->format('W'));
+            $series[] = (int) ($counts[$key] ?? 0);
         }
         return $series;
     }
