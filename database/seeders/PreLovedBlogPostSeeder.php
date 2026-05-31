@@ -28,7 +28,7 @@ class PreLovedBlogPostSeeder extends Seeder
                 'read_time' => '4 min',
                 'blog_author_id' => $author->id,
                 'is_published' => true,
-                'published_at' => Carbon::parse('2026-05-29 10:00:00'),
+                'published_at' => Carbon::parse('2026-06-05 10:00:00'),
                 'blocks' => $this->blocks(),
             ]
         );
@@ -48,11 +48,13 @@ class PreLovedBlogPostSeeder extends Seeder
             ['type' => 'paragraph', 'text' => 'Nekako smo navikli da riječ “novo” automatski povezujemo s vrijednošću. Ali kada malo bolje razmislimo, većina stvari koje zaista volimo nema veze s tim jesu li nove.'],
             ['type' => 'paragraph', 'text' => 'Volimo ih jer su kvalitetne. Jer nam dobro stoje. Jer imaju priču. Jer ih rado nosimo. Sve te stvari ostaju iste i nakon jednog nošenja.'],
             ['type' => 'paragraph', 'text' => 'Odjeća ne prestaje biti dobra čim skinemo etiketu.'],
+            ['type' => 'paragraph', 'text' => 'Ako ne vjerujete, pitajte mog oca, koji nosi istu majicu više od 20 godina. Malo zbog nostalgije na mladalačke dane, a malo zbog kvaliteta iste. Kako kaže: “Ne možeš danas više naći ovakvu…”'],
 
             ['type' => 'heading', 'text' => 'Budimo realni'],
+            ['type' => 'paragraph', 'text' => '(Fanovi smo serije “Bitange i princeze”, ko zna zna 😅)'],
             ['type' => 'paragraph', 'text' => 'Većina nas ima barem nekoliko komada koje više ne nosimo. Možda su nam dosadili. Možda smo promijenili stil. Možda ih čuvamo za neku priliku koja nikako da dođe. I tako stoje. Mjesecima. Godinama.'],
             ['type' => 'paragraph', 'text' => 'Na Balkanu smo poznati po tome da čuvamo stvari “za svaki slučaj”. Kutije od telefona. Kese. Stare kablove. A često i odjeću koju više ne nosimo.'],
-            ['type' => 'paragraph', 'text' => 'Problem je što taj “svaki slučaj” rijetko dođe. U međuvremenu, neko drugi možda upravo traži taj komad koji kod nas skuplja prašinu.'],
+            ['type' => 'paragraph', 'text' => 'A sad zamisli sve te ormare zajedno. Hiljade komada koji su jednom, dvaput obučeni, pa zaboravljeni. Među njima je vjerovatno i jakna koju ti već mjesecima tražiš – samo što je u tuđem ormaru.'],
 
             ['type' => 'heading', 'text' => 'Najbolji komadi često nisu novi'],
             ['type' => 'paragraph', 'text' => 'Vintage jakne, stare kožne torbe, kvalitetni kaputi, farmerke koje su već dobile svoj karakter kroz nošenje. Mnogi od najzanimljivijih komada u ormarima širom svijeta nisu kupljeni novi.'],
@@ -62,11 +64,12 @@ class PreLovedBlogPostSeeder extends Seeder
             ['type' => 'heading', 'text' => 'Odjeća zaslužuje više od nekoliko izlazaka'],
             ['type' => 'paragraph', 'text' => 'Iskreno, šteta je kada dobar komad odjeće završi zaboravljen na dnu ormara nakon nekoliko nošenja. Ne zato što je loš. Nego zato što je jednostavno došlo vrijeme da ga nosi neko drugi.'],
             ['type' => 'paragraph', 'text' => 'Svaki komad ima potencijal za mnogo više od nekoliko izlazaka, nekoliko fotografija i nekoliko mjeseci u ormaru. Odjeća je napravljena da se nosi.'],
+            ['type' => 'paragraph', 'text' => 'Svaki put kada odjeća pronađe novog vlasnika, njen životni vijek se produžava. To znači manje odjeće koja završava zaboravljena u ormarima ili na otpadu i manju potrebu za proizvodnjom novih komada. Ne moramo uvijek kupovati novo da bismo napravili dobar izbor. Ponekad je dovoljno dati postojećim stvarima još jednu priliku.'],
 
             ['type' => 'heading', 'text' => 'Vrijeme je da promijenimo pogled'],
-            ['type' => 'paragraph', 'text' => 'Možda je vrijeme da prestanemo gledati polovnu odjeću kao nešto manje vrijedno. Jer vrijednost nije u tome koliko je puta nešto obučeno. Vrijednost je u tome koliko će još puta biti obučeno.'],
-            ['type' => 'paragraph', 'text' => 'Zato vjerujemo da dobra odjeća zaslužuje drugi život. A možda baš sada u tvom ormaru postoji komad koji više ne nosiš, a nekome bi mogao postati omiljeni dio garderobe.'],
-            ['type' => 'paragraph', 'text' => 'I to je sasvim dovoljan razlog da ga pustiš dalje.'],
+            ['type' => 'paragraph', 'text' => 'Vrijeme je da prestanemo gledati polovnu odjeću kao nešto manje vrijedno. Jer vrijednost nije u tome koliko je puta nešto obučeno. Vrijednost je u tome koliko će još puta biti obučeno.'],
+            ['type' => 'paragraph', 'text' => 'Dobra odjeća zaslužuje drugi život. Ne zato što je jeftinija ili zato što je održivija, nego zato što je i dalje vrijedna. A taj drugi život počinje onog trenutka kad je neko odluči ponovo nositi.'],
+            ['type' => 'paragraph', 'text' => 'Možda baš sada, u nečijem ormaru, čeka komad koji će postati omiljeni dio tvoje garderobe. Na Tavanu ga je lakše pronaći 😉.'],
         ];
     }
 }
