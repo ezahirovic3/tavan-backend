@@ -28,7 +28,7 @@ class PreLovedBlogPostSeeder extends Seeder
                 'read_time' => '4 min',
                 'blog_author_id' => $author->id,
                 'is_published' => true,
-                'published_at' => Carbon::parse('2026-05-29 10:00:00'),
+                'published_at' => Carbon::parse('2026-06-05 10:00:00'),
                 'blocks' => $this->blocks(),
             ]
         );
@@ -62,6 +62,7 @@ class PreLovedBlogPostSeeder extends Seeder
             ['type' => 'heading', 'text' => 'Odjeća zaslužuje više od nekoliko izlazaka'],
             ['type' => 'paragraph', 'text' => 'Iskreno, šteta je kada dobar komad odjeće završi zaboravljen na dnu ormara nakon nekoliko nošenja. Ne zato što je loš. Nego zato što je jednostavno došlo vrijeme da ga nosi neko drugi.'],
             ['type' => 'paragraph', 'text' => 'Svaki komad ima potencijal za mnogo više od nekoliko izlazaka, nekoliko fotografija i nekoliko mjeseci u ormaru. Odjeća je napravljena da se nosi.'],
+            ['type' => 'paragraph', 'text' => 'Svaki put kada odjeća pronađe novog vlasnika, njen životni vijek se produžava. To znači manje odjeće koja završava zaboravljena u ormarima ili na otpadu i manju potrebu za proizvodnjom novih komada. Ne moramo uvijek kupovati novo da bismo napravili dobar izbor. Ponekad je dovoljno dati postojećim stvarima još jednu priliku.'],
 
             ['type' => 'heading', 'text' => 'Vrijeme je da promijenimo pogled'],
             ['type' => 'paragraph', 'text' => 'Možda je vrijeme da prestanemo gledati polovnu odjeću kao nešto manje vrijedno. Jer vrijednost nije u tome koliko je puta nešto obučeno. Vrijednost je u tome koliko će još puta biti obučeno.'],
