@@ -50,4 +50,10 @@ return [
         'private_key' => env('APPLE_PRIVATE_KEY'),
     ],
 
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token'  => env('TWILIO_AUTH_TOKEN'),
+        'verify_sid'  => env('TWILIO_VERIFY_SERVICE_SID'),
+    ],
+
 ];

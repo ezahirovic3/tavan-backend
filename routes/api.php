@@ -101,53 +101,65 @@ Route::prefix('v1')->group(function () {
         Route::patch('users/me/addresses/{address}', [UserAddressController::class, 'update']);
         Route::delete('users/me/addresses/{address}', [UserAddressController::class, 'destroy']);
 
-        Route::post('products', [ProductController::class, 'store']);
-        Route::patch('products/{product}', [ProductController::class, 'update']);
-        Route::delete('products/{product}', [ProductController::class, 'destroy']);
-        Route::post('products/{product}/publish', [ProductController::class, 'publish']);
-        Route::post('products/{product}/vintage', [ProductController::class, 'applyVintage']);
+        // ── Phone-verified write routes ───────────────────────────────────────────
+        Route::middleware('phone.verified')->group(function () {
+
+            Route::post('products', [ProductController::class, 'store']);
+            Route::patch('products/{product}', [ProductController::class, 'update']);
+            Route::delete('products/{product}', [ProductController::class, 'destroy']);
+            Route::post('products/{product}/publish', [ProductController::class, 'publish']);
+            Route::post('products/{product}/vintage', [ProductController::class, 'applyVintage']);
+            Route::post('products/{product}/images', [ProductImageController::class, 'store']);
+            Route::delete('products/{product}/images/{image}', [ProductImageController::class, 'destroy']);
+            Route::patch('products/{product}/images/reorder', [ProductImageController::class, 'reorder']);
+
+            // Offers
+            Route::post('offers', [OfferController::class, 'store']);
+            Route::get('offers/{offer}', [OfferController::class, 'show']);
+            Route::post('offers/{offer}/accept', [OfferController::class, 'accept']);
+            Route::post('offers/{offer}/decline', [OfferController::class, 'decline']);
+            Route::post('offers/{offer}/counter', [OfferController::class, 'counter']);
+
+            // Trades
+            Route::post('trades', [TradeController::class, 'store']);
+            Route::get('trades/{trade}', [TradeController::class, 'show']);
+            Route::post('trades/{trade}/accept', [TradeController::class, 'accept']);
+            Route::post('trades/{trade}/decline', [TradeController::class, 'decline']);
+            Route::post('trades/{trade}/counter', [TradeController::class, 'counter']);
+
+            // Orders
+            Route::get('orders', [OrderController::class, 'index']);
+            Route::post('orders', [OrderController::class, 'store']);
+            Route::get('orders/{order}', [OrderController::class, 'show']);
+            Route::post('orders/{order}/accept', [OrderController::class, 'accept']);
+            Route::post('orders/{order}/ship', [OrderController::class, 'ship']);
+            Route::post('orders/{order}/deliver', [OrderController::class, 'deliver']);
+            Route::post('orders/{order}/complete', [OrderController::class, 'complete']);
+            Route::post('orders/{order}/decline', [OrderController::class, 'decline']);
+
+            // Reviews
+            Route::get('reviews/{review}', [ReviewController::class, 'show']);
+            Route::post('orders/{order}/reviews', [ReviewController::class, 'store']);
+
+            // Conversations (messaging requires phone verification)
+            Route::post('conversations/support', [ConversationController::class, 'support']);
+            Route::post('conversations', [ConversationController::class, 'store']);
+            Route::post('conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);
+
+        });
+
+        // ── Phone-verified not required ───────────────────────────────────────────
         Route::post('products/{product}/report', [ProductReportController::class, 'store']);
-        Route::post('products/{product}/images', [ProductImageController::class, 'store']);
-        Route::delete('products/{product}/images/{image}', [ProductImageController::class, 'destroy']);
-        Route::patch('products/{product}/images/reorder', [ProductImageController::class, 'reorder']);
 
         Route::get('wishlist', [WishlistController::class, 'index']);
         Route::post('wishlist/{product}/toggle', [WishlistController::class, 'toggle']);
         Route::post('wishlist/{product}', [WishlistController::class, 'store']);
         Route::delete('wishlist/{product}', [WishlistController::class, 'destroy']);
 
-        // Offers
-        Route::post('offers', [OfferController::class, 'store']);
-        Route::get('offers/{offer}', [OfferController::class, 'show']);
-        Route::post('offers/{offer}/accept', [OfferController::class, 'accept']);
-        Route::post('offers/{offer}/decline', [OfferController::class, 'decline']);
-        Route::post('offers/{offer}/counter', [OfferController::class, 'counter']);
-
-        // Trades
-        Route::post('trades', [TradeController::class, 'store']);
-        Route::get('trades/{trade}', [TradeController::class, 'show']);
-        Route::post('trades/{trade}/accept', [TradeController::class, 'accept']);
-        Route::post('trades/{trade}/decline', [TradeController::class, 'decline']);
-        Route::post('trades/{trade}/counter', [TradeController::class, 'counter']);
-
-        // Orders
-        Route::get('orders', [OrderController::class, 'index']);
-        Route::post('orders', [OrderController::class, 'store']);
-        Route::get('orders/{order}', [OrderController::class, 'show']);
-        Route::post('orders/{order}/accept', [OrderController::class, 'accept']);
-        Route::post('orders/{order}/ship', [OrderController::class, 'ship']);
-        Route::post('orders/{order}/deliver', [OrderController::class, 'deliver']);
-        Route::post('orders/{order}/complete', [OrderController::class, 'complete']);
-        Route::post('orders/{order}/decline', [OrderController::class, 'decline']);
-
-        // Reviews
-        Route::get('reviews/{review}', [ReviewController::class, 'show']);
-        Route::post('orders/{order}/reviews', [ReviewController::class, 'store']);
-
         // Brand suggestions
         Route::post('brand-suggestions', [BrandSuggestionController::class, 'store']);
 
-        // Push tokens
+        // Push tokens — must never be blocked (required for notifications)
         Route::post('push-tokens', [PushTokenController::class, 'store']);
         Route::delete('push-tokens', [PushTokenController::class, 'destroy']);
         Route::post('push-tokens/badge/reset', [PushTokenController::class, 'resetBadge']);
@@ -156,14 +168,11 @@ Route::prefix('v1')->group(function () {
         Route::get('announcements/unread-count', [AnnouncementController::class, 'unreadCount']);
         Route::post('announcements/{announcement}/read', [AnnouncementController::class, 'markRead']);
 
-        // Conversations
+        // Conversations — read access open (show history, unread count)
         Route::get('conversations', [ConversationController::class, 'index']);
         Route::get('conversations/unread', [ConversationController::class, 'unreadCount']);
-        Route::post('conversations/support', [ConversationController::class, 'support']);
-        Route::post('conversations', [ConversationController::class, 'store']);
         Route::get('conversations/{conversation}', [ConversationController::class, 'show']);
         Route::get('conversations/{conversation}/info', [ConversationController::class, 'info']);
-        Route::post('conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);
         Route::post('conversations/{conversation}/read', [ConversationController::class, 'markRead']);
 
     });

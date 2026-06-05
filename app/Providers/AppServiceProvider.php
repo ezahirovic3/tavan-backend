@@ -3,10 +3,11 @@
 namespace App\Providers;
 
 use App\Contracts\AuthProviderInterface;
-use App\Contracts\SmsProviderInterface;
+use App\Contracts\OtpProviderInterface;
 use App\Models\CachedPersonalAccessToken;
 use App\Services\Auth\LocalAuthProvider;
-use App\Services\Auth\LogSmsProvider;
+use App\Services\Auth\LogOtpProvider;
+use App\Services\Auth\TwilioOtpProvider;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
@@ -17,8 +18,19 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(AuthProviderInterface::class, LocalAuthProvider::class);
 
-        // In production swap LogSmsProvider for TwilioSmsProvider (or similar)
-        $this->app->bind(SmsProviderInterface::class, LogSmsProvider::class);
+        $this->app->bind(OtpProviderInterface::class, function () {
+            $sid = config('services.twilio.account_sid');
+
+            if (! $sid) {
+                return new LogOtpProvider();
+            }
+
+            return new TwilioOtpProvider(
+                $sid,
+                config('services.twilio.auth_token'),
+                config('services.twilio.verify_sid'),
+            );
+        });
     }
 
     public function boot(): void
