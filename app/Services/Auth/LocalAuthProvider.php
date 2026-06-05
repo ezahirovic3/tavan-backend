@@ -3,6 +3,7 @@
 namespace App\Services\Auth;
 
 use App\Contracts\AuthProviderInterface;
+use App\Exceptions\AccountBannedException;
 use App\Exceptions\AccountPendingDeletionException;
 use App\Exceptions\EmailNotVerifiedException;
 use App\Models\User;
@@ -39,6 +40,10 @@ class LocalAuthProvider implements AuthProviderInterface
 
         if (! $user->email_verified_at) {
             throw new EmailNotVerifiedException($user->email);
+        }
+
+        if ($user->isBanned()) {
+            throw new AccountBannedException($user->banned_until);
         }
 
         if ($user->deletion_requested_at) {

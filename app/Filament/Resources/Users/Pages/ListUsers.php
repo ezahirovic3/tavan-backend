@@ -29,6 +29,12 @@ class ListUsers extends ListRecords
                 ->modifyQueryUsing(fn ($query) => $query
                     ->where('is_anonymized', false)
                     ->where('is_verified', true)),
+            'banned' => Tab::make('Banirani')
+                ->modifyQueryUsing(fn ($query) => $query
+                    ->where('is_anonymized', false)
+                    ->where('banned_until', '>', now()))
+                ->badge(fn () => \App\Models\User::where('banned_until', '>', now())->count())
+                ->badgeColor('danger'),
             'obrisani' => Tab::make('Obrisani')
                 ->modifyQueryUsing(fn ($query) => $query->where('is_anonymized', true))
                 ->badge(fn () => \App\Models\User::where('is_anonymized', true)->count())

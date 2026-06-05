@@ -17,6 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'phone.verified' => \App\Http\Middleware\RequiresPhoneVerification::class,
+            'ban.check'      => \App\Http\Middleware\CheckBanStatus::class,
+            'device.ban'     => \App\Http\Middleware\CheckDeviceBan::class,
         ]);
 
         // Reject requests missing the shared app key (mobile + landing page set X-App-Key)

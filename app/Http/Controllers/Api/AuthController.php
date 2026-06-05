@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Contracts\AuthProviderInterface;
+use App\Exceptions\AccountBannedException;
 use App\Exceptions\AccountPendingDeletionException;
 use App\Exceptions\EmailNotVerifiedException;
 use App\Http\Controllers\Controller;
@@ -49,6 +50,12 @@ class AuthController extends Controller
     {
         try {
             $result = $this->auth->login($request->email, $request->password);
+        } catch (AccountBannedException $e) {
+            return response()->json([
+                'message' => 'Tvoj račun je suspendiran.',
+                'code'    => 'account_banned',
+                'bannedUntil' => $e->bannedUntil->year >= 2099 ? null : $e->bannedUntil->toISOString(),
+            ], 403);
         } catch (AccountPendingDeletionException $e) {
             return response()->json([
                 'error'         => 'account_pending_deletion',

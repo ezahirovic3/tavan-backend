@@ -34,6 +34,9 @@ class ProductController extends Controller
             }
         }
 
+        // Hide products from banned sellers
+        $query->whereDoesntHave('seller', fn ($q) => $q->where('banned_until', '>', now()));
+
         // ── Category filters ───────────────────────────────────────────────────
         if ($request->filled('root_category')) {
             $query->where('root_category', $request->root_category);

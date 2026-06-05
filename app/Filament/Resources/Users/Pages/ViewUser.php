@@ -3,8 +3,11 @@
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\UserResource;
+use App\Services\BanService;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\RepeatableEntry;
@@ -61,6 +64,44 @@ class ViewUser extends ViewRecord
                 ->action(function ($record) {
                     $record->update(['deletion_requested_at' => null]);
                     Notification::make()->success()->title('Brisanje poništeno')->send();
+                }),
+
+            Action::make('ban')
+                ->label('Baniraj')
+                ->icon('heroicon-m-no-symbol')
+                ->color('danger')
+                ->visible(fn ($record) => ! UserResource::isLocked($record) && ! $record->isBanned())
+                ->schema([
+                    Select::make('duration')
+                        ->label('Trajanje')
+                        ->options([
+                            '7d'        => '7 dana — lakše kršenje',
+                            '30d'       => '30 dana — ponovljeno kršenje',
+                            'permanent' => 'Permanentno — prevara / scam',
+                        ])
+                        ->required(),
+                    Textarea::make('ban_reason')->label('Razlog (interno)')->rows(2),
+                ])
+                ->modalHeading('Baniraj korisnika')
+                ->modalDescription('Korisnik gubi pristup odmah. Tokeni se brišu, aktivni oglasi idu u draft.')
+                ->action(function (array $data, $record) {
+                    app(BanService::class)->ban($record, $data['duration'], $data['ban_reason'] ?? null);
+                    Notification::make()->success()->title('Korisnik baniran')->send();
+                    $this->refreshFormData(['banned_until', 'ban_reason']);
+                }),
+
+            Action::make('liftBan')
+                ->label('Skini ban')
+                ->icon('heroicon-m-check-circle')
+                ->color('success')
+                ->visible(fn ($record) => ! UserResource::isLocked($record) && $record->isBanned())
+                ->requiresConfirmation()
+                ->modalHeading('Skini ban')
+                ->modalDescription('Korisnik ponovo dobija pristup aplikaciji.')
+                ->action(function ($record) {
+                    app(BanService::class)->lift($record);
+                    Notification::make()->success()->title('Ban uklonjen')->send();
+                    $this->refreshFormData(['banned_until', 'ban_reason']);
                 }),
 
             Action::make('forceAnonymize')
@@ -159,16 +200,21 @@ class ViewUser extends ViewRecord
                                             ->columnSpan(2)
                                             ->state(fn ($record) => match (true) {
                                                 $record->is_anonymized                => 'anonymized',
+                                                $record->isBanned()                   => 'banned',
                                                 (bool) $record->deletion_requested_at => 'pending_deletion',
                                                 default                               => 'active',
                                             })
                                             ->formatStateUsing(fn ($state, $record) => match ($state) {
                                                 'anonymized'       => 'Obrisan',
+                                                'banned'           => $record->banned_until?->year >= 2099
+                                                    ? 'BANIRAN — Permanentno'
+                                                    : 'BANIRAN — do ' . $record->banned_until->format('d.m.Y.'),
                                                 'pending_deletion' => 'Briše se ' . \Carbon\Carbon::parse($record->deletion_requested_at)->addDays(30)->format('d.m.Y.'),
                                                 default            => 'Aktivan',
                                             })
                                             ->color(fn ($state) => match ($state) {
                                                 'anonymized'       => 'gray',
+                                                'banned'           => 'danger',
                                                 'pending_deletion' => 'danger',
                                                 default            => 'success',
                                             }),

@@ -24,4 +24,11 @@ class VerifyPhoneOtpRequest extends FormRequest
             'otp'   => ['required', 'string', 'size:6'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'phone.unique' => 'Ovaj broj telefona je već registrovan na drugom računu.',
+        ];
+    }
 }

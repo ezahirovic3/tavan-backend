@@ -23,6 +23,8 @@ class UpdateProfileRequest extends FormRequest
             'feed_setup_done'            => ['sometimes', 'boolean'],
             'first_listing_coach_seen'   => ['sometimes', 'boolean'],
             'first_draft_coach_seen'     => ['sometimes', 'boolean'],
+            // Phone changes require OTP verification — use /auth/phone/send-otp flow
+            'phone'             => ['prohibited'],
         ];
     }
 }

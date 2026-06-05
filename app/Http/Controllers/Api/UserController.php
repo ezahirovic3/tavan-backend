@@ -21,6 +21,7 @@ class UserController extends Controller
         $users = User::query()
             ->where('email', 'not like', '%@deleted.tavan')
             ->whereNull('deletion_requested_at')
+            ->where(fn ($q) => $q->whereNull('banned_until')->orWhere('banned_until', '<=', now()))
             ->withCount(['products as item_count' => fn ($q) => $q->where('status', 'active')])
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($inner) use ($query) {
@@ -68,7 +69,7 @@ class UserController extends Controller
             abort_if($blocked, 404);
         }
 
-        if ($user->deletion_requested_at) {
+        if ($user->deletion_requested_at || $user->isBanned()) {
             abort(404);
         }
 

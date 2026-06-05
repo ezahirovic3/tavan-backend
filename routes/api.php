@@ -30,10 +30,10 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
 
     // ── Public ────────────────────────────────────────────────────────────────
-    Route::post('auth/register', [AuthController::class, 'register']);
-    Route::post('auth/login', [AuthController::class, 'login']);
-    Route::post('auth/social/google', [SocialAuthController::class, 'google']);
-    Route::post('auth/social/apple', [SocialAuthController::class, 'apple']);
+    Route::post('auth/register', [AuthController::class, 'register'])->middleware('device.ban');
+    Route::post('auth/login', [AuthController::class, 'login'])->middleware('device.ban');
+    Route::post('auth/social/google', [SocialAuthController::class, 'google'])->middleware('device.ban');
+    Route::post('auth/social/apple', [SocialAuthController::class, 'apple'])->middleware('device.ban');
     Route::get('auth/social/google/redirect', [SocialAuthRedirectController::class, 'redirect'])->withoutMiddleware(\App\Http\Middleware\VerifyAppKey::class);
     Route::get('auth/social/google/callback', [SocialAuthRedirectController::class, 'callback'])->withoutMiddleware(\App\Http\Middleware\VerifyAppKey::class);
 
@@ -75,7 +75,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // ── Authenticated ─────────────────────────────────────────────────────────
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'ban.check'])->group(function () {
 
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
