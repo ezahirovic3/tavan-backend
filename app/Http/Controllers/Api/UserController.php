@@ -20,6 +20,7 @@ class UserController extends Controller
 
         $users = User::query()
             ->where('email', 'not like', '%@deleted.tavan')
+            ->where('role', '!=', 'super_admin')
             ->whereNull('deletion_requested_at')
             ->where(fn ($q) => $q->whereNull('banned_until')->orWhere('banned_until', '<=', now()))
             ->withCount(['products as item_count' => fn ($q) => $q->where('status', 'active')])
@@ -69,7 +70,7 @@ class UserController extends Controller
             abort_if($blocked, 404);
         }
 
-        if ($user->deletion_requested_at || $user->isBanned()) {
+        if ($user->deletion_requested_at || $user->isBanned() || $user->role === 'super_admin') {
             abort(404);
         }
 
@@ -140,7 +141,7 @@ class UserController extends Controller
             } else {
                 $q->where('username', $username);
             }
-        })->firstOrFail();
+        })->where('role', '!=', 'super_admin')->firstOrFail();
 
         // This is a public route, so $request->user() is null even when a Bearer token
         // is present. Resolve the Sanctum user manually (same pattern as ProductController).

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\User;
 
+use App\Rules\NotReservedWord;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,8 +16,8 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'              => ['sometimes', 'string', 'max:255'],
-            'username'          => ['sometimes', 'string', 'max:64', 'regex:/^[a-zA-Z0-9_.]+$/', Rule::unique('users')->ignore($this->user()->id)],
+            'name'              => ['sometimes', 'string', 'max:255', new NotReservedWord(exact: false)],
+            'username'          => ['sometimes', 'string', 'max:64', 'regex:/^[a-zA-Z0-9_.]+$/', Rule::unique('users')->ignore($this->user()->id), new NotReservedWord(exact: true)],
             'bio'               => ['sometimes', 'nullable', 'string', 'max:500'],
             'location'          => ['sometimes', 'nullable', 'string', 'max:128'],
             'profile_setup_done'         => ['sometimes', 'boolean'],
