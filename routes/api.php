@@ -70,6 +70,7 @@ Route::prefix('v1')->group(function () {
     // Tracking — public, gated by VerifyAppKey (applied to all /api/v1/ routes)
     Route::middleware('throttle:60,1')->group(function () {
         Route::post('tracking/share-view', [TrackingController::class, 'shareView']);
+        Route::post('tracking/search-query', [TrackingController::class, 'searchQuery']);
         Route::get('tracking/campaign/{id}', [TrackingController::class, 'campaign']);
         Route::post('tracking/campaign-event', [TrackingController::class, 'campaignEvent']);
     });
