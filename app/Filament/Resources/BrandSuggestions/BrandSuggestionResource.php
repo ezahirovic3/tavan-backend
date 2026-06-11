@@ -144,6 +144,16 @@ class BrandSuggestionResource extends Resource
                     ->modalHeading('Odobri prijedlog → kreiraj brend')
                     ->modalSubmitActionLabel('Kreiraj brend')
                     ->action(function (array $data, $record) {
+                        if (Brand::where('slug', $data['slug'])->exists()) {
+                            Notification::make()
+                                ->danger()
+                                ->title('Brend već postoji')
+                                ->body('Brend sa slug-om "' . $data['slug'] . '" već postoji u katalogu.')
+                                ->send();
+
+                            return;
+                        }
+
                         Brand::create([
                             'name' => $data['name'],
                             'slug' => $data['slug'],
