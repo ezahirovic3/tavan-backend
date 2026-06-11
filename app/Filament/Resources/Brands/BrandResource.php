@@ -22,6 +22,7 @@ use Filament\Tables\Columns\TextInputColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
 class BrandResource extends Resource
@@ -132,7 +133,20 @@ class BrandResource extends Resource
                     ->placeholder('Svi'),
             ])
             ->recordActions([
-                EditAction::make()->slideOver(),
+                EditAction::make()
+                    ->slideOver()
+                    ->using(function (array $data, Model $record): void {
+                        $newOrder = (int) $data['sort_order'];
+                        $oldOrder = (int) $record->sort_order;
+
+                        if ($newOrder !== $oldOrder) {
+                            Brand::where('id', '!=', $record->getKey())
+                                ->where('sort_order', '>=', $newOrder)
+                                ->increment('sort_order');
+                        }
+
+                        $record->update($data);
+                    }),
                 DeleteAction::make()
                     ->visible(fn () => auth()->user()->isSuperAdmin()),
             ])
