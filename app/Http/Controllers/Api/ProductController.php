@@ -127,10 +127,10 @@ class ProductController extends Controller
         // ── Sorting ────────────────────────────────────────────────────────────
         // Frontend sends sortBy → middleware converts to sort_by
         match ($request->input('sort_by', 'newest')) {
-            'price_asc'  => $query->orderBy('price', 'asc'),
-            'price_desc' => $query->orderBy('price', 'desc'),
-            'oldest'     => $query->oldest(),
-            default      => $query->latest(),
+            'price_asc', 'priceAsc'   => $query->orderBy('price', 'asc'),
+            'price_desc', 'priceDesc' => $query->orderBy('price', 'desc'),
+            'oldest'                  => $query->oldest(),
+            default                   => $query->latest(),
         };
 
         // Personalized feed — filter by the authenticated user's saved preferences.
