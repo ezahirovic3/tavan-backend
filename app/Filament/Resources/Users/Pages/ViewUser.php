@@ -3,8 +3,13 @@
 namespace App\Filament\Resources\Users\Pages;
 
 use App\Filament\Resources\Users\UserResource;
+use App\Services\BanService;
+use App\Services\ConversationService;
+use App\Services\PushNotificationService;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\RepeatableEntry;
@@ -39,15 +44,79 @@ class ViewUser extends ViewRecord
                 }),
 
             Action::make('toggleAutoReview')
-                ->label(fn ($record) => $record->listings_require_review ? 'Ukloni auto-review' : 'Postavi auto-review')
-                ->icon('heroicon-m-shield-exclamation')
-                ->color(fn ($record) => $record->listings_require_review ? 'gray' : 'danger')
+                ->label(fn ($record) => $record->listings_require_review ? 'Odobri prodavca' : 'Postavi auto-review')
+                ->icon(fn ($record) => $record->listings_require_review ? 'heroicon-m-check-badge' : 'heroicon-m-shield-exclamation')
+                ->color(fn ($record) => $record->listings_require_review ? 'success' : 'danger')
                 ->visible(fn ($record) => ! UserResource::isLocked($record))
                 ->requiresConfirmation()
-                ->modalDescription('Svaki novi oglas korisnika će ići u pending_review.')
+                ->modalHeading(fn ($record) => $record->listings_require_review ? 'Odobri prodavca' : 'Postavi auto-review')
+                ->modalDescription(fn ($record) => $record->listings_require_review
+                    ? 'Korisnik dobija obavijest da su oglasi odobreni i da budući oglasi idu direktno online.'
+                    : 'Svaki novi oglas korisnika će ići u pending_review.')
                 ->action(function ($record) {
-                    $record->update(['listings_require_review' => ! $record->listings_require_review]);
-                    Notification::make()->success()->title('Auto-review flag ažuriran')->send();
+                    $wasUnderReview = (bool) $record->listings_require_review;
+                    $record->update(['listings_require_review' => ! $wasUnderReview]);
+
+                    if ($wasUnderReview) {
+                        $conversations = app(ConversationService::class);
+                        $push = app(PushNotificationService::class);
+
+                        $conversation = $conversations->findOrCreateSupportConversation($record->id);
+
+                        $conversations->sendSupportReply(
+                            $conversation,
+                            auth()->user(),
+                            "Tvoji oglasi su pregledani i odobreni! 🎉\n\nOd sada svi tvoji novi oglasi idu direktno online — nema više čekanja na pregled.\n\nNapomena: Ako primimo prijave vezane za tvoj profil ili oglase, pregled može biti ponovo uključen. Hvala na razumijevanju i dobrodošao/la u Tavan zajednicu! 🩷",
+                        );
+
+                        $push->sendToUser(
+                            $record->id,
+                            'Tavan Podrška',
+                            'Tvoji oglasi su odobreni! Od sada objavljuješ direktno online 🎉',
+                            ['type' => 'support_message', 'conversationId' => $conversation->id],
+                        );
+                    }
+
+                    Notification::make()->success()
+                        ->title($wasUnderReview ? 'Prodavac odobren — poruka poslana' : 'Auto-review flag uključen')
+                        ->send();
+                }),
+
+            Action::make('rejectSeller')
+                ->label('Odbij prodavca')
+                ->icon('heroicon-m-x-circle')
+                ->color('danger')
+                ->visible(fn ($record) => ! UserResource::isLocked($record) && $record->listings_require_review)
+                ->schema([
+                    Textarea::make('rejection_message')
+                        ->label('Poruka za korisnika')
+                        ->placeholder('Npr. Nismo uspjeli verificirati tvoj profil. Molimo te da...')
+                        ->rows(4)
+                        ->required(),
+                ])
+                ->modalHeading('Odbij prodavca')
+                ->modalDescription('Oglas ostaje u pregledu. Korisnik dobija tvoju poruku putem Tavan Podrška chata.')
+                ->modalSubmitActionLabel('Odbij i pošalji poruku')
+                ->action(function (array $data, $record) {
+                    $conversations = app(ConversationService::class);
+                    $push = app(PushNotificationService::class);
+
+                    $conversation = $conversations->findOrCreateSupportConversation($record->id);
+
+                    $conversations->sendSupportReply(
+                        $conversation,
+                        auth()->user(),
+                        "Pregledali smo tvoj profil i trenutno nismo u mogućnosti odobriti tvoje oglase.\n\n{$data['rejection_message']}\n\nAko imaš pitanja ili smatraš da se radi o grešci, slobodno nam odgovori na ovu poruku.",
+                    );
+
+                    $push->sendToUser(
+                        $record->id,
+                        'Tavan Podrška',
+                        'Imaš novu poruku od Tavan Podrška tima.',
+                        ['type' => 'support_message', 'conversationId' => $conversation->id],
+                    );
+
+                    Notification::make()->success()->title('Prodavac odbijen — poruka poslana')->send();
                 }),
 
             Action::make('cancelDeletion')
@@ -61,6 +130,44 @@ class ViewUser extends ViewRecord
                 ->action(function ($record) {
                     $record->update(['deletion_requested_at' => null]);
                     Notification::make()->success()->title('Brisanje poništeno')->send();
+                }),
+
+            Action::make('ban')
+                ->label('Baniraj')
+                ->icon('heroicon-m-no-symbol')
+                ->color('danger')
+                ->visible(fn ($record) => ! UserResource::isLocked($record) && ! $record->isBanned())
+                ->schema([
+                    Select::make('duration')
+                        ->label('Trajanje')
+                        ->options([
+                            '7d'        => '7 dana — lakše kršenje',
+                            '30d'       => '30 dana — ponovljeno kršenje',
+                            'permanent' => 'Permanentno — prevara / scam',
+                        ])
+                        ->required(),
+                    Textarea::make('ban_reason')->label('Razlog (interno)')->rows(2),
+                ])
+                ->modalHeading('Baniraj korisnika')
+                ->modalDescription('Korisnik gubi pristup odmah. Tokeni se brišu, aktivni oglasi idu u draft.')
+                ->action(function (array $data, $record) {
+                    app(BanService::class)->ban($record, $data['duration'], $data['ban_reason'] ?? null);
+                    Notification::make()->success()->title('Korisnik baniran')->send();
+                    $this->refreshFormData(['banned_until', 'ban_reason']);
+                }),
+
+            Action::make('liftBan')
+                ->label('Skini ban')
+                ->icon('heroicon-m-check-circle')
+                ->color('success')
+                ->visible(fn ($record) => ! UserResource::isLocked($record) && $record->isBanned())
+                ->requiresConfirmation()
+                ->modalHeading('Skini ban')
+                ->modalDescription('Korisnik ponovo dobija pristup aplikaciji.')
+                ->action(function ($record) {
+                    app(BanService::class)->lift($record);
+                    Notification::make()->success()->title('Ban uklonjen')->send();
+                    $this->refreshFormData(['banned_until', 'ban_reason']);
                 }),
 
             Action::make('forceAnonymize')
@@ -159,16 +266,21 @@ class ViewUser extends ViewRecord
                                             ->columnSpan(2)
                                             ->state(fn ($record) => match (true) {
                                                 $record->is_anonymized                => 'anonymized',
+                                                $record->isBanned()                   => 'banned',
                                                 (bool) $record->deletion_requested_at => 'pending_deletion',
                                                 default                               => 'active',
                                             })
                                             ->formatStateUsing(fn ($state, $record) => match ($state) {
                                                 'anonymized'       => 'Obrisan',
+                                                'banned'           => $record->banned_until?->year >= 2099
+                                                    ? 'BANIRAN — Permanentno'
+                                                    : 'BANIRAN — do ' . $record->banned_until->format('d.m.Y.'),
                                                 'pending_deletion' => 'Briše se ' . \Carbon\Carbon::parse($record->deletion_requested_at)->addDays(30)->format('d.m.Y.'),
                                                 default            => 'Aktivan',
                                             })
                                             ->color(fn ($state) => match ($state) {
                                                 'anonymized'       => 'gray',
+                                                'banned'           => 'danger',
                                                 'pending_deletion' => 'danger',
                                                 default            => 'success',
                                             }),

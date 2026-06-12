@@ -33,10 +33,19 @@ class Brand extends Model
 
     protected static function booted(): void
     {
-        // When a logo is replaced in Filament, delete the old R2 file
         static::saving(function (Brand $brand) {
+            // When a logo is replaced in Filament, delete the old R2 file
             if ($brand->isDirty('logo_url') && $brand->getOriginal('logo_url')) {
                 app(\App\Services\ImageService::class)->deleteByUrl($brand->getOriginal('logo_url'));
+            }
+
+            // Insert-at-position: shift other brands down when sort_order changes
+            if ($brand->isDirty('sort_order') && $brand->sort_order !== null) {
+                $query = static::where('sort_order', '>=', $brand->sort_order);
+                if ($brand->exists) {
+                    $query->where($brand->getKeyName(), '!=', $brand->getKey());
+                }
+                $query->increment('sort_order');
             }
         });
 

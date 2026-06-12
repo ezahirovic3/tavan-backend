@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\AccountBannedException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -59,6 +60,14 @@ class SocialAuthController extends Controller
             givenName: $payload['given_name'] ?? null,
         );
 
+        if ($user->isBanned()) {
+            return response()->json([
+                'message'     => 'Tvoj račun je suspendiran.',
+                'code'        => 'account_banned',
+                'bannedUntil' => $user->banned_until->year >= 2099 ? null : $user->banned_until->toISOString(),
+            ], 403);
+        }
+
         $token = $user->createToken('mobile')->plainTextToken;
 
         return response()->json([
@@ -104,6 +113,14 @@ class SocialAuthController extends Controller
             name: $name,
             givenName: $givenName,
         );
+
+        if ($user->isBanned()) {
+            return response()->json([
+                'message'     => 'Tvoj račun je suspendiran.',
+                'code'        => 'account_banned',
+                'bannedUntil' => $user->banned_until->year >= 2099 ? null : $user->banned_until->toISOString(),
+            ], 403);
+        }
 
         $token = $user->createToken('mobile')->plainTextToken;
 

@@ -216,17 +216,22 @@ class UserResource extends Resource
                     ->label('Status')
                     ->badge()
                     ->state(fn ($record) => match (true) {
-                        $record->is_anonymized          => 'anonymized',
+                        $record->is_anonymized                => 'anonymized',
+                        $record->isBanned()                   => 'banned',
                         (bool) $record->deletion_requested_at => 'pending_deletion',
-                        default                         => null,
+                        default                               => null,
                     })
                     ->formatStateUsing(fn ($state, $record) => match ($state) {
-                        'anonymized'      => 'Obrisan',
+                        'anonymized'       => 'Obrisan',
+                        'banned'           => $record->banned_until?->year >= 2099
+                            ? 'Baniran (perm.)'
+                            : 'Baniran još ' . now()->diffInDays($record->banned_until) . ' d.',
                         'pending_deletion' => 'Briše se ' . \Carbon\Carbon::parse($record->deletion_requested_at)->addDays(30)->format('d.m.Y.'),
-                        default           => null,
+                        default            => null,
                     })
                     ->color(fn ($state) => match ($state) {
                         'anonymized'       => 'gray',
+                        'banned'           => 'danger',
                         'pending_deletion' => 'danger',
                         default            => null,
                     })
@@ -254,6 +259,12 @@ class UserResource extends Resource
                 TernaryFilter::make('listings_require_review')
                     ->label('Auto-review flag')
                     ->placeholder('Svi'),
+                Filter::make('banned')
+                    ->label('Banirani')
+                    ->toggle()
+                    ->query(fn (Builder $q, array $data) => $data['isActive']
+                        ? $q->where('banned_until', '>', now())
+                        : $q),
                 Filter::make('pending_deletion')
                     ->label('Na čekanju brisanja')
                     ->toggle()

@@ -18,6 +18,7 @@ class TestUserSeeder extends Seeder
                 'password'           => Hash::make('test123'),
                 'profile_setup_done' => true,
                 'email_verified_at'  => now(),
+                'phone_verified_at'  => now(),
             ]
         );
     }

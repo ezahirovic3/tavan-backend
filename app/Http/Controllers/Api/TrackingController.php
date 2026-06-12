@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignEvent;
+use App\Models\SearchQuery;
 use App\Models\ShareView;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -47,6 +48,17 @@ class TrackingController extends Controller
             $host === ''                                                            => 'direct',
             default                                                                => 'other',
         };
+    }
+
+    public function searchQuery(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'query' => ['required', 'string', 'max:255'],
+        ]);
+
+        SearchQuery::record($data['query']);
+
+        return response()->json(['data' => ['recorded' => true]], 201);
     }
 
     public function campaign(string $id): JsonResponse

@@ -8,6 +8,7 @@ use App\Http\Requests\Product\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Models\WishlistItem;
+use App\Services\ProductSearchService;
 use App\Services\ViewCountService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,9 @@ class ProductController extends Controller
                 $query->whereNotIn('seller_id', $blockedIds);
             }
         }
+
+        // Hide products from banned sellers
+        $query->whereDoesntHave('seller', fn ($q) => $q->where('banned_until', '>', now()));
 
         // ── Category filters ───────────────────────────────────────────────────
         if ($request->filled('root_category')) {
@@ -99,19 +103,34 @@ class ProductController extends Controller
 
         // ── Search ─────────────────────────────────────────────────────────────
         if ($request->filled('q')) {
-            $query->where(fn ($q) => $q
-                ->where('title', 'like', '%'.$request->q.'%')
-                ->orWhere('description', 'like', '%'.$request->q.'%')
-            );
+            $terms          = ProductSearchService::expandTerms($request->q);
+            $categoryIntent = ProductSearchService::detectCategoryIntent($request->q);
+
+            $query->where(function ($q) use ($terms, $categoryIntent) {
+                // Text match across title, description, and subcategory label.
+                // Subcategory is included so a listing titled "Plave pantalone" but
+                // tagged subcategory="Farmerke" still surfaces when searching "farmerke".
+                foreach ($terms as $term) {
+                    $q->orWhere('title',       'like', '%'.$term.'%')
+                      ->orWhere('description', 'like', '%'.$term.'%')
+                      ->orWhere('subcategory', 'like', '%'.$term.'%');
+                }
+
+                // Category-level intent: "hlače" → bottoms, "patike" → shoes, etc.
+                // Catches listings whose titles use a completely different word family.
+                if ($categoryIntent) {
+                    $q->orWhere('category', $categoryIntent);
+                }
+            });
         }
 
         // ── Sorting ────────────────────────────────────────────────────────────
         // Frontend sends sortBy → middleware converts to sort_by
         match ($request->input('sort_by', 'newest')) {
-            'price_asc'  => $query->orderBy('price', 'asc'),
-            'price_desc' => $query->orderBy('price', 'desc'),
-            'oldest'     => $query->oldest(),
-            default      => $query->latest(),
+            'price_asc', 'priceAsc'   => $query->orderBy('price', 'asc'),
+            'price_desc', 'priceDesc' => $query->orderBy('price', 'desc'),
+            'oldest'                  => $query->oldest(),
+            default                   => $query->latest(),
         };
 
         // Personalized feed — filter by the authenticated user's saved preferences.

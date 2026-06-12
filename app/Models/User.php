@@ -65,6 +65,8 @@ class User extends Authenticatable implements FilamentUser
         'is_anonymized',
         'acquired_via_campaign_id',
         'deletion_requested_at',
+        'banned_until',
+        'ban_reason',
     ];
 
     protected $hidden = [
@@ -78,6 +80,7 @@ class User extends Authenticatable implements FilamentUser
             'phone_verified_at'      => 'datetime',
             'last_active_at'         => 'datetime',
             'deletion_requested_at'  => 'datetime',
+            'banned_until'           => 'datetime',
             'password'          => 'hashed',
             'is_verified'               => 'boolean',
             'is_vintage_seller'         => 'boolean',
@@ -91,6 +94,11 @@ class User extends Authenticatable implements FilamentUser
             'is_anonymized'              => 'boolean',
             'rating'            => 'decimal:2',
         ];
+    }
+
+    public function isBanned(): bool
+    {
+        return $this->banned_until !== null && $this->banned_until->isFuture();
     }
 
     public function isSuperAdmin(): bool

@@ -5,10 +5,12 @@ namespace App\Filament\Resources\UserReports;
 use App\Filament\Resources\UserReports\Pages\ListUserReports;
 use App\Filament\Resources\UserReports\Pages\ViewUserReport;
 use App\Models\UserReport;
+use App\Services\BanService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
@@ -322,12 +324,28 @@ class UserReportResource extends Resource
                     }),
 
                 Action::make('ban')
-                    ->label('Ban (placeholder)')
+                    ->label('Baniraj')
                     ->icon('heroicon-m-no-symbol')
                     ->color('danger')
-                    ->visible(fn ($record) => $record->status === 'pending')
-                    ->disabled() // future feature, per brief
-                    ->action(fn () => null),
+                    ->visible(fn ($record) => $record->status === 'pending' && $record->reported)
+                    ->schema([
+                        Select::make('duration')
+                            ->label('Trajanje')
+                            ->options([
+                                '7d'        => '7 dana — lakše kršenje',
+                                '30d'       => '30 dana — ponovljeno kršenje',
+                                'permanent' => 'Permanentno — prevara / scam',
+                            ])
+                            ->required(),
+                        Textarea::make('ban_reason')->label('Razlog (interno)')->rows(2),
+                    ])
+                    ->modalHeading('Baniraj korisnika')
+                    ->modalDescription('Korisnik gubi pristup odmah. Tokeni se brišu, aktivni oglasi idu u draft.')
+                    ->action(function (array $data, $record) {
+                        app(BanService::class)->ban($record->reported, $data['duration'], $data['ban_reason'] ?? null);
+                        $record->update(['status' => 'banned']);
+                        Notification::make()->success()->title('Korisnik baniran')->send();
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

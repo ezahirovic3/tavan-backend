@@ -177,9 +177,39 @@ class ProductsTable
                     ->visible(fn ($record) => $record->status === 'pending_review')
                     ->requiresConfirmation()
                     ->modalHeading('Odobri oglas')
-                    ->modalDescription('Oglas postaje aktivan i vidljiv u aplikaciji.')
+                    ->modalDescription(fn ($record) => $record->seller?->listings_require_review
+                        ? 'Oglas postaje aktivan. Prodavac dobija obavijest da su budući oglasi odobreni i idu direktno online.'
+                        : 'Oglas postaje aktivan i vidljiv u aplikaciji.')
                     ->action(function ($record) {
                         $record->update(['status' => 'active']);
+
+                        $seller = $record->seller;
+
+                        if ($seller && $seller->listings_require_review) {
+                            $seller->update(['listings_require_review' => false]);
+
+                            $conversations = app(ConversationService::class);
+                            $push = app(PushNotificationService::class);
+
+                            $conversation = $conversations->findOrCreateSupportConversation($seller->id);
+
+                            $conversations->sendSupportReply(
+                                $conversation,
+                                auth()->user(),
+                                "Tvoji oglasi su pregledani i odobreni! 🎉\n\nOd sada svi tvoji novi oglasi idu direktno online — nema više čekanja na pregled.\n\nNapomena: Ako primimo prijave vezane za tvoj profil ili oglase, pregled može biti ponovo uključen. Hvala na razumijevanju i dobrodošao/la u Tavan zajednicu! 🩷",
+                            );
+
+                            $push->sendToUser(
+                                $seller->id,
+                                'Tavan Podrška',
+                                'Tvoji oglasi su odobreni! Od sada objavljuješ direktno online 🎉',
+                                ['type' => 'support_message', 'conversationId' => $conversation->id],
+                            );
+
+                            Notification::make()->success()->title('Oglas odobren — prodavac odobren, poruka poslana')->send();
+                            return;
+                        }
+
                         Notification::make()->success()->title('Oglas odobren')->send();
                     }),
 
