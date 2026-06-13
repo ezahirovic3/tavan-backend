@@ -21,7 +21,7 @@ class ProductForm
                 Section::make('Osnovno')
                     ->columnSpan(8)
                     ->schema([
-                        TextInput::make('title')->label('Naslov')->required()->maxLength(180),
+                        TextInput::make('title')->label('Naslov')->maxLength(180),
 
                         Textarea::make('description')->label('Opis')->rows(5),
 
@@ -30,39 +30,66 @@ class ProductForm
                                 ->label('Brend')
                                 ->relationship('brand', 'name')
                                 ->searchable()
-                                ->preload(),
+                                ->preload()
+                                ->placeholder('— Odaberi brend —'),
+
+                            TextInput::make('brand_custom')
+                                ->label('Brend (prilagođen)')
+                                ->maxLength(100)
+                                ->helperText('Ako brend nije u listi'),
+
+                            Select::make('root_category')
+                                ->label('Root kategorija')
+                                ->options([
+                                    'women' => 'Women',
+                                    'men'   => 'Men',
+                                ])
+                                ->native(false),
+
                             Select::make('category')
                                 ->label('Kategorija')
                                 ->options([
-                                    'tops'       => 'Tops (majice, bluze, košulje)',
-                                    'bottoms'    => 'Bottoms (pantalone, suknje)',
-                                    'jackets'    => 'Jackets (jakne, kaputi)',
-                                    'dresses'    => 'Dresses (haljine)',
-                                    'shoes'      => 'Shoes (cipele)',
-                                    'bags'       => 'Bags (torbe)',
-                                    'accessories'=> 'Accessories (aksesoari)',
-                                    'jewelry'    => 'Jewelry (nakit)',
-                                    'activewear' => 'Activewear (sportska odjeća)',
-                                    'occasion'   => 'Occasion (svečana odjeća)',
+                                    'tops'        => 'Tops (majice, bluze, košulje)',
+                                    'bottoms'     => 'Bottoms (pantalone, suknje)',
+                                    'jackets'     => 'Jackets (jakne, kaputi)',
+                                    'dresses'     => 'Dresses (haljine)',
+                                    'shoes'       => 'Shoes (cipele)',
+                                    'bags'        => 'Bags (torbe)',
+                                    'accessories' => 'Accessories (aksesoari)',
+                                    'jewelry'     => 'Jewelry (nakit)',
+                                    'activewear'  => 'Activewear (sportska odjeća)',
+                                    'occasion'    => 'Occasion (svečana odjeća)',
                                 ])
-                                ->searchable(),
+                                ->searchable()
+                                ->native(false),
+
+                            TextInput::make('subcategory')
+                                ->label('Podkategorija')
+                                ->maxLength(128),
+
                             Select::make('size')
                                 ->label('Veličina')
-                                ->options(['XS' => 'XS','S' => 'S','M' => 'M','L' => 'L','XL' => 'XL','XXL' => 'XXL']),
+                                ->options(['XS' => 'XS', 'S' => 'S', 'M' => 'M', 'L' => 'L', 'XL' => 'XL', 'XXL' => 'XXL'])
+                                ->native(false),
+
                             Select::make('condition')
                                 ->label('Stanje')
                                 ->options([
                                     'new'       => 'Novo/Nenošeno',
-                                    'very_good' => 'Vrlo dobro',
+                                    'very_good' => 'Velmi dobro',
                                     'good'      => 'Dobro',
                                     'worn'      => 'Vidljivo nošeno',
-                                ]),
+                                ])
+                                ->native(false),
+
                             TextInput::make('price')
                                 ->label('Cijena')
                                 ->numeric()
-                                ->suffix('KM')
-                                ->required(),
+                                ->suffix('KM'),
+
                             TextInput::make('color')->label('Boja')->maxLength(40),
+
+                            TextInput::make('material')->label('Materijal')->maxLength(100),
                         ]),
                     ]),
 
@@ -72,12 +99,12 @@ class ProductForm
                         Select::make('status')
                             ->label('Status')
                             ->options([
-                                'draft' => 'Draft',
+                                'draft'          => 'Draft',
                                 'pending_review' => 'Pending review',
-                                'active' => 'Active',
-                                'sold' => 'Sold',
+                                'active'         => 'Active',
+                                'reserved'       => 'Reserved',
+                                'sold'           => 'Sold',
                             ])
-                            ->required()
                             ->native(false),
 
                         Select::make('seller_id')
@@ -86,6 +113,33 @@ class ProductForm
                             ->searchable()
                             ->preload()
                             ->disabled(),
+                    ]),
+
+                Section::make('Dostava & opcije')
+                    ->columnSpan(12)
+                    ->schema([
+                        Grid::make(4)->schema([
+                            Select::make('shipping_size')
+                                ->label('Veličina paketa')
+                                ->options(['S' => 'S', 'M' => 'M', 'L' => 'L'])
+                                ->native(false),
+
+                            TextInput::make('exact_shipping_price')
+                                ->label('Tačna cijena dostave')
+                                ->numeric()
+                                ->suffix('KM'),
+
+                            TextInput::make('location')
+                                ->label('Lokacija')
+                                ->maxLength(100),
+                        ]),
+
+                        Grid::make(4)->schema([
+                            Toggle::make('allows_trades')->label('Dozvoljava zamjene'),
+                            Toggle::make('allows_offers')->label('Dozvoljava ponude'),
+                            Toggle::make('pickup_enabled')->label('Lično preuzimanje'),
+                            Toggle::make('free_shipping')->label('Besplatna dostava'),
+                        ]),
                     ]),
 
                 Section::make('Vintage')
