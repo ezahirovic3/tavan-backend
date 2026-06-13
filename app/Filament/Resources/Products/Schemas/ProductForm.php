@@ -33,11 +33,6 @@ class ProductForm
                                 ->preload()
                                 ->placeholder('— Odaberi brend —'),
 
-                            TextInput::make('brand_custom')
-                                ->label('Brend (prilagođen)')
-                                ->maxLength(100)
-                                ->helperText('Ako brend nije u listi'),
-
                             Select::make('root_category')
                                 ->label('Root kategorija')
                                 ->options([

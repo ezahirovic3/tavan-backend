@@ -227,12 +227,7 @@ class ProductsTable
                     ])
                     ->modalHeading('Odbaci oglas')
                     ->action(function (array $data, $record) {
-                        $record->update([
-                            'status' => 'draft',
-                            'rejection_reason' => $data['reason'],
-                            'rejected_at' => now(),
-                            'rejected_by' => auth()->id(),
-                        ]);
+                        $record->update(['status' => 'draft']);
 
                         $conversations = app(ConversationService::class);
                         $push = app(PushNotificationService::class);
@@ -254,6 +249,23 @@ class ProductsTable
                 ActionGroup::make([
                     EditAction::make(),
 
+                    Action::make('changeBrand')
+                        ->label('Promijeni brend')
+                        ->icon('heroicon-m-tag')
+                        ->color('gray')
+                        ->schema([
+                            Select::make('brand_id')
+                                ->label('Brend')
+                                ->relationship('brand', 'name')
+                                ->searchable()
+                                ->preload()
+                                ->placeholder('— Bez brenda —'),
+                        ])
+                        ->fillForm(fn ($record) => ['brand_id' => $record->brand_id])
+                        ->modalHeading('Promijeni brend')
+                        ->modalSubmitActionLabel('Sačuvaj')
+                        ->action(fn (array $data, $record) => $record->update(['brand_id' => $data['brand_id'] ?: null])),
+
                     Action::make('forceStatus')
                         ->label('Promijeni status (force)')
                         ->icon('heroicon-m-wrench-screwdriver')
@@ -262,20 +274,17 @@ class ProductsTable
                             Select::make('status')
                                 ->label('Novi status')
                                 ->options([
-                                    'draft' => 'Draft',
+                                    'draft'          => 'Draft',
                                     'pending_review' => 'Pending review',
-                                    'active' => 'Active',
-                                    'sold' => 'Sold',
+                                    'active'         => 'Active',
+                                    'reserved'       => 'Reserved',
+                                    'sold'           => 'Sold',
                                 ])
                                 ->required(),
-                            Textarea::make('admin_note')->label('Napomena')->rows(2),
                         ])
                         ->modalHeading('Force status change')
                         ->modalDescription('Koristi samo za state recovery (bug, zaglavljen oglas).')
-                        ->action(fn (array $data, $record) => $record->update([
-                            'status' => $data['status'],
-                            'admin_note' => $data['admin_note'] ?? null,
-                        ])),
+                        ->action(fn (array $data, $record) => $record->update(['status' => $data['status']])),
                 ])->dropdown(),
             ])
             ->toolbarActions([
