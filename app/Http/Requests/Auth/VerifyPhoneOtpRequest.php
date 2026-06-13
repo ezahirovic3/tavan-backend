@@ -18,7 +18,7 @@ class VerifyPhoneOtpRequest extends FormRequest
             'phone' => [
                 'required',
                 'string',
-                'max:32',
+                'regex:/^\+[1-9]\d{6,14}$/',
                 Rule::unique('users', 'phone')->ignore($this->user()?->id),
             ],
             'otp'   => ['required', 'string', 'size:6'],
@@ -28,6 +28,7 @@ class VerifyPhoneOtpRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'phone.regex'  => 'Unesite ispravan broj telefona u međunarodnom formatu (npr. +38761123456).',
             'phone.unique' => 'Ovaj broj telefona je već registrovan na drugom računu.',
         ];
     }

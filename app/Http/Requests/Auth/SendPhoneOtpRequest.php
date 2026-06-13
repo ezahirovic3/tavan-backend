@@ -14,7 +14,14 @@ class SendPhoneOtpRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone' => ['required', 'string', 'max:32'],
+            'phone' => ['required', 'string', 'regex:/^\+[1-9]\d{6,14}$/'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'phone.regex' => 'Unesite ispravan broj telefona u međunarodnom formatu (npr. +38761123456).',
         ];
     }
 }
