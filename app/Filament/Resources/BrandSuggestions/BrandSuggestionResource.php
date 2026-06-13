@@ -4,14 +4,15 @@ namespace App\Filament\Resources\BrandSuggestions;
 
 use App\Filament\Resources\BrandSuggestions\Pages\ListBrandSuggestions;
 use App\Filament\Resources\BrandSuggestions\Pages\ViewBrandSuggestion;
-use App\Models\Brand;
 use App\Models\BrandSuggestion;
+use App\Models\Conversation;
+use App\Models\Message;
+use App\Services\PushNotificationService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -124,55 +125,33 @@ class BrandSuggestionResource extends Resource
                     ->color('success')
                     ->visible(fn ($record) => $record->status === 'pending')
                     ->schema([
-                        TextInput::make('name')
-                            ->label('Naziv brenda')
-                            ->required()
-                            ->default(fn ($record) => $record->name),
-
-                        TextInput::make('slug')
-                            ->label('Slug')
-                            ->required()
-                            ->extraInputAttributes(['class' => 'font-mono'])
-                            ->default(fn ($record) => Str::slug($record->name)),
-
-                        FileUpload::make('logo')
-                            ->label('Logo')
-                            ->image()
-                            ->disk('r2')
-                            ->directory('brands/logos'),
+                        Textarea::make('note')
+                            ->label('Poruka korisniku (opcionalno)')
+                            ->placeholder('Npr. Brend je dodan u katalog i uskoro će biti dostupan.')
+                            ->rows(3)
+                            ->maxLength(500),
                     ])
-                    ->modalHeading('Odobri prijedlog → kreiraj brend')
-                    ->modalSubmitActionLabel('Kreiraj brend')
+                    ->modalHeading('Odobri prijedlog')
+                    ->modalSubmitActionLabel('Odobri')
                     ->action(function (array $data, $record) {
-                        if (Brand::where('slug', $data['slug'])->exists()) {
-                            Notification::make()
-                                ->danger()
-                                ->title('Brend već postoji')
-                                ->body('Brend sa slug-om "' . $data['slug'] . '" već postoji u katalogu.')
-                                ->send();
-
-                            return;
-                        }
-
-                        Brand::create([
-                            'name' => $data['name'],
-                            'slug' => $data['slug'],
-                            'logo' => $data['logo'] ?? null,
-                            'active' => true,
-                            'sort_order' => Brand::max('sort_order') + 1,
-                        ]);
-
                         $record->update([
-                            'status' => 'approved',
+                            'status'      => 'approved',
                             'reviewed_by' => auth()->id(),
                             'reviewed_at' => now(),
                         ]);
 
-                        Notification::make()
-                            ->success()
-                            ->title('Brend kreiran')
-                            ->body('Brend "' . $data['name'] . '" je dodan u katalog.')
-                            ->send();
+                        $pushMessage = 'Tvoj prijedlog brenda "' . $record->name . '" je odobren.';
+                        app(PushNotificationService::class)->sendToUser(
+                            $record->user_id,
+                            'Prijedlog brenda odobren ✓',
+                            $pushMessage,
+                            ['type' => 'brand_suggestion_approved'],
+                        );
+
+                        $supportMessage = $data['note'] ?: $pushMessage;
+                        static::postSupportMessage($record->user_id, $supportMessage);
+
+                        Notification::make()->success()->title('Prijedlog odobren')->send();
                     }),
 
                 Action::make('reject')
@@ -180,14 +159,33 @@ class BrandSuggestionResource extends Resource
                     ->icon('heroicon-m-x-mark')
                     ->color('danger')
                     ->visible(fn ($record) => $record->status === 'pending')
-                    ->requiresConfirmation()
+                    ->schema([
+                        Textarea::make('note')
+                            ->label('Razlog odbijanja (opcionalno)')
+                            ->placeholder('Npr. Brend već postoji u katalogu pod drugim nazivom.')
+                            ->rows(3)
+                            ->maxLength(500),
+                    ])
                     ->modalHeading('Odbaci prijedlog')
-                    ->action(function ($record) {
+                    ->modalSubmitActionLabel('Odbaci')
+                    ->action(function (array $data, $record) {
                         $record->update([
-                            'status' => 'rejected',
+                            'status'      => 'rejected',
                             'reviewed_by' => auth()->id(),
                             'reviewed_at' => now(),
                         ]);
+
+                        $pushMessage = 'Tvoj prijedlog brenda "' . $record->name . '" nije odobren.';
+                        app(PushNotificationService::class)->sendToUser(
+                            $record->user_id,
+                            'Prijedlog brenda odbijen',
+                            $pushMessage,
+                            ['type' => 'brand_suggestion_rejected'],
+                        );
+
+                        $supportMessage = $data['note'] ?: $pushMessage;
+                        static::postSupportMessage($record->user_id, $supportMessage);
+
                         Notification::make()->success()->title('Prijedlog odbačen')->send();
                     }),
             ])
@@ -197,6 +195,34 @@ class BrandSuggestionResource extends Resource
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function postSupportMessage(string $userId, string $body): void
+    {
+        $convo = Conversation::firstOrCreate(
+            [
+                'participant_one_id' => $userId,
+                'participant_two_id' => config('tavan.system_user_id'),
+            ],
+            [
+                'allow_replies'   => true,
+                'status'          => 'open',
+                'type'            => 'admin_support',
+                'last_message_at' => now(),
+            ]
+        );
+
+        if (! $convo->wasRecentlyCreated && $convo->status === 'closed') {
+            $convo->update(['status' => 'open', 'allow_replies' => true]);
+        }
+
+        Message::create([
+            'conversation_id' => $convo->id,
+            'sender_id'       => auth()->id(),
+            'body'            => $body,
+        ]);
+
+        $convo->update(['last_message_at' => now()]);
     }
 
     public static function getPages(): array

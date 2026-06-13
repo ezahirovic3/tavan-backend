@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Contracts\AuthProviderInterface;
 use App\Contracts\OtpProviderInterface;
+use App\Models\BrandSuggestion;
 use App\Models\CachedPersonalAccessToken;
+use App\Observers\BrandSuggestionObserver;
 use App\Services\Auth\LocalAuthProvider;
 use App\Services\Auth\LogOtpProvider;
 use App\Services\Auth\TwilioOtpProvider;
@@ -35,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        BrandSuggestion::observe(BrandSuggestionObserver::class);
+
         // Cache Sanctum token lookups in Redis (5 min TTL) to avoid a DB hit per request.
         Sanctum::usePersonalAccessTokenModel(CachedPersonalAccessToken::class);
 
