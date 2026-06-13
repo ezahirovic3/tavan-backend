@@ -22,11 +22,18 @@ class NotReservedWord implements ValidationRule
         'security', 'sigurnost',
     ];
 
+    // App-generated default names that are allowed despite containing reserved words.
+    private const ALLOWED_DEFAULTS = ['tavan korisnik'];
+
     public function __construct(private bool $exact = true) {}
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         $lower = mb_strtolower((string) $value);
+
+        if (in_array($lower, self::ALLOWED_DEFAULTS, true)) {
+            return;
+        }
 
         foreach (self::RESERVED as $word) {
             $match = $this->exact
