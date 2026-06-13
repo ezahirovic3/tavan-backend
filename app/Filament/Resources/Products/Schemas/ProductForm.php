@@ -67,10 +67,9 @@ class ProductForm
                                 ->label('Podkategorija')
                                 ->maxLength(128),
 
-                            Select::make('size')
+                            TextInput::make('size')
                                 ->label('Veličina')
-                                ->options(['XS' => 'XS', 'S' => 'S', 'M' => 'M', 'L' => 'L', 'XL' => 'XL', 'XXL' => 'XXL'])
-                                ->native(false),
+                                ->maxLength(20),
 
                             Select::make('condition')
                                 ->label('Stanje')
