@@ -381,6 +381,26 @@ class ProductController extends Controller
             'Samo draft ili pending_review proizvodi mogu biti objavljeni.'
         );
 
+        $missing = collect([
+            'title'         => $product->title,
+            'price'         => $product->price,
+            'root_category' => $product->root_category,
+            'condition'     => $product->condition,
+            'location'      => $product->location,
+        ])->filter(fn ($v) => $v === null || $v === '')->keys();
+
+        abort_if(
+            $missing->isNotEmpty(),
+            422,
+            'Oglas nije kompletan. Nedostaju polja: ' . $missing->join(', ') . '.'
+        );
+
+        abort_if(
+            $product->images()->doesntExist(),
+            422,
+            'Oglas mora imati barem jednu fotografiju.'
+        );
+
         $seller = $product->seller;
         $status = $seller->listings_require_review ? 'pending_review' : 'active';
 
