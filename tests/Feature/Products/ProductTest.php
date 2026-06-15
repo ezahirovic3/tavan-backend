@@ -4,7 +4,6 @@ namespace Tests\Feature\Products;
 
 use App\Models\Brand;
 use App\Models\Product;
-use App\Models\ProductImage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -194,7 +193,6 @@ class ProductTest extends TestCase
     {
         $seller  = User::factory()->create(['listings_require_review' => false]);
         $product = Product::factory()->draft()->create(['seller_id' => $seller->id]);
-        ProductImage::factory()->create(['product_id' => $product->id]);
 
         $response = $this->actingAs($seller)
             ->postJson("/api/v1/products/{$product->id}/publish");
