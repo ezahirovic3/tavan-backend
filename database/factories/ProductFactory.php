@@ -23,7 +23,7 @@ class ProductFactory extends Factory
             'root_category' => fake()->randomElement(['women', 'men']),
             'category'      => 'tops',
             'subcategory'   => null,
-            'condition'     => 'good',
+            'condition'     => 'dobar',
             'size'          => 'M',
             'color'         => 'black',
             'material'      => null,
