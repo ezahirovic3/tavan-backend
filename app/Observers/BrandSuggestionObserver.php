@@ -5,7 +5,7 @@ namespace App\Observers;
 use App\Filament\Resources\BrandSuggestions\BrandSuggestionResource;
 use App\Models\BrandSuggestion;
 use App\Models\User;
-use Filament\Notifications\Actions\Action;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Mail;
 
