@@ -54,6 +54,7 @@ class ProductForm
                                     'jewelry'     => 'Jewelry (nakit)',
                                     'activewear'  => 'Activewear (sportska odjeća)',
                                     'occasion'    => 'Occasion (svečana odjeća)',
+                                    'swimwear'    => 'Swimwear (kupaći kostimi)',
                                 ])
                                 ->searchable()
                                 ->native(false),

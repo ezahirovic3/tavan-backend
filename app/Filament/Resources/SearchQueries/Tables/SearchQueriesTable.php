@@ -4,8 +4,11 @@ namespace App\Filament\Resources\SearchQueries\Tables;
 
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use App\Models\SearchQuery;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SearchQueriesTable
 {
@@ -54,6 +57,31 @@ class SearchQueriesTable
                 DeleteBulkAction::make(),
             ])
             ->defaultSort('occurrences', 'desc')
-            ->paginated([25, 50, 100]);
+            ->paginated([25, 50, 100])
+            ->headerActions([
+                Action::make('export')
+                    ->label('Izvezi CSV')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->action(function (): StreamedResponse {
+                        $filename = 'pretrage-' . now()->format('Y-m-d') . '.csv';
+
+                        return response()->streamDownload(function () {
+                            $handle = fopen('php://output', 'w');
+                            fputcsv($handle, ['Upit', 'Broj pretraga', 'Zadnja pretraga', 'Prva pretraga']);
+
+                            SearchQuery::orderByDesc('occurrences')->each(function (SearchQuery $row) use ($handle) {
+                                fputcsv($handle, [
+                                    $row->query,
+                                    $row->occurrences,
+                                    $row->last_searched_at?->format('d.m.Y. H:i'),
+                                    $row->created_at?->format('d.m.Y. H:i'),
+                                ]);
+                            });
+
+                            fclose($handle);
+                        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+                    }),
+            ]);
     }
 }

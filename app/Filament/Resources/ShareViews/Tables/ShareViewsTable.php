@@ -2,7 +2,9 @@
 
 namespace App\Filament\Resources\ShareViews\Tables;
 
+use App\Models\Product;
 use App\Models\ShareView;
+use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -20,13 +22,17 @@ class ShareViewsTable
                     ->color(fn ($state) => $state === 'product' ? 'info' : 'success')
                     ->formatStateUsing(fn ($state) => $state === 'product' ? 'Artikal' : 'Profil'),
 
-                TextColumn::make('entity_id')
-                    ->label('ID')
-                    ->color('gray')
-                    ->size('sm')
-                    ->fontFamily('mono')
-                    ->copyable()
-                    ->copyMessage('ID kopiran!'),
+                TextColumn::make('entity_name')
+                    ->label('Naziv')
+                    ->state(function ($record): string {
+                        if ($record->entity_type === 'product') {
+                            return Product::find($record->entity_id)?->title ?? $record->entity_id;
+                        }
+                        $user = User::find($record->entity_id);
+                        return $user ? "{$user->name} (@{$user->username})" : $record->entity_id;
+                    })
+                    ->description(fn ($record) => $record->entity_id)
+                    ->weight('semibold'),
 
                 TextColumn::make('total')
                     ->label('Ukupno')
@@ -61,7 +67,16 @@ class ShareViewsTable
                 Action::make('details')
                     ->label('Detalji')
                     ->icon('heroicon-m-list-bullet')
-                    ->modalHeading(fn ($record) => ucfirst($record->entity_type) . ' · ' . $record->entity_id)
+                    ->modalHeading(function ($record): string {
+                        $label = $record->entity_type === 'product' ? 'Artikal' : 'Profil';
+                        if ($record->entity_type === 'product') {
+                            $name = Product::find($record->entity_id)?->title ?? $record->entity_id;
+                        } else {
+                            $user = User::find($record->entity_id);
+                            $name = $user ? "{$user->name} (@{$user->username})" : $record->entity_id;
+                        }
+                        return "{$label} · {$name}";
+                    })
                     ->modalContent(fn ($record) => view('filament.share-view-details', [
                         'events' => ShareView::where('entity_id', $record->entity_id)
                             ->where('entity_type', $record->entity_type)
