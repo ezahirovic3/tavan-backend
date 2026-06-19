@@ -52,6 +52,12 @@ class Product extends Model
         'vintage_reject_reason',
         'vintage_reviewed_by',
         'vintage_reviewed_at',
+        'designer_status',
+        'designer_brand',
+        'designer_notes',
+        'designer_reject_reason',
+        'designer_reviewed_by',
+        'designer_reviewed_at',
     ];
 
     protected function casts(): array
@@ -64,7 +70,8 @@ class Product extends Model
             'free_shipping'        => 'boolean',
             'exact_shipping_price' => 'decimal:2',
             'measurements'         => 'array',
-            'vintage_reviewed_at'  => 'datetime',
+            'vintage_reviewed_at'   => 'datetime',
+            'designer_reviewed_at'  => 'datetime',
         ];
     }
 
