@@ -39,6 +39,12 @@ class ProductResource extends JsonResource
             ] : null,
             'vintage_status'        => $this->vintage_status,
             'vintage_reject_reason' => $this->vintage_reject_reason,
+            'designer'              => $this->designer_status === 'approved' ? [
+                'brand' => $this->designer_brand,
+                'notes' => $this->designer_notes,
+            ] : null,
+            'designer_status'        => $this->designer_status,
+            'designer_reject_reason' => $this->designer_reject_reason,
             'brand'         => new BrandResource($this->whenLoaded('brand')),
             'images'        => ProductImageResource::collection($this->whenLoaded('images')),
             'seller'        => new UserResource($this->whenLoaded('seller')),

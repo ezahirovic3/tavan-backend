@@ -110,6 +110,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('products/{product}', [ProductController::class, 'destroy']);
             Route::post('products/{product}/publish', [ProductController::class, 'publish']);
             Route::post('products/{product}/vintage', [ProductController::class, 'applyVintage']);
+            Route::post('products/{product}/designer', [ProductController::class, 'applyDesigner']);
             Route::post('products/{product}/images', [ProductImageController::class, 'store']);
             Route::delete('products/{product}/images/{image}', [ProductImageController::class, 'destroy']);
             Route::patch('products/{product}/images/reorder', [ProductImageController::class, 'reorder']);

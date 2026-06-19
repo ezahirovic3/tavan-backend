@@ -96,9 +96,12 @@ class ProductController extends Controller
             $query->where('price', '<=', $request->price_max);
         }
 
-        // ── Vintage filter ─────────────────────────────────────────────────────
+        // ── Badge filters (standalone — also applied via personalized prefs) ─────
         if ($request->boolean('vintage_only')) {
             $query->where('vintage_status', 'approved');
+        }
+        if ($request->boolean('designer_only')) {
+            $query->where('designer_status', 'approved');
         }
 
         // ── Search ─────────────────────────────────────────────────────────────
@@ -170,7 +173,9 @@ class ProductController extends Controller
                 $hasBrands            = ! empty($brands);
                 $hasCities            = ! empty($cities);
                 $hasFilter            = $hasSizesOrCategories || $hasBrands || $hasCities;
-                $hasVintageOnly       = $prefs->vintage_only ?? false;
+                $hasVintageOnly       = $prefs->vintage_only  ?? false;
+                $hasDesignerOnly      = $prefs->designer_only ?? false;
+                $hasBadgeFilter       = $hasVintageOnly || $hasDesignerOnly;
 
                 // Closure that applies the size + category + brand OR block.
                 $applyPreferences = function ($q) use ($sizes, $categories, $subcategoryPairs, $brands) {
@@ -209,25 +214,40 @@ class ProductController extends Controller
                     }
                 };
 
-                // When vintageOnly is set, it acts as the primary split:
-                //   included  → vintage products (+ matching other prefs when set)
-                //   excluded  → non-vintage products (the complement of the included feed)
-                // When vintageOnly is not set, the split is purely pref-based (sizes/cats/brands/cities).
-                if ($hasFilter || $hasVintageOnly) {
+                // Badge filter (vintage OR designer, or both).
+                // Included  → at least one enabled badge approved
+                // Excluded  → no enabled badge approved (AND between absent badges)
+                if ($hasFilter || $hasBadgeFilter) {
                     if ($personalizedParam === 'true' || $personalizedParam === '1') {
                         if ($hasFilter) {
                             $query->where($applyMatch);
                         }
-                        if ($hasVintageOnly) {
-                            $query->where('vintage_status', 'approved');
+                        if ($hasBadgeFilter) {
+                            if ($hasVintageOnly && $hasDesignerOnly) {
+                                $query->where(fn ($q) => $q
+                                    ->where('vintage_status', 'approved')
+                                    ->orWhere('designer_status', 'approved')
+                                );
+                            } elseif ($hasVintageOnly) {
+                                $query->where('vintage_status', 'approved');
+                            } else {
+                                $query->where('designer_status', 'approved');
+                            }
                         }
                     } elseif ($personalizedParam === 'exclude') {
-                        if ($hasVintageOnly) {
-                            // Excluded = non-vintage (NULL or anything other than approved)
-                            $query->where(fn ($q) => $q
-                                ->whereNull('vintage_status')
-                                ->orWhere('vintage_status', '!=', 'approved')
-                            );
+                        if ($hasBadgeFilter) {
+                            if ($hasVintageOnly) {
+                                $query->where(fn ($q) => $q
+                                    ->whereNull('vintage_status')
+                                    ->orWhere('vintage_status', '!=', 'approved')
+                                );
+                            }
+                            if ($hasDesignerOnly) {
+                                $query->where(fn ($q) => $q
+                                    ->whereNull('designer_status')
+                                    ->orWhere('designer_status', '!=', 'approved')
+                                );
+                            }
                         } elseif ($hasFilter) {
                             $query->whereNot($applyMatch);
                         }
@@ -366,6 +386,33 @@ class ProductController extends Controller
             'vintage_reject_reason'  => null,
             'vintage_reviewed_by'    => $seller->is_vintage_seller ? $seller->id : null,
             'vintage_reviewed_at'    => $seller->is_vintage_seller ? now() : null,
+        ]);
+
+        return response()->json(['data' => new ProductResource($product->fresh()->load('images', 'brand'))]);
+    }
+
+    public function applyDesigner(Request $request, Product $product): JsonResponse
+    {
+        $this->authorize('update', $product);
+
+        abort_if(
+            in_array($product->designer_status, ['pending', 'approved']),
+            422,
+            'Designer zahtjev je već poslan ili odobren.'
+        );
+
+        $data = $request->validate([
+            'brand' => ['required', 'string', 'max:200'],
+            'notes' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $product->update([
+            'designer_status'      => 'pending',
+            'designer_brand'       => $data['brand'],
+            'designer_notes'       => $data['notes'],
+            'designer_reject_reason' => null,
+            'designer_reviewed_by' => null,
+            'designer_reviewed_at' => null,
         ]);
 
         return response()->json(['data' => new ProductResource($product->fresh()->load('images', 'brand'))]);
