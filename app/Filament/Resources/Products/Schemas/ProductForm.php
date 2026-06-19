@@ -183,6 +183,39 @@ class ProductForm
                             ->columnSpanFull(),
                     ]),
 
+                Section::make('Designer')
+                    ->columnSpan(12)
+                    ->schema([
+                        Grid::make(3)->schema([
+                            Select::make('designer_status')
+                                ->label('Designer status')
+                                ->options([
+                                    'pending'  => 'Na čekanju',
+                                    'approved' => 'Odobreno',
+                                    'rejected' => 'Odbijeno',
+                                ])
+                                ->placeholder('— Nije designer —')
+                                ->native(false)
+                                ->helperText('Postavi na "Odobreno" da odmah dobiješ badge bez review procesa.'),
+
+                            TextInput::make('designer_brand')
+                                ->label('Brand (od prodavca)')
+                                ->maxLength(128)
+                                ->placeholder('npr. Gucci, Prada, Chanel'),
+
+                            TextInput::make('designer_reject_reason')
+                                ->label('Razlog odbijanja')
+                                ->maxLength(500)
+                                ->placeholder('Ostavi prazno ako nema odbijanja'),
+                        ]),
+
+                        Textarea::make('designer_notes')
+                            ->label('Opis (od prodavca)')
+                            ->rows(3)
+                            ->maxLength(1000)
+                            ->columnSpanFull(),
+                    ]),
+
                 Section::make('Slike')
                     ->columnSpan(12)
                     ->schema([
