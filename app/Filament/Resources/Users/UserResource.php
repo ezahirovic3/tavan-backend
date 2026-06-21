@@ -128,6 +128,13 @@ class UserResource extends Resource
                             ->onColor('danger')
                             ->disabled(fn ($record) => $record && self::isLocked($record)),
 
+                        Toggle::make('notify_brand_suggestions')
+                            ->label('Email obavijesti: prijedlozi brendova')
+                            ->helperText('Ovaj admin prima email kada korisnik predloži novi brend.')
+                            ->onColor('primary')
+                            ->visible(fn ($record) => $record && in_array($record->role, ['admin', 'super_admin']))
+                            ->disabled(fn ($record) => $record && self::isLocked($record)),
+
                         DateTimePicker::make('deletion_requested_at')
                             ->label('Datum zahtjeva za brisanje')
                             ->helperText('Račun se trajno briše 30 dana nakon ovog datuma. Ostavi prazno za aktivan račun.')

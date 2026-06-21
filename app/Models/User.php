@@ -55,6 +55,7 @@ class User extends Authenticatable implements FilamentUser
         'first_listing_coach_seen',
         'first_draft_coach_seen',
         'notifications_enabled',
+        'notify_brand_suggestions',
         'rating',
         'total_reviews',
         'last_active_at',
