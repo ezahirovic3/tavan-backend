@@ -40,7 +40,7 @@ class BrandSuggestionObserver
             <p><a href="' . $url . '">Pregledaj prijedloge →</a></p>
         ';
 
-        foreach ($admins as $admin) {
+        foreach ($admins->where('notify_brand_suggestions', true) as $admin) {
             Mail::html($html, function ($message) use ($admin, $subject) {
                 $message->to($admin->email)->subject($subject);
             });
