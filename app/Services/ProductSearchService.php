@@ -157,7 +157,9 @@ class ProductSearchService
     /**
      * Expand a search term into its full synonym group.
      * Normalises diacritics so "hlace" matches "hlače".
-     * Returns an array with the original query when no synonym match is found.
+     * If no exact match, falls back to the closest synonym group within
+     * Levenshtein distance 2 (catches fat-finger typos like "trba" → "torba").
+     * Returns an array with the original query when no match is found.
      */
     public static function expandTerms(string $q): array
     {
@@ -168,6 +170,27 @@ class ProductSearchService
                 if (self::normalize($term) === $normalized) {
                     return $group;
                 }
+            }
+        }
+
+        // Fuzzy fallback: find the synonym group whose canonical term is closest.
+        // Only triggers for short-ish queries to avoid false positives on long phrases.
+        if (mb_strlen($normalized) >= 3) {
+            $bestGroup    = null;
+            $bestDistance = PHP_INT_MAX;
+
+            foreach (self::SYNONYMS as $group) {
+                foreach ($group as $term) {
+                    $distance = levenshtein($normalized, self::normalize($term));
+                    if ($distance < $bestDistance) {
+                        $bestDistance = $distance;
+                        $bestGroup    = $group;
+                    }
+                }
+            }
+
+            if ($bestDistance <= 2 && $bestGroup !== null) {
+                return $bestGroup;
             }
         }
 

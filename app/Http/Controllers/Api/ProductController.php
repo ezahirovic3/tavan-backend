@@ -110,13 +110,14 @@ class ProductController extends Controller
             $categoryIntent = ProductSearchService::detectCategoryIntent($request->q);
 
             $query->where(function ($q) use ($terms, $categoryIntent) {
-                // Text match across title, description, and subcategory label.
+                // Text match across title, description, subcategory, and brand name.
                 // Subcategory is included so a listing titled "Plave pantalone" but
                 // tagged subcategory="Farmerke" still surfaces when searching "farmerke".
                 foreach ($terms as $term) {
                     $q->orWhere('title',       'like', '%'.$term.'%')
                       ->orWhere('description', 'like', '%'.$term.'%')
-                      ->orWhere('subcategory', 'like', '%'.$term.'%');
+                      ->orWhere('subcategory', 'like', '%'.$term.'%')
+                      ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', '%'.$term.'%'));
                 }
 
                 // Category-level intent: "hlače" → bottoms, "patike" → shoes, etc.
