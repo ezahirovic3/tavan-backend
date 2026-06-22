@@ -174,8 +174,9 @@ class ProductSearchService
         }
 
         // Fuzzy fallback: find the synonym group whose canonical term is closest.
-        // Only triggers for short-ish queries to avoid false positives on long phrases.
-        if (mb_strlen($normalized) >= 3) {
+        // Requires ≥5 chars so short brand names (e.g. "zara", "h&m") don't accidentally
+        // match a synonym group like ['šal', 'šalovi', ...] via Levenshtein distance 2.
+        if (mb_strlen($normalized) >= 5) {
             $bestGroup    = null;
             $bestDistance = PHP_INT_MAX;
 
