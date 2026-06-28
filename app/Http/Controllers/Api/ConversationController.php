@@ -126,7 +126,7 @@ class ConversationController extends Controller
 
         $messages = $conversation->messages()
             ->with('sender')
-            ->latest('created_at')
+            ->reorder('created_at', 'desc')
             ->paginate(50);
 
         // Mark messages from other user as read
