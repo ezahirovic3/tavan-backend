@@ -87,7 +87,11 @@ class SupportConversationResource extends Resource
                 TextColumn::make('participantOne.name')
                     ->label('Korisnik')
                     ->description(fn ($record) => '@' . $record->participantOne?->username)
-                    ->searchable(['users.name', 'users.username'])
+                    ->searchable(query: fn ($query, string $search) => $query->whereHas(
+                        'participantOne',
+                        fn ($q) => $q->where('name', 'like', "%{$search}%")
+                                     ->orWhere('username', 'like', "%{$search}%")
+                    ))
                     ->weight('semibold'),
 
                 TextColumn::make('lastMessage.body')
