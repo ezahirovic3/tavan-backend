@@ -24,14 +24,19 @@ class PushNotificationService
 
         $badge = $this->incrementBadge($userId);
 
-        $messages = array_map(fn (string $token) => [
-            'to'    => $token,
-            'title' => $title,
-            'body'  => $body,
-            'data'  => $data,
-            'sound' => 'default',
-            'badge' => $badge,
-        ], $tokens);
+        $threadId  = isset($data['conversationId']) ? (string) $data['conversationId'] : null;
+        $channelId = $threadId ? 'messages' : 'default';
+
+        $messages = array_map(fn (string $token) => array_filter([
+            'to'        => $token,
+            'title'     => $title,
+            'body'      => $body,
+            'data'      => $data,
+            'sound'     => 'default',
+            'badge'     => $badge,
+            'threadId'  => $threadId,
+            'channelId' => $channelId,
+        ]), $tokens);
 
         $this->dispatch($messages);
     }
