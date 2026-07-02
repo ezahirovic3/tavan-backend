@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -95,9 +96,9 @@ class Product extends Model
         return $this->hasMany(WishlistItem::class);
     }
 
-    public function orders(): HasMany
+    public function orders(): BelongsToMany
     {
-        return $this->hasMany(Order::class);
+        return $this->belongsToMany(Order::class, 'order_items', 'product_id', 'order_id');
     }
 
     public function reports(): HasMany
