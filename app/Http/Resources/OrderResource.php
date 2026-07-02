@@ -26,6 +26,7 @@ class OrderResource extends JsonResource
                 'phone'  => $this->shipping_phone,
             ],
             'product'         => new ProductResource($this->whenLoaded('product')),
+            'items'           => OrderItemResource::collection($this->whenLoaded('items')),
             'buyer'           => new UserResource($this->whenLoaded('buyer')),
             'seller'          => new UserResource($this->whenLoaded('seller')),
             'offer'           => new OfferResource($this->whenLoaded('offer')),

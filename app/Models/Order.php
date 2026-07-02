@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Order extends Model
@@ -18,7 +19,6 @@ class Order extends Model
         'order_number',
         'buyer_id',
         'seller_id',
-        'product_id',
         'offer_id',
         'trade_id',
         'subtotal',
@@ -54,9 +54,26 @@ class Order extends Model
         return $this->belongsTo(User::class, 'seller_id');
     }
 
-    public function product(): BelongsTo
+    public function items(): HasMany
     {
-        return $this->belongsTo(Product::class);
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * First item's product, exposed as a real relation so eager loads,
+     * whenLoaded('product') and Filament dot-notation keep working on
+     * multi-item orders (backward compat for the mobile app).
+     */
+    public function product(): HasOneThrough
+    {
+        return $this->hasOneThrough(
+            Product::class,
+            OrderItem::class,
+            'order_id',   // FK on order_items → orders
+            'id',         // key on products
+            'id',         // local key on orders
+            'product_id', // key on order_items → products
+        )->oldest('order_items.id');
     }
 
     public function offer(): BelongsTo

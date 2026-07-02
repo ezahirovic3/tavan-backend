@@ -19,14 +19,16 @@ class UserDeletionService
                 $q->where('buyer_id', $user->id)->orWhere('seller_id', $user->id);
             })
             ->whereIn('status', ['pending', 'accepted', 'shipped'])
-            ->with('product')
+            ->with('items.product')
             ->get();
 
         foreach ($activeOrders as $order) {
             $order->update(['status' => 'cancelled']);
 
-            if ($order->buyer_id === $user->id && $order->product?->status === 'reserved') {
-                $order->product->update(['status' => 'active']);
+            if ($order->buyer_id === $user->id) {
+                $order->items
+                    ->filter(fn ($item) => $item->product?->status === 'reserved')
+                    ->each(fn ($item) => $item->product->update(['status' => 'active']));
             }
 
             $conversation = $this->conversations->findOrCreate($order->buyer_id, $order->seller_id);

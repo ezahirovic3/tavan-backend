@@ -34,7 +34,7 @@ class OrderController extends Controller
                 ->where('buyer_id',  $userId)
                 ->orWhere('seller_id', $userId)
             ))
-            ->with(['product.images', 'buyer', 'seller'])
+            ->with(['product.images', 'items.product.images', 'buyer', 'seller'])
             ->latest()
             ->paginate(20);
 
@@ -71,14 +71,14 @@ class OrderController extends Controller
         SendReminderNotificationJob::dispatch('order', $order->id, 'pending_seller')
             ->delay(now()->addHours(24));
 
-        return response()->json(['data' => new OrderResource($order->load('product', 'buyer', 'seller'))], 201);
+        return response()->json(['data' => new OrderResource($order->load('product', 'items.product.images', 'buyer', 'seller'))], 201);
     }
 
     public function show(Request $request, Order $order): JsonResponse
     {
         $this->authorize('view', $order);
 
-        return response()->json(['data' => new OrderResource($order->load('product.images', 'buyer', 'seller', 'offer', 'trade.offeredProduct.images', 'reviews.reviewer'))]);
+        return response()->json(['data' => new OrderResource($order->load('product.images', 'items.product.images', 'buyer', 'seller', 'offer', 'trade.offeredProduct.images', 'reviews.reviewer'))]);
     }
 
     public function accept(Request $request, Order $order): JsonResponse
@@ -95,7 +95,7 @@ class OrderController extends Controller
         SendReminderNotificationJob::dispatch('order', $order->id, 'accepted_buyer_pickup')
             ->delay(now()->addHours(24));
 
-        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'items.product.images', 'buyer', 'seller'))]);
     }
 
     public function ship(Request $request, Order $order): JsonResponse
@@ -109,7 +109,7 @@ class OrderController extends Controller
         SendReminderNotificationJob::dispatch('order', $order->id, 'shipped_buyer')
             ->delay(now()->addHours(48));
 
-        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'items.product.images', 'buyer', 'seller'))]);
     }
 
     public function deliver(Request $request, Order $order): JsonResponse
@@ -120,7 +120,7 @@ class OrderController extends Controller
         $order->update(['status' => 'delivered']);
         $this->systemStatus($order, $request->user(), 'delivered');
 
-        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller'))]);
+        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'items.product.images', 'buyer', 'seller'))]);
     }
 
     public function complete(Request $request, Order $order): JsonResponse
@@ -132,7 +132,7 @@ class OrderController extends Controller
         abort_if(! in_array($order->status, $validStatuses), 422, $isPickup ? 'Narudžba nije prihvaćena.' : 'Narudžba još nije poslana.');
 
         $order->update(['status' => 'completed']);
-        $order->product->update(['status' => 'sold']);
+        $order->items->each(fn ($item) => $item->product?->update(['status' => 'sold']));
 
         if ($order->trade_id) {
             $order->trade->offeredProduct()->update(['status' => 'sold']);
@@ -141,7 +141,7 @@ class OrderController extends Controller
 
         $this->systemStatus($order, $request->user(), 'completed');
 
-        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller', 'trade.offeredProduct.images'))]);
+        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'items.product.images', 'buyer', 'seller', 'trade.offeredProduct.images'))]);
     }
 
     public function decline(Request $request, Order $order): JsonResponse
@@ -159,7 +159,7 @@ class OrderController extends Controller
         }
 
         $order->update(['status' => 'declined']);
-        $order->product->update(['status' => 'active']);
+        $order->items->each(fn ($item) => $item->product?->update(['status' => 'active']));
 
         if ($order->trade_id) {
             $order->trade->offeredProduct()->update(['status' => 'active']);
@@ -168,7 +168,7 @@ class OrderController extends Controller
 
         $this->systemStatus($order, $request->user(), 'declined');
 
-        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'buyer', 'seller', 'trade.offeredProduct.images'))]);
+        return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'items.product.images', 'buyer', 'seller', 'trade.offeredProduct.images'))]);
     }
 
     private function systemStatus(Order $order, User $actor, string $status): void
