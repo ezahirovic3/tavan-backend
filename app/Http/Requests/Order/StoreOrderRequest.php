@@ -14,7 +14,11 @@ class StoreOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'product_id'      => ['required', 'ulid', 'exists:products,id'],
+            // Single-item orders send product_id (legacy mobile);
+            // bundles send product_ids. Exactly one of the two is required.
+            'product_id'      => ['required_without:product_ids', 'nullable', 'ulid', 'exists:products,id'],
+            'product_ids'     => ['sometimes', 'array', 'min:1', 'max:20'],
+            'product_ids.*'   => ['ulid', 'distinct', 'exists:products,id'],
             'offer_id'        => ['sometimes', 'nullable', 'ulid', 'exists:offers,id'],
             'payment_method'  => ['required', 'string', 'max:64'],
             'delivery_method' => ['required', 'string', 'max:64'],

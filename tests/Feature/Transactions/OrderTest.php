@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Transactions;
 
+use App\Models\Offer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -171,6 +172,188 @@ class OrderTest extends TestCase
         $this->actingAs($buyer)
             ->postJson("/api/v1/orders/{$order->id}/decline")
             ->assertStatus(422);
+    }
+
+    // ─── Bundle buy ──────────────────────────────────────────────────────────
+
+    public function test_buyer_can_create_a_bundle_order(): void
+    {
+        $buyer  = User::factory()->create();
+        $seller = User::factory()->create();
+        $cheap  = Product::factory()->create([
+            'seller_id'            => $seller->id,
+            'status'               => 'active',
+            'price'                => 20,
+            'free_shipping'        => false,
+            'exact_shipping_price' => 4,
+        ]);
+        $pricey = Product::factory()->create([
+            'seller_id'            => $seller->id,
+            'status'               => 'active',
+            'price'                => 30,
+            'free_shipping'        => false,
+            'exact_shipping_price' => 7,
+        ]);
+
+        $response = $this->actingAs($buyer)->postJson('/api/v1/orders', [
+            'product_ids'     => [$cheap->id, $pricey->id],
+            'payment_method'  => 'cash',
+            'delivery_method' => 'delivery',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonCount(2, 'data.items')
+            ->assertJsonPath('data.subtotal', 50)
+            // Bundle ships as one parcel — max of the per-item costs
+            ->assertJsonPath('data.shippingCost', 7)
+            ->assertJsonPath('data.total', 57);
+
+        $this->assertEquals('reserved', $cheap->fresh()->status);
+        $this->assertEquals('reserved', $pricey->fresh()->status);
+    }
+
+    public function test_bundle_shipping_is_free_only_when_all_items_ship_free(): void
+    {
+        $buyer  = User::factory()->create();
+        $seller = User::factory()->create();
+        $products = Product::factory()->count(2)->create([
+            'seller_id'     => $seller->id,
+            'status'        => 'active',
+            'free_shipping' => true,
+        ]);
+
+        $response = $this->actingAs($buyer)->postJson('/api/v1/orders', [
+            'product_ids'     => $products->pluck('id')->all(),
+            'payment_method'  => 'cash',
+            'delivery_method' => 'delivery',
+        ]);
+
+        $response->assertStatus(201)->assertJsonPath('data.shippingCost', 0);
+    }
+
+    public function test_bundle_items_must_all_be_from_the_same_seller(): void
+    {
+        $buyer    = User::factory()->create();
+        $productA = Product::factory()->create(['status' => 'active']);
+        $productB = Product::factory()->create(['status' => 'active']); // different seller
+
+        $this->actingAs($buyer)->postJson('/api/v1/orders', [
+            'product_ids'     => [$productA->id, $productB->id],
+            'payment_method'  => 'cash',
+            'delivery_method' => 'pickup',
+        ])->assertStatus(422)->assertJsonValidationErrors('productIds');
+    }
+
+    public function test_bundle_with_an_unavailable_item_is_rejected_and_names_it(): void
+    {
+        $buyer  = User::factory()->create();
+        $seller = User::factory()->create();
+        $active = Product::factory()->create(['seller_id' => $seller->id, 'status' => 'active']);
+        $sold   = Product::factory()->create(['seller_id' => $seller->id, 'status' => 'sold', 'title' => 'Prodana jakna']);
+
+        $response = $this->actingAs($buyer)->postJson('/api/v1/orders', [
+            'product_ids'     => [$active->id, $sold->id],
+            'payment_method'  => 'cash',
+            'delivery_method' => 'pickup',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertStringContainsString('Prodana jakna', $response->json('message'));
+
+        // Nothing was reserved — the whole bundle is rejected atomically
+        $this->assertEquals('active', $active->fresh()->status);
+    }
+
+    public function test_bundle_containing_own_product_is_rejected(): void
+    {
+        $buyer  = User::factory()->create();
+        $seller = User::factory()->create();
+        $theirs = Product::factory()->create(['seller_id' => $seller->id, 'status' => 'active']);
+        $mine   = Product::factory()->create(['seller_id' => $buyer->id, 'status' => 'active']);
+
+        $this->actingAs($buyer)->postJson('/api/v1/orders', [
+            'product_ids'     => [$theirs->id, $mine->id],
+            'payment_method'  => 'cash',
+            'delivery_method' => 'pickup',
+        ])->assertStatus(422);
+    }
+
+    public function test_offer_cannot_be_applied_to_a_bundle(): void
+    {
+        $buyer    = User::factory()->create();
+        $seller   = User::factory()->create();
+        $products = Product::factory()->count(2)->create(['seller_id' => $seller->id, 'status' => 'active']);
+
+        $offer = Offer::factory()->create([
+            'buyer_id'   => $buyer->id,
+            'seller_id'  => $seller->id,
+            'product_id' => $products[0]->id,
+            'status'     => 'accepted',
+        ]);
+
+        $this->actingAs($buyer)->postJson('/api/v1/orders', [
+            'product_ids'     => $products->pluck('id')->all(),
+            'offer_id'        => $offer->id,
+            'payment_method'  => 'cash',
+            'delivery_method' => 'pickup',
+        ])->assertStatus(422)->assertJsonValidationErrors('offerId');
+    }
+
+    public function test_accepted_offer_still_discounts_a_single_item_order(): void
+    {
+        $buyer   = User::factory()->create();
+        $seller  = User::factory()->create();
+        $product = Product::factory()->create([
+            'seller_id'     => $seller->id,
+            'status'        => 'active',
+            'price'         => 50,
+            'free_shipping' => true,
+        ]);
+
+        $offer = Offer::factory()->create([
+            'buyer_id'      => $buyer->id,
+            'seller_id'     => $seller->id,
+            'product_id'    => $product->id,
+            'offered_price' => 40,
+            'status'        => 'accepted',
+        ]);
+
+        $response = $this->actingAs($buyer)->postJson('/api/v1/orders', [
+            'product_id'      => $product->id,
+            'offer_id'        => $offer->id,
+            'payment_method'  => 'cash',
+            'delivery_method' => 'delivery',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.discount', 10)
+            ->assertJsonPath('data.total', 40);
+
+        $this->assertEquals('ordered', $offer->fresh()->status);
+    }
+
+    public function test_someone_elses_offer_cannot_be_applied(): void
+    {
+        $buyer      = User::factory()->create();
+        $otherBuyer = User::factory()->create();
+        $seller     = User::factory()->create();
+        $product    = Product::factory()->create(['seller_id' => $seller->id, 'status' => 'active', 'price' => 50]);
+
+        $offer = Offer::factory()->create([
+            'buyer_id'      => $otherBuyer->id,
+            'seller_id'     => $seller->id,
+            'product_id'    => $product->id,
+            'offered_price' => 1,
+            'status'        => 'accepted',
+        ]);
+
+        $this->actingAs($buyer)->postJson('/api/v1/orders', [
+            'product_id'      => $product->id,
+            'offer_id'        => $offer->id,
+            'payment_method'  => 'cash',
+            'delivery_method' => 'pickup',
+        ])->assertStatus(422)->assertJsonValidationErrors('offerId');
     }
 
     // ─── Multi-item orders (bundle groundwork) ───────────────────────────────

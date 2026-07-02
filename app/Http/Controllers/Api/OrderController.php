@@ -7,7 +7,6 @@ use App\Http\Requests\Order\StoreOrderRequest;
 use App\Http\Resources\OrderResource;
 use App\Jobs\SendReminderNotificationJob;
 use App\Models\Order;
-use App\Models\Product;
 use App\Models\User;
 use App\Services\ConversationService;
 use App\Services\OrderService;
@@ -51,20 +50,27 @@ class OrderController extends Controller
 
     public function store(StoreOrderRequest $request): JsonResponse
     {
-        $product = Product::findOrFail($request->product_id);
+        $productIds = $request->validated('product_ids') ?: [$request->validated('product_id')];
 
-        abort_if($product->seller_id === $request->user()->id, 422, 'Ne možete kupiti vlastiti proizvod.');
-        abort_if($product->status !== 'active', 422, 'Proizvod nije dostupan.');
+        // Availability, ownership and same-seller checks happen in the service,
+        // inside the transaction, with the products locked.
+        $order = $this->orderService->createDirect($request->user(), $productIds, $request->validated());
 
-        $order = $this->orderService->createDirect($request->user(), $product, $request->validated());
+        $order->load('items.product');
+        $firstProduct = $order->items->first()?->product;
 
-        $conversation = $this->conversations->findOrCreate($request->user()->id, $product->seller_id, $product->id);
+        $conversation = $this->conversations->findOrCreate($request->user()->id, $order->seller_id, $firstProduct?->id);
         $this->conversations->sendSystemMessage($conversation, $request->user()->id, 'system_order', ['orderId' => $order->id]);
 
+        $itemCount = $order->items->count();
+        $pushBody  = $itemCount > 1
+            ? $request->user()->name . ' je naručio/la ' . $itemCount . ' ' . $this->itemNoun($itemCount) . '.'
+            : $request->user()->name . ' je naručio/la "' . $firstProduct?->title . '".';
+
         $this->push->sendToUser(
-            $product->seller_id,
+            $order->seller_id,
             'Nova narudžba! 🛍️',
-            $request->user()->name . ' je naručio/la "' . $product->title . '".',
+            $pushBody,
             ['type' => 'order', 'orderId' => $order->id],
         );
 
@@ -169,6 +175,20 @@ class OrderController extends Controller
         $this->systemStatus($order, $request->user(), 'declined');
 
         return response()->json(['data' => new OrderResource($order->fresh()->load('product', 'items.product.images', 'buyer', 'seller', 'trade.offeredProduct.images'))]);
+    }
+
+    /** Bosnian pluralization: 1 artikal, 2–4 artikla, 5+ artikala (11–14 → artikala). */
+    private function itemNoun(int $count): string
+    {
+        if ($count % 100 >= 11 && $count % 100 <= 14) {
+            return 'artikala';
+        }
+
+        return match (true) {
+            $count % 10 === 1                       => 'artikal',
+            $count % 10 >= 2 && $count % 10 <= 4    => 'artikla',
+            default                                 => 'artikala',
+        };
     }
 
     private function systemStatus(Order $order, User $actor, string $status): void
