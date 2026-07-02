@@ -42,6 +42,29 @@ class ProductTest extends TestCase
         $this->assertCount(1, $response->json('data'));
     }
 
+    public function test_user_products_respect_per_page_with_a_cap(): void
+    {
+        $seller = User::factory()->create();
+        Product::factory()->count(25)->create([
+            'seller_id' => $seller->id,
+            'status'    => 'active',
+        ]);
+
+        // Default stays 20
+        $default = $this->getJson("/api/v1/users/{$seller->id}/products");
+        $this->assertCount(20, $default->json('data'));
+        $this->assertEquals(25, $default->json('meta.total'));
+
+        // per_page raises the limit
+        $all = $this->getJson("/api/v1/users/{$seller->id}/products?per_page=100");
+        $this->assertCount(25, $all->json('data'));
+        $this->assertEquals(1, $all->json('meta.lastPage'));
+
+        // per_page is capped at 100
+        $capped = $this->getJson("/api/v1/users/{$seller->id}/products?per_page=5000");
+        $this->assertEquals(100, $capped->json('meta.perPage'));
+    }
+
     public function test_anyone_can_view_a_single_product(): void
     {
         $product = Product::factory()->create(['status' => 'active']);

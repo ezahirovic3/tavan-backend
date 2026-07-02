@@ -73,10 +73,12 @@ class ReviewController extends Controller
             }
         })->firstOrFail();
 
+        $perPage = min(max((int) $request->get('per_page', 20), 1), 100);
+
         $reviews = Review::where('reviewed_id', $user->id)
             ->with('reviewer')
             ->latest('created_at')
-            ->paginate(20);
+            ->paginate($perPage);
 
         return response()->json([
             'data' => ReviewResource::collection($reviews->items()),
