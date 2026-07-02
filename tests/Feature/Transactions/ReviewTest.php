@@ -110,10 +110,9 @@ class ReviewTest extends TestCase
         $seller  = User::factory()->create();
         $product = Product::factory()->create(['seller_id' => $seller->id]);
 
-        $order = Order::factory()->completed()->create(array_merge([
-            'buyer_id'   => $buyer->id,
-            'seller_id'  => $seller->id,
-            'product_id' => $product->id,
+        $order = Order::factory()->forProduct($product)->completed()->create(array_merge([
+            'buyer_id'  => $buyer->id,
+            'seller_id' => $seller->id,
         ], $overrides));
 
         return [$buyer, $seller, $order];
