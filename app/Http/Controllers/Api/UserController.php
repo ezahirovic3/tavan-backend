@@ -162,11 +162,13 @@ class UserController extends Controller
             default                                                               => 'active',
         };
 
+        $perPage = min(max((int) $request->get('per_page', 20), 1), 100);
+
         $products = $user->products()
             ->where('status', $allowedStatus)
             ->with(['images', 'brand'])
             ->latest()
-            ->paginate(20);
+            ->paginate($perPage);
 
         return response()->json([
             'data' => ProductResource::collection($products->items()),
