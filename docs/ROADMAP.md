@@ -110,7 +110,7 @@ bundle-buy mobile UI consumes it later (old orders render via `product` fallback
 
 ---
 
-## 2. Bundle Buy (Priority: High — depends on #1)
+## 2. Bundle Buy (Backend: DONE — mobile UI pending)
 
 ### Concept
 
@@ -120,6 +120,17 @@ Buyer selects multiple items from the same seller and places them as a single or
 - All items must be from the same seller
 - Single shipping fee for the whole order
 - `order_items` schema is a prerequisite
+
+### Backend implementation (shipped)
+
+`POST /api/v1/orders` now accepts `product_ids: []` (1–20 items) alongside the legacy
+`product_id` (old mobile versions keep working unchanged). All purchase validation
+(availability, ownership, same-seller) moved from the controller into
+`OrderService::createDirect`, inside the transaction with `lockForUpdate` on the
+products — bundles are reserved atomically or rejected as a whole (422 names the
+unavailable items). Offers are validated properly now (must be the buyer's own accepted
+offer for the ordered product; single-item orders only). Push notification says
+"N artikala" for bundles.
 
 ### Decisions made ahead of implementation
 
