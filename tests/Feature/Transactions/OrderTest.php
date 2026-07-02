@@ -31,14 +31,20 @@ class OrderTest extends TestCase
         ]);
 
         $response->assertStatus(201)
-            ->assertJsonStructure(['data' => ['id', 'orderNumber', 'status', 'total']])
-            ->assertJsonPath('data.status', 'pending');
+            ->assertJsonStructure(['data' => ['id', 'orderNumber', 'status', 'total', 'items']])
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.product.id', $product->id)
+            ->assertJsonPath('data.items.0.product.id', $product->id);
 
         $this->assertDatabaseHas('orders', [
-            'buyer_id'   => $buyer->id,
-            'seller_id'  => $seller->id,
+            'buyer_id'  => $buyer->id,
+            'seller_id' => $seller->id,
+            'status'    => 'pending',
+        ]);
+
+        $this->assertDatabaseHas('order_items', [
+            'order_id'   => $response->json('data.id'),
             'product_id' => $product->id,
-            'status'     => 'pending',
         ]);
 
         // Product should be reserved while waiting for seller confirmation
@@ -167,6 +173,48 @@ class OrderTest extends TestCase
             ->assertStatus(422);
     }
 
+    // ─── Multi-item orders (bundle groundwork) ───────────────────────────────
+
+    public function test_completing_a_multi_item_order_marks_all_products_sold(): void
+    {
+        [$buyer, $seller, $order, $products] = $this->makeMultiItemOrder(['status' => 'delivered']);
+
+        $this->actingAs($buyer)
+            ->postJson("/api/v1/orders/{$order->id}/complete")
+            ->assertStatus(200)
+            ->assertJsonPath('data.status', 'completed')
+            ->assertJsonCount(2, 'data.items');
+
+        foreach ($products as $product) {
+            $this->assertEquals('sold', $product->fresh()->status);
+        }
+    }
+
+    public function test_declining_a_multi_item_order_reactivates_all_products(): void
+    {
+        [$buyer, $seller, $order, $products] = $this->makeMultiItemOrder(['status' => 'pending']);
+
+        $this->actingAs($seller)
+            ->postJson("/api/v1/orders/{$order->id}/decline")
+            ->assertStatus(200)
+            ->assertJsonPath('data.status', 'declined');
+
+        foreach ($products as $product) {
+            $this->assertEquals('active', $product->fresh()->status);
+        }
+    }
+
+    public function test_order_response_exposes_first_item_as_product_for_backward_compat(): void
+    {
+        [$buyer, $seller, $order, $products] = $this->makeMultiItemOrder();
+
+        $this->actingAs($buyer)
+            ->getJson("/api/v1/orders/{$order->id}")
+            ->assertStatus(200)
+            ->assertJsonPath('data.product.id', $products[0]->id)
+            ->assertJsonCount(2, 'data.items');
+    }
+
     // ─── Listing orders ──────────────────────────────────────────────────────
 
     public function test_user_can_list_their_orders(): void
@@ -213,8 +261,8 @@ class OrderTest extends TestCase
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     /**
-     * Creates a buyer, a seller, a product (owned by seller), and an order.
-     * The product is kept in 'active' status since orders use the product_id FK.
+     * Creates a buyer, a seller, a product (owned by seller), and an order
+     * with a single line item for that product.
      *
      * @return array{0: User, 1: User, 2: Order}
      */
@@ -224,12 +272,34 @@ class OrderTest extends TestCase
         $seller  = User::factory()->create();
         $product = Product::factory()->create(['seller_id' => $seller->id, 'status' => 'active']);
 
-        $order = Order::factory()->create(array_merge([
-            'buyer_id'   => $buyer->id,
-            'seller_id'  => $seller->id,
-            'product_id' => $product->id,
+        $order = Order::factory()->forProduct($product)->create(array_merge([
+            'buyer_id'  => $buyer->id,
+            'seller_id' => $seller->id,
         ], $orderOverrides));
 
         return [$buyer, $seller, $order];
+    }
+
+    /**
+     * Creates an order with two line items from the same seller.
+     * Products start 'reserved' (buyer committed, order in flight).
+     *
+     * @return array{0: User, 1: User, 2: Order, 3: array<Product>}
+     */
+    private function makeMultiItemOrder(array $orderOverrides = []): array
+    {
+        $buyer    = User::factory()->create();
+        $seller   = User::factory()->create();
+        $products = Product::factory()->count(2)->create(['seller_id' => $seller->id, 'status' => 'reserved']);
+
+        $order = Order::factory()
+            ->forProduct($products[0])
+            ->forProduct($products[1])
+            ->create(array_merge([
+                'buyer_id'  => $buyer->id,
+                'seller_id' => $seller->id,
+            ], $orderOverrides));
+
+        return [$buyer, $seller, $order, $products->all()];
     }
 }

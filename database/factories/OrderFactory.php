@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -18,7 +19,6 @@ class OrderFactory extends Factory
             'order_number'    => '#' . fake()->unique()->numerify('#####'),
             'buyer_id'        => User::factory(),
             'seller_id'       => User::factory(),
-            'product_id'      => Product::factory(),
             'offer_id'        => null,
             'trade_id'        => null,
             'subtotal'        => 50.00,
@@ -33,6 +33,18 @@ class OrderFactory extends Factory
             'shipping_city'   => 'Sarajevo',
             'shipping_phone'  => '+38761000000',
         ];
+    }
+
+    /** Attach a line item for the given product (or a fresh one). */
+    public function forProduct(?Product $product = null, float $price = 50.00): static
+    {
+        return $this->has(
+            OrderItem::factory()->state(fn () => [
+                'product_id' => $product?->id ?? Product::factory(),
+                'price'      => $price,
+            ]),
+            'items',
+        );
     }
 
     public function accepted(): static

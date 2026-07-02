@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Offer;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\ShippingOption;
 use App\Models\Trade;
@@ -28,7 +28,6 @@ class OrderService
                 'order_number'    => $this->generateOrderNumber(),
                 'buyer_id'        => $buyer->id,
                 'seller_id'       => $product->seller_id,
-                'product_id'      => $product->id,
                 'offer_id'        => $offerId,
                 'subtotal'        => $subtotal,
                 'discount'        => $discount,
@@ -43,45 +42,17 @@ class OrderService
                 'shipping_phone'  => $data['shipping_phone'] ?? null,
             ]);
 
+            OrderItem::create([
+                'order_id'   => $order->id,
+                'product_id' => $product->id,
+                'price'      => $subtotal,
+            ]);
+
             if ($offer) {
                 $offer->update(['status' => 'ordered']);
             }
 
             // Reserved = buyer committed, but seller hasn't confirmed yet
-            $product->update(['status' => 'reserved']);
-
-            return $order;
-        });
-    }
-
-    public function createFromOffer(Offer $offer, array $shippingData): Order
-    {
-        return DB::transaction(function () use ($offer, $shippingData) {
-            $product      = $offer->product;
-            $shippingCost = $this->resolveShippingCost($product, $shippingData['delivery_method'] ?? 'delivery');
-            $subtotal     = $product->price;
-            $discount     = max(0, $subtotal - $offer->offered_price);
-
-            $order = Order::create([
-                'order_number'    => $this->generateOrderNumber(),
-                'buyer_id'        => $offer->buyer_id,
-                'seller_id'       => $offer->seller_id,
-                'product_id'      => $product->id,
-                'offer_id'        => $offer->id,
-                'subtotal'        => $subtotal,
-                'discount'        => $discount,
-                'shipping_cost'   => $shippingCost,
-                'total'           => $offer->offered_price + $shippingCost,
-                'payment_method'  => $shippingData['payment_method'],
-                'delivery_method' => $shippingData['delivery_method'],
-                'status'          => 'pending',
-                'shipping_name'   => $shippingData['shipping_name'],
-                'shipping_street' => $shippingData['shipping_street'],
-                'shipping_city'   => $shippingData['shipping_city'],
-                'shipping_phone'  => $shippingData['shipping_phone'],
-            ]);
-
-            $offer->update(['status' => 'ordered']);
             $product->update(['status' => 'reserved']);
 
             return $order;
@@ -97,7 +68,6 @@ class OrderService
                 'order_number'    => $this->generateOrderNumber(),
                 'buyer_id'        => $trade->buyer_id,
                 'seller_id'       => $trade->seller_id,
-                'product_id'      => $product->id,
                 'trade_id'        => $trade->id,
                 'subtotal'        => 0,
                 'discount'        => 0,
@@ -106,6 +76,12 @@ class OrderService
                 'payment_method'  => 'trade',
                 'delivery_method' => 'pickup',
                 'status'          => 'accepted',
+            ]);
+
+            OrderItem::create([
+                'order_id'   => $order->id,
+                'product_id' => $product->id,
+                'price'      => 0,
             ]);
 
             // Reserve both products until the trade is completed
