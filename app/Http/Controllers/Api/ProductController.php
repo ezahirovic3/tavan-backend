@@ -105,27 +105,44 @@ class ProductController extends Controller
         }
 
         // ── Search ─────────────────────────────────────────────────────────────
+        // Multi-word queries match token-by-token: every token must hit somewhere
+        // (AND across tokens, OR within a token's synonym expansions), so
+        // "zara haljina" means brand/title "zara" AND the dress word family —
+        // not the exact phrase "zara haljina" in a title.
         if ($request->filled('q')) {
-            $terms          = ProductSearchService::expandTerms($request->q);
-            $categoryIntent = ProductSearchService::detectCategoryIntent($request->q);
+            $tokens    = ProductSearchService::tokenize($request->q);
+            $multiWord = count($tokens) > 1;
 
-            $query->where(function ($q) use ($terms, $categoryIntent) {
-                // Text match across title, description, subcategory, and brand name.
-                // Subcategory is included so a listing titled "Plave pantalone" but
-                // tagged subcategory="Farmerke" still surfaces when searching "farmerke".
-                foreach ($terms as $term) {
-                    $q->orWhere('title',       'like', '%'.$term.'%')
-                      ->orWhere('description', 'like', '%'.$term.'%')
-                      ->orWhere('subcategory', 'like', '%'.$term.'%')
-                      ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', '%'.$term.'%'));
-                }
+            foreach ($tokens as $token) {
+                $terms          = ProductSearchService::expandTerms($token, stemFallback: $multiWord);
+                $categoryIntent = ProductSearchService::detectCategoryIntent($token);
 
-                // Category-level intent: "hlače" → bottoms, "patike" → shoes, etc.
-                // Catches listings whose titles use a completely different word family.
-                if ($categoryIntent) {
-                    $q->orWhere('category', $categoryIntent);
-                }
-            });
+                $query->where(function ($q) use ($terms, $categoryIntent, $token) {
+                    // Text match across title, description, subcategory, and brand name.
+                    // Subcategory is included so a listing titled "Plave pantalone" but
+                    // tagged subcategory="Farmerke" still surfaces when searching "farmerke".
+                    // Title and brand comparisons ignore apostrophes so "levis"
+                    // matches "Levi's" (and the curly ’ variant).
+                    foreach ($terms as $term) {
+                        $stripped = ProductSearchService::stripApostrophes($term);
+
+                        $q->orWhereRaw("REPLACE(REPLACE(title, '''', ''), '’', '') LIKE ?", ['%'.$stripped.'%'])
+                          ->orWhere('description', 'like', '%'.$term.'%')
+                          ->orWhere('subcategory', 'like', '%'.$term.'%')
+                          ->orWhereHas('brand', fn ($b) => $b->whereRaw("REPLACE(REPLACE(name, '''', ''), '’', '') LIKE ?", ['%'.$stripped.'%']));
+                    }
+
+                    // Bare size tokens ("haljina xl", "new balance 38") match the
+                    // size column directly — collation makes "xl" equal "XL".
+                    $q->orWhere('size', $token);
+
+                    // Category-level intent: "hlače" → bottoms, "patike" → shoes, etc.
+                    // Catches listings whose titles use a completely different word family.
+                    if ($categoryIntent) {
+                        $q->orWhere('category', $categoryIntent);
+                    }
+                });
+            }
         }
 
         // ── Sorting ────────────────────────────────────────────────────────────
