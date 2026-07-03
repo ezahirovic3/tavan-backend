@@ -10,13 +10,11 @@ use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Schema;
-use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\TextInputColumn;
 use Filament\Tables\Columns\ToggleColumn;
@@ -62,13 +60,6 @@ class BrandResource extends Resource
                         ->extraInputAttributes(['class' => 'font-mono']),
                 ]),
 
-                FileUpload::make('logo_url')
-                    ->label('Logo')
-                    ->image()
-                    ->disk('r2')
-                    ->directory('brands/logos')
-                    ->imageEditor(),
-
                 Grid::make(2)->schema([
                     Toggle::make('is_active')
                         ->label('Aktivan')
@@ -91,13 +82,6 @@ class BrandResource extends Resource
             ->reorderable('sort_order')
             ->defaultSort('sort_order')
             ->columns([
-                ImageColumn::make('logo_url')
-                    ->label('Logo')
-                    ->disk('r2')
-                    ->square()
-                    ->size(40)
-                    ->extraImgAttributes(['style' => 'object-fit: contain']),
-
                 TextColumn::make('name')
                     ->label('Naziv')
                     ->searchable()
