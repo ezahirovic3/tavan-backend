@@ -269,6 +269,30 @@ class ProductSearchService
         return [$original];
     }
 
+    // Gender words map to root_category so "muske majice" narrows to the
+    // men's section instead of requiring "muška" in the listing text.
+    private const ROOT_INTENTS = [
+        'men'   => ['muski', 'muska', 'musko', 'muske', 'muskarci', 'muskarac', 'men', 'mens'],
+        'women' => ['zenski', 'zenska', 'zensko', 'zenske', 'zene', 'zena', 'women', 'womens', 'ladies'],
+    ];
+
+    /**
+     * Detect whether the term is a gender word mapping to a root category.
+     * Returns "men", "women", or null.
+     */
+    public static function detectRootIntent(string $q): ?string
+    {
+        $normalized = self::normalize($q);
+
+        foreach (self::ROOT_INTENTS as $rootKey => $terms) {
+            if (in_array($normalized, $terms, true)) {
+                return $rootKey;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Detect whether the query maps to a known product category key.
      * Returns a category key (e.g. "bottoms", "shoes") or null.

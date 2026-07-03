@@ -116,8 +116,9 @@ class ProductController extends Controller
             foreach ($tokens as $token) {
                 $terms          = ProductSearchService::expandTerms($token, stemFallback: $multiWord);
                 $categoryIntent = ProductSearchService::detectCategoryIntent($token);
+                $rootIntent     = ProductSearchService::detectRootIntent($token);
 
-                $query->where(function ($q) use ($terms, $categoryIntent, $token) {
+                $query->where(function ($q) use ($terms, $categoryIntent, $rootIntent, $token) {
                     // Text match across title, description, subcategory, and brand name.
                     // Subcategory is included so a listing titled "Plave pantalone" but
                     // tagged subcategory="Farmerke" still surfaces when searching "farmerke".
@@ -140,6 +141,11 @@ class ProductController extends Controller
                     // Catches listings whose titles use a completely different word family.
                     if ($categoryIntent) {
                         $q->orWhere('category', $categoryIntent);
+                    }
+
+                    // Gender intent: "muske majice" → men's section
+                    if ($rootIntent) {
+                        $q->orWhere('root_category', $rootIntent);
                     }
                 });
             }
