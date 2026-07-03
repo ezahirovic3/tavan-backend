@@ -274,4 +274,33 @@ class ProductTest extends TestCase
         $this->assertCount(1, $response->json('data'));
         $this->assertStringContainsString('haljina', strtolower($response->json('data.0.title')));
     }
+
+    // ─── View count visibility ───────────────────────────────────────────────
+
+    public function test_view_count_is_only_visible_to_the_owner(): void
+    {
+        $seller = User::factory()->create();
+        $product = Product::factory()->create([
+            'seller_id'  => $seller->id,
+            'status'     => 'active',
+            'view_count' => 7,
+        ]);
+
+        // Owner sees it
+        $this->actingAs($seller)
+            ->getJson("/api/v1/products/{$product->id}")
+            ->assertStatus(200)
+            ->assertJsonPath('data.viewCount', 7);
+
+        // Another user does not
+        $this->actingAs(User::factory()->create())
+            ->getJson("/api/v1/products/{$product->id}")
+            ->assertStatus(200)
+            ->assertJsonMissingPath('data.viewCount');
+
+        // Guests do not
+        $this->getJson("/api/v1/products/{$product->id}")
+            ->assertStatus(200)
+            ->assertJsonMissingPath('data.viewCount');
+    }
 }
