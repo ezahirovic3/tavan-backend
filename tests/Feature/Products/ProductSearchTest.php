@@ -103,6 +103,25 @@ class ProductSearchTest extends TestCase
         $this->assertEquals('XL', $results[0]['size']);
     }
 
+    public function test_gender_token_narrows_by_root_category(): void
+    {
+        Product::factory()->create([
+            'root_category' => 'men',
+            'category'      => 'tops',
+            'title'         => 'Basic pamucna',
+        ]);
+        Product::factory()->create([
+            'root_category' => 'women',
+            'category'      => 'tops',
+            'title'         => 'Basic pamucna',
+        ]);
+
+        $results = $this->search('muske majice');
+
+        $this->assertCount(1, $results);
+        $this->assertEquals('men', $results[0]['rootCategory']);
+    }
+
     public function test_single_token_brand_query_is_not_stemmed(): void
     {
         // "nike" must not become "nik" and match e.g. "tunika"
