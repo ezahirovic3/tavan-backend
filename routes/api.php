@@ -103,6 +103,9 @@ Route::prefix('v1')->group(function () {
         Route::delete('users/me/addresses/{address}', [UserAddressController::class, 'destroy']);
 
         // ── Phone-verified write routes ───────────────────────────────────────────
+        // Only actions that create or move transactions require a verified phone.
+        // Reads (order history, offer/trade/review detail) stay open so unverified
+        // users are never blocked from viewing their own data.
         Route::middleware('phone.verified')->group(function () {
 
             Route::post('products', [ProductController::class, 'store']);
@@ -117,22 +120,18 @@ Route::prefix('v1')->group(function () {
 
             // Offers
             Route::post('offers', [OfferController::class, 'store']);
-            Route::get('offers/{offer}', [OfferController::class, 'show']);
             Route::post('offers/{offer}/accept', [OfferController::class, 'accept']);
             Route::post('offers/{offer}/decline', [OfferController::class, 'decline']);
             Route::post('offers/{offer}/counter', [OfferController::class, 'counter']);
 
             // Trades
             Route::post('trades', [TradeController::class, 'store']);
-            Route::get('trades/{trade}', [TradeController::class, 'show']);
             Route::post('trades/{trade}/accept', [TradeController::class, 'accept']);
             Route::post('trades/{trade}/decline', [TradeController::class, 'decline']);
             Route::post('trades/{trade}/counter', [TradeController::class, 'counter']);
 
             // Orders
-            Route::get('orders', [OrderController::class, 'index']);
             Route::post('orders', [OrderController::class, 'store']);
-            Route::get('orders/{order}', [OrderController::class, 'show']);
             Route::post('orders/{order}/accept', [OrderController::class, 'accept']);
             Route::post('orders/{order}/ship', [OrderController::class, 'ship']);
             Route::post('orders/{order}/deliver', [OrderController::class, 'deliver']);
@@ -140,17 +139,25 @@ Route::prefix('v1')->group(function () {
             Route::post('orders/{order}/decline', [OrderController::class, 'decline']);
 
             // Reviews
-            Route::get('reviews/{review}', [ReviewController::class, 'show']);
             Route::post('orders/{order}/reviews', [ReviewController::class, 'store']);
 
-            // Conversations (messaging requires phone verification)
-            Route::post('conversations/support', [ConversationController::class, 'support']);
+            // Conversations (sending messages to sellers requires phone verification)
             Route::post('conversations', [ConversationController::class, 'store']);
             Route::post('conversations/{conversation}/messages', [ConversationController::class, 'sendMessage']);
 
         });
 
         // ── Phone-verified not required ───────────────────────────────────────────
+        Route::get('orders', [OrderController::class, 'index']);
+        Route::get('orders/{order}', [OrderController::class, 'show']);
+        Route::get('offers/{offer}', [OfferController::class, 'show']);
+        Route::get('trades/{trade}', [TradeController::class, 'show']);
+        Route::get('reviews/{review}', [ReviewController::class, 'show']);
+
+        // Support chat must never be phone-gated — users stuck on verification
+        // need a way to reach us.
+        Route::post('conversations/support', [ConversationController::class, 'support']);
+
         Route::post('products/{product}/report', [ProductReportController::class, 'store']);
 
         Route::get('wishlist', [WishlistController::class, 'index']);

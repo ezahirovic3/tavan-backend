@@ -18,7 +18,6 @@ class BrandFactory extends Factory
         return [
             'name'      => $name,
             'slug'      => Str::slug($name),
-            'logo_url'  => null,
             'is_active' => true,
             'is_other'  => false,
             'sort_order' => fake()->numberBetween(1, 100),
