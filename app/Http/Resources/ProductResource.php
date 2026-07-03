@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Auth;
 
 class ProductResource extends JsonResource
 {
@@ -30,7 +31,14 @@ class ProductResource extends JsonResource
             'allows_trades'        => $this->allows_trades,
             'allows_offers'        => $this->allows_offers,
             'likes'         => $this->likes,
-            'view_count'    => (int) $this->view_count,
+            // Owner-only until the marketplace is big enough for public view
+            // counts to read as social proof rather than low liquidity.
+            // Product routes use optional auth, so fall back to the sanctum
+            // guard — $request->user() is null on public routes.
+            'view_count'    => $this->when(
+                ($request->user() ?? Auth::guard('sanctum')->user())?->id === $this->seller_id,
+                fn () => (int) $this->view_count
+            ),
             'measurements'  => $this->measurements,
             'vintage'       => $this->vintage_status === 'approved' ? [
                 'era'         => $this->vintage_era,
