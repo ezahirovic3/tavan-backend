@@ -29,6 +29,7 @@ class AccountDeletionReminderNotification extends Notification
             ->greeting('Zdravo!')
             ->line("Zatražili ste brisanje vašeg Tavan računa. Ako se ne prijavite, račun i svi podaci će biti trajno obrisani za {$daysLabel} ({$this->deletionDate->translatedFormat('d.m.Y.')}).")
             ->line('Ako ste se predomislili, samo se prijavite u aplikaciju i otkažite brisanje.')
-            ->line('Ako ste namjerno zatražili brisanje, ne morate ništa raditi — račun će biti obrisan automatski.');
+            ->line('Ako ste namjerno zatražili brisanje, ne morate ništa raditi — račun će biti obrisan automatski.')
+            ->salutation("Pozdrav,\nTavan tim");
     }
 }
