@@ -24,6 +24,7 @@ class PasswordResetOtpNotification extends Notification
             ->line('Tvoj verifikacijski kod je:')
             ->line('**' . $this->otp . '**')
             ->line('Kod je validan 15 minuta.')
-            ->line('Ako nisi ti zatražio/la reset, ignoriši ovaj email.');
+            ->line('Ako nisi ti zatražio/la reset, ignoriši ovaj email.')
+            ->salutation("Pozdrav,\nTavan tim");
     }
 }

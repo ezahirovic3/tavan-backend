@@ -32,7 +32,9 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
         // Remove activity log entries older than the configured retention period (default: 365 days)
-        $schedule->command('activitylog:clean')->weekly();
+        // --force skips the ConfirmableTrait production prompt, which would otherwise
+        // make the non-interactive scheduler run exit with code 1
+        $schedule->command('activitylog:clean --force')->weekly();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         Integration::handles($exceptions);

@@ -199,12 +199,77 @@ C2C card payments are not currently supported in Bosnia. Requires obrt (sole tra
 
 ---
 
+---
+
+## 7. Release train work (July 2026 — product roadmap in `tavan-landing/ROADMAP.md`)
+
+> What/when/why lives in the landing repo's ROADMAP.md (single source of truth).
+> Sibling implementation doc: `tavan-mobile/docs/roadmap.md`.
+
+### 1.3.0 (juli) — Stilovi + founding bedž
+
+- [ ] Migration: `products.styles` JSON array (nullable) + cast on `Product`
+- [ ] Validation: `StoreProductRequest` / `UpdateProductRequest` — array, max 3,
+      each value `Rule::in(...)` against a shared constant (config or enum class)
+- [ ] `ProductResource`: expose `styles`
+- [ ] `ProductController@index`: `styles` filter param (whereJsonContains, any-of)
+- [ ] Search: STYLE_INTENTS map in `ProductSearchService` (`goth`, `y2k`, `alt`… as
+      tokens → style filter OR-branch, same pattern as category intents).
+      Include `pokrivene` → modest style.
+- [ ] `users.is_founding_seller` boolean + Filament toggle + expose in API `UserResource`
+- [ ] Filament ProductForm/ProductsTable: styles multi-select
+
+### 1.4.0 (sredina augusta) — Follows + notifications
+
+- [ ] `follows` table (follower_id, followed_id, unique pair) + model + cascades
+- [ ] Endpoints: `POST/DELETE users/{user}/follow`, `GET users/me/following`,
+      follower/following counts on `UserResource` (withCount, mind N+1 on lists)
+- [ ] Throttle follow/unfollow
+- [ ] Home rail feed: `GET products?followed=true` — recent items from followed
+      sellers, no preference filtering, excludes future `drop`-state items
+- [ ] Notification fan-out (queued): new-listing digest per seller (30 min quiet /
+      60 min max delay, quiet hours 22–08, daily cap; "novi artikal" vs "X novih
+      artikala"); `drop_scheduled` immediate (1.5.0 consumes)
+- [ ] Blocks: blocked users can't follow; block severs follows both ways
+
+### 1.5.0 (sep–okt) — Drops — **depends on §1 order_items refactor**
+
+The reservation basket produces one order with N items → `order_items` must ship
+first. Bundle-buy backend (§2, done) provides the atomic `lockForUpdate` reservation
+pattern and `product_ids[]` checkout the basket reuses.
+
+- [ ] `drops` table (seller, scheduled_at, tease media, description, status:
+      scheduled/live/ended/cancelled) + `drop_id` on products + product status `drop`
+- [ ] Visibility: `drop` items excluded from `Product::active()`, feeds, **and search**
+      until T0+24h; purchasable only via drop endpoints during the window
+- [ ] Server-enforced buy-only for drop items (offers/trades rejected, not just hidden)
+- [ ] Scheduler: T0 flips to live; T0+24h releases unsold to `active`;
+      cancellation notifies interested users (queued)
+- [ ] `drop_interests` table; interested count exposed to the seller
+- [ ] Reservation endpoint: lock item for user (TTL ~5 min, per-user cap per drop);
+      basket checkout → ONE order via existing multi-item path
+- [ ] Review-flag edge: seller flagged after scheduling → drop suspended
+- [ ] Filament: Drops resource (oversight, cancel/suspend)
+- [ ] Baseline metric (can ship earlier): same-buyer-same-seller orders within 15 min
+
+### 2.0.0 (novembar) — Djeca i bebe
+
+- [ ] `kids` root_category wherever root values are validated
+- [ ] Kids category branch (clothing + shoes ONLY)
+- [ ] Search `ROOT_INTENTS` += `djeca`, `djecije`, `dječije`, `kids` → `kids`
+
+---
+
 ## Implementation Order
 
 ```
-[Now]         order_items refactor (migration + all touchpoints)
-[After #1]    bundle buy — buyer-initiated multi-item orders
-[After meet]  courier integration — EuroExpress fields + status flow
-[Future]      subscriptions → seller bundles → promoted listings
-[Future]      Monri card payments (obrt prerequisite)
+[Now]         order_items refactor (§1) — also a prerequisite for 1.5.0 drops basket
+[July]        1.3.0 — styles + founding badge
+[After #1]    bundle buy mobile UX (backend done)
+[Mid-Aug]     1.4.0 — follows + notification fan-out
+[After meet]  courier integration — EuroExpress fields + status flow (any open release)
+[Sep–Oct]     1.5.0 — drops (needs order_items + reuses bundle-buy reservation)
+[November]    2.0.0 — kids root + categories
+[Future]      subscriptions → seller bundles → promoted listings → drop quotas
+[Future]      Monri card payments (obrt prerequisite) → unlocks credits lane from product roadmap
 ```
