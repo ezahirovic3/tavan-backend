@@ -55,7 +55,9 @@ class ListingsOverTimeChart extends ChartWidget
                 [
                     'label' => 'Na pregledu',
                     'data' => $pending,
-                    'borderColor' => '#0A0A0A',
+                    // Mid-grey so the dashed line reads on both the white and
+                    // ink-dark card surfaces (near-black vanished in dark mode).
+                    'borderColor' => '#8A8A8A',
                     'backgroundColor' => 'transparent',
                     'borderDash' => [4, 3],
                     'tension' => 0.25,

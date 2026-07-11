@@ -10,6 +10,7 @@ use App\Observers\BrandSuggestionObserver;
 use App\Services\Auth\LocalAuthProvider;
 use App\Services\Auth\LogOtpProvider;
 use App\Services\Auth\TwilioOtpProvider;
+use Filament\Tables\Table;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Sanctum\Sanctum;
@@ -46,5 +47,10 @@ class AppServiceProvider extends ServiceProvider
         // Without this, the default /broadcasting/auth route uses the web (cookie/session) guard
         // which breaks token-based clients.
         Broadcast::routes(['middleware' => ['auth:sanctum']]);
+
+        // Filament v4 defers filters behind an "Apply" button by default, which
+        // also drops any ?filters[...] passed in the URL (the deferred set boots
+        // empty and overwrites them). Live filters restore both behaviours.
+        Table::configureUsing(fn (Table $table) => $table->deferFilters(false));
     }
 }

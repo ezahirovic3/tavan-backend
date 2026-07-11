@@ -56,4 +56,12 @@ return [
         'verify_sid'  => env('TWILIO_VERIFY_SERVICE_SID'),
     ],
 
+    'posthog' => [
+        // Private API host (analytics queries) — not the eu.i ingestion host.
+        'host'       => env('POSTHOG_HOST', 'https://eu.posthog.com'),
+        'project_id' => env('POSTHOG_PROJECT_ID'),
+        // Personal API key with "query:read" scope — NOT the phc_ project token.
+        'api_key'    => env('POSTHOG_PERSONAL_API_KEY'),
+    ],
+
 ];

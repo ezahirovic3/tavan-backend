@@ -35,10 +35,19 @@ class RecentActivityFeed extends Widget
                         'deleted' => 'danger',
                         default   => 'gray',
                     },
-                    'subject' => class_basename($a->subject_type ?? '') .
-                                 ($a->subject?->getAttribute('title')
+                    'type'    => match (class_basename($a->subject_type ?? '')) {
+                        'Product'  => 'oglas',
+                        'User'     => 'korisnika',
+                        'BlogPost' => 'blog',
+                        'Order'    => 'narudžbu',
+                        'Brand'    => 'brend',
+                        'Offer'    => 'ponudu',
+                        default    => strtolower(class_basename($a->subject_type ?? '')),
+                    },
+                    'subject' => $a->subject?->getAttribute('title')
                                    ?? $a->subject?->getAttribute('name')
-                                   ?? '#' . $a->subject_id),
+                                   ?? $a->subject?->getAttribute('username')
+                                   ?? '#' . $a->subject_id,
                 ]),
         ];
     }

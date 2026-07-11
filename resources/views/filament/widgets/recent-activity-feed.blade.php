@@ -4,7 +4,7 @@
         <x-slot name="heading">Aktivnost</x-slot>
         <x-slot name="description">Posljednje radnje administratora</x-slot>
 
-        <ol class="divide-y divide-neutral-200 dark:divide-neutral-800 -mx-6">
+        <ol class="divide-y divide-neutral-200 dark:divide-neutral-800 -mx-6 max-h-96 overflow-y-auto">
             @forelse ($activities as $a)
                 <li class="px-6 py-3 flex items-start gap-3 group">
                     <span @class([
@@ -20,7 +20,7 @@
                         </p>
                         <p class="text-sm text-neutral-900 dark:text-neutral-100 mt-0.5 truncate">
                             <span class="font-semibold">{{ $a['who'] }}</span>
-                            <span class="text-neutral-500">{{ strtolower($a['event']) }}</span>
+                            <span class="text-neutral-500">{{ strtolower($a['event']) }} {{ $a['type'] }}</span>
                             <span class="font-medium">{{ $a['subject'] }}</span>
                         </p>
                     </div>
