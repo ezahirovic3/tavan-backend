@@ -109,6 +109,11 @@ class ProductInfolist
                                     default         => $state ?? '—',
                                 }),
                             TextEntry::make('color')->label('Boja')->placeholder('—'),
+                            TextEntry::make('styles')
+                                ->label('Stilovi')
+                                ->placeholder('—')
+                                ->formatStateUsing(fn ($state) => \App\Enums\ProductStyle::tryFrom($state)?->getLabel() ?? $state)
+                                ->badge(),
                             TextEntry::make('created_at')->label('Objavljen')->date('d.m.Y.'),
                         ]),
                     ]),

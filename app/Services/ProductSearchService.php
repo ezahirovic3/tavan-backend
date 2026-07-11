@@ -173,6 +173,30 @@ class ProductSearchService
         ],
     ];
 
+    // Maps search terms to style keys (App\Enums\ProductStyle values) stored in
+    // the products.styles JSON array. Matched as an OR-branch alongside text/category
+    // intents, so a style token only ever broadens the result set.
+    // Search-log evidence drove this list: goth, alt, y2k, western, hippie, vintage
+    // were all searched in an app with no style field.
+    private const STYLE_INTENTS = [
+        'y2k'        => ['y2k', '2000s', '00s'],
+        'streetwear' => ['streetwear'],
+        'casual'     => ['casual', 'ležerno', 'kežual'],
+        'elegant'    => ['elegantno', 'elegantna', 'elegantan', 'elegant'],
+        'boho'       => ['boho', 'bohemian', 'hippie', 'hipi'],
+        'goth_alt'   => ['goth', 'gotika', 'gotički', 'alt', 'alternativa', 'alternativno', 'emo', 'punk'],
+        'grunge'     => ['grunge', 'grandž'],
+        'minimal'    => ['minimalizam', 'minimal', 'minimalistički', 'minimalism'],
+        'old_money'  => ['oldmoney', 'old-money'],
+        // "vintage" maps to the retro style; the controller additionally OR-branches
+        // vintage_status = approved for this intent (badge and style both surface).
+        'retro'      => ['retro', 'vintage', 'vintidž'],
+        'sporty'     => ['sportski', 'sportsko', 'sporty', 'atletski'],
+        'western'    => ['western', 'vestern', 'kauboj', 'kaubojski'],
+        'romantic'   => ['romantično', 'romantična', 'romantic', 'coquette'],
+        'modest'     => ['pokrivene', 'pokrivena', 'modest'],
+    ];
+
     // Tokens skipped entirely — they match everything or nothing useful and,
     // AND-ed with the real tokens, can only hurt the result set.
     private const STOPWORDS = ['za', 'i', 'u', 'na', 'sa', 's', 'od', 'do', 'vel'];
@@ -305,6 +329,25 @@ class ProductSearchService
             foreach ($terms as $term) {
                 if (self::normalize($term) === $normalized) {
                     return $categoryKey;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Detect whether the query maps to a known product style key.
+     * Returns a style key (e.g. "goth_alt", "y2k") or null.
+     */
+    public static function detectStyleIntent(string $q): ?string
+    {
+        $normalized = self::normalize($q);
+
+        foreach (self::STYLE_INTENTS as $styleKey => $terms) {
+            foreach ($terms as $term) {
+                if (self::normalize($term) === $normalized) {
+                    return $styleKey;
                 }
             }
         }

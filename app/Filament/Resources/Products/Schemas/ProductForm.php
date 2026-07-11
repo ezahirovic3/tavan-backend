@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Products\Schemas;
 
+use App\Enums\ProductStyle;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -85,6 +86,13 @@ class ProductForm
                             TextInput::make('color')->label('Boja')->maxLength(40),
 
                             TextInput::make('material')->label('Materijal')->maxLength(100),
+
+                            Select::make('styles')
+                                ->label('Stilovi')
+                                ->options(ProductStyle::options())
+                                ->multiple()
+                                ->maxItems(ProductStyle::MAX_PER_PRODUCT)
+                                ->native(false),
                         ]),
                     ]),
 

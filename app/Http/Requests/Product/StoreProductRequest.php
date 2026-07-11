@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Product;
 
+use App\Enums\ProductStyle;
 use App\Models\Brand;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -50,6 +51,8 @@ class StoreProductRequest extends FormRequest
             'size'          => ['nullable', 'string', 'max:32'],
             'color'         => ['nullable', 'string', 'max:64'],
             'material'      => ['nullable', 'string', 'max:128'],
+            'styles'        => ['nullable', 'array', 'max:'.ProductStyle::MAX_PER_PRODUCT],
+            'styles.*'      => [Rule::in(ProductStyle::values())],
             'shipping_size' => ['nullable', Rule::in(['S', 'M', 'L'])],
             'location'      => [$isDraft ? 'nullable' : 'required', 'nullable', 'string', 'max:128'],
             'brand_id'      => ['nullable', 'ulid', 'exists:brands,id'],

@@ -35,6 +35,7 @@ class Product extends Model
         'size',
         'color',
         'material',
+        'styles',
         'price',
         'allows_trades',
         'allows_offers',
@@ -71,6 +72,7 @@ class Product extends Model
             'free_shipping'        => 'boolean',
             'exact_shipping_price' => 'decimal:2',
             'measurements'         => 'array',
+            'styles'               => 'array',
             'vintage_reviewed_at'   => 'datetime',
             'designer_reviewed_at'  => 'datetime',
         ];

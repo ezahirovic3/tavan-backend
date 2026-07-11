@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ProductStyle;
 use App\Http\Controllers\Controller;
 use App\Models\UserPreference;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class UserPreferenceController extends Controller
 {
@@ -20,6 +22,7 @@ class UserPreferenceController extends Controller
                 'categories'    => [],
                 'subcategories' => [],
                 'brands'        => [],
+                'styles'        => [],
                 'cities'        => [],
                 'vintage_only'   => false,
                 'designer_only'  => false,
@@ -38,6 +41,8 @@ class UserPreferenceController extends Controller
             'categories'    => ['sometimes', 'array'],
             'subcategories' => ['sometimes', 'array'],
             'brands'        => ['sometimes', 'array'],
+            'styles'        => ['sometimes', 'array'],
+            'styles.*'      => [Rule::in(ProductStyle::values())],
             'cities'        => ['sometimes', 'array'],
             'vintage_only'  => ['sometimes', 'boolean'],
             'designer_only' => ['sometimes', 'boolean'],
@@ -61,6 +66,7 @@ class UserPreferenceController extends Controller
             'categories'    => $prefs->categories    ?? [],
             'subcategories' => $prefs->subcategories ?? [],
             'brands'        => $prefs->brands        ?? [],
+            'styles'        => $prefs->styles        ?? [],
             'cities'        => $prefs->cities        ?? [],
             'vintageOnly'   => (bool) ($prefs->vintage_only  ?? false),
             'designerOnly'  => (bool) ($prefs->designer_only ?? false),
