@@ -6,7 +6,7 @@ This document covers features and schema changes that have been discussed and de
 
 ---
 
-## 1. order_items Refactor (Priority: High)
+## 1. order_items Refactor ✅ (shipped — migration 2026-07-02, `OrderItem` model + resource live)
 
 ### Problem
 
@@ -206,18 +206,24 @@ C2C card payments are not currently supported in Bosnia. Requires obrt (sole tra
 > What/when/why lives in the landing repo's ROADMAP.md (single source of truth).
 > Sibling implementation doc: `tavan-mobile/docs/roadmap.md`.
 
-### 1.3.0 (juli) — Stilovi + founding bedž
+### 1.3.0 (juli) — Stilovi + founding bedž ✅ (implemented 2026-07-11)
 
-- [ ] Migration: `products.styles` JSON array (nullable) + cast on `Product`
-- [ ] Validation: `StoreProductRequest` / `UpdateProductRequest` — array, max 3,
-      each value `Rule::in(...)` against a shared constant (config or enum class)
-- [ ] `ProductResource`: expose `styles`
-- [ ] `ProductController@index`: `styles` filter param (whereJsonContains, any-of)
-- [ ] Search: STYLE_INTENTS map in `ProductSearchService` (`goth`, `y2k`, `alt`… as
-      tokens → style filter OR-branch, same pattern as category intents).
-      Include `pokrivene` → modest style.
-- [ ] `users.is_founding_seller` boolean + Filament toggle + expose in API `UserResource`
-- [ ] Filament ProductForm/ProductsTable: styles multi-select
+- [x] `App\Enums\ProductStyle` — 14 curated styles (Depop model), MAX_PER_PRODUCT = 3;
+      single source for validation, Filament options, search intents
+- [x] Migration: `products.styles` JSON array (nullable) + cast on `Product`
+- [x] Validation: `StoreProductRequest` / `UpdateProductRequest` — array, max 3,
+      `Rule::in(ProductStyle::values())`
+- [x] `ProductResource`: expose `styles` (defaults to `[]`)
+- [x] `ProductController@index`: `styles` filter param (whereJsonContains, any-of)
+- [x] Search: STYLE_INTENTS in `ProductSearchService` + `detectStyleIntent()`.
+      `pokrivene` → modest. `vintage`/`retro` → retro style **plus**
+      `vintage_status = approved` OR-branch (badge and style both surface)
+- [x] `user_preferences.styles` (scope added mid-build): column + validation +
+      personalized-feed OR-branch in the `$applyPreferences` closure
+- [x] `users.is_founding_seller` boolean + Filament toggle/column/filter + API `UserResource`
+- [x] Filament ProductForm styles multi-select + ProductInfolist badges
+- [x] Tests: `tests/Feature/Products/ProductStyleTest.php` (12 tests — validation,
+      filter, search intents, preferences, founding flag)
 
 ### 1.4.0 (sredina augusta) — Follows + notifications
 
@@ -263,9 +269,9 @@ pattern and `product_ids[]` checkout the basket reuses.
 ## Implementation Order
 
 ```
-[Now]         order_items refactor (§1) — also a prerequisite for 1.5.0 drops basket
-[July]        1.3.0 — styles + founding badge
-[After #1]    bundle buy mobile UX (backend done)
+[DONE]        order_items refactor (§1) — prerequisite for 1.5.0 drops basket
+[DONE 07-11]  1.3.0 — styles + founding badge (backend + mobile)
+[Next]        bundle buy mobile UX (backend done)
 [Mid-Aug]     1.4.0 — follows + notification fan-out
 [After meet]  courier integration — EuroExpress fields + status flow (any open release)
 [Sep–Oct]     1.5.0 — drops (needs order_items + reuses bundle-buy reservation)

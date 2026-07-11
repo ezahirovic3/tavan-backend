@@ -122,6 +122,12 @@ class UserResource extends Resource
                             ->onColor('warning')
                             ->disabled(fn ($record) => $record && self::isLocked($record)),
 
+                        Toggle::make('is_founding_seller')
+                            ->label('Founding Seller')
+                            ->helperText('Bio među prvim prodavačima na TAVAN-u — dobija Founding Seller bedž u aplikaciji.')
+                            ->onColor('info')
+                            ->disabled(fn ($record) => $record && self::isLocked($record)),
+
                         Toggle::make('listings_require_review')
                             ->label('Listings zahtijevaju pregled')
                             ->helperText('Svaki novi oglas ovog korisnika ide u pending_review.')
@@ -206,6 +212,14 @@ class UserResource extends Resource
                     ->falseIcon('heroicon-m-minus-small')
                     ->falseColor('gray'),
 
+                IconColumn::make('is_founding_seller')
+                    ->label('Founding')
+                    ->boolean()
+                    ->trueIcon('heroicon-m-star')
+                    ->trueColor('info')
+                    ->falseIcon('heroicon-m-minus-small')
+                    ->falseColor('gray'),
+
                 TextColumn::make('profile_view_count')
                     ->label('Pregledi')
                     ->sortable()
@@ -266,6 +280,11 @@ class UserResource extends Resource
                 TernaryFilter::make('listings_require_review')
                     ->label('Auto-review flag')
                     ->placeholder('Svi'),
+                TernaryFilter::make('is_founding_seller')
+                    ->label('Founding Seller')
+                    ->placeholder('Svi')
+                    ->trueLabel('Samo founding')
+                    ->falseLabel('Bez founding'),
                 Filter::make('banned')
                     ->label('Banirani')
                     ->toggle()

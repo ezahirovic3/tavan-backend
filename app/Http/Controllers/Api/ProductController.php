@@ -74,6 +74,15 @@ class ProductController extends Controller
             $query->whereIn('material', (array) $request->materials);
         }
 
+        // styles is a JSON array column — any-of match across the selected styles
+        if ($request->filled('styles')) {
+            $query->where(function ($q) use ($request) {
+                foreach ((array) $request->styles as $style) {
+                    $q->orWhereJsonContains('styles', $style);
+                }
+            });
+        }
+
         // ── Brand filter ───────────────────────────────────────────────────────
         if ($request->filled('brands')) {
             $query->whereHas('brand', fn ($q) => $q->whereIn('name', (array) $request->brands));
@@ -117,8 +126,9 @@ class ProductController extends Controller
                 $terms          = ProductSearchService::expandTerms($token, stemFallback: $multiWord);
                 $categoryIntent = ProductSearchService::detectCategoryIntent($token);
                 $rootIntent     = ProductSearchService::detectRootIntent($token);
+                $styleIntent    = ProductSearchService::detectStyleIntent($token);
 
-                $query->where(function ($q) use ($terms, $categoryIntent, $rootIntent, $token) {
+                $query->where(function ($q) use ($terms, $categoryIntent, $rootIntent, $styleIntent, $token) {
                     // Text match across title, description, subcategory, and brand name.
                     // Subcategory is included so a listing titled "Plave pantalone" but
                     // tagged subcategory="Farmerke" still surfaces when searching "farmerke".
@@ -146,6 +156,17 @@ class ProductController extends Controller
                     // Gender intent: "muske majice" → men's section
                     if ($rootIntent) {
                         $q->orWhere('root_category', $rootIntent);
+                    }
+
+                    // Style intent: "goth", "y2k", "pokrivene" → tagged listings.
+                    // "vintage"/"retro" additionally surface verified-vintage items —
+                    // searchers don't care about our badge-vs-style distinction.
+                    if ($styleIntent) {
+                        $q->orWhereJsonContains('styles', $styleIntent);
+
+                        if ($styleIntent === 'retro') {
+                            $q->orWhere('vintage_status', 'approved');
+                        }
                     }
                 });
             }
@@ -180,6 +201,7 @@ class ProductController extends Controller
                 $categories = $prefs->categories ?? [];
                 $cities     = $prefs->cities     ?? [];
                 $brands     = $prefs->brands     ?? [];
+                $styles     = $prefs->styles     ?? [];
 
                 // Parse subcategory preference keys like "men-tops" → {root, category} pairs.
                 // Keys are always "{rootId}-{categoryKey}" with no hyphens in either segment.
@@ -193,7 +215,7 @@ class ProductController extends Controller
                     ->filter()
                     ->values();
 
-                $hasSizesOrCategories = ! empty($sizes) || $subcategoryPairs->isNotEmpty() || ! empty($categories);
+                $hasSizesOrCategories = ! empty($sizes) || $subcategoryPairs->isNotEmpty() || ! empty($categories) || ! empty($styles);
                 $hasBrands            = ! empty($brands);
                 $hasCities            = ! empty($cities);
                 $hasFilter            = $hasSizesOrCategories || $hasBrands || $hasCities;
@@ -201,9 +223,17 @@ class ProductController extends Controller
                 $hasDesignerOnly      = $prefs->designer_only ?? false;
                 $hasBadgeFilter       = $hasVintageOnly || $hasDesignerOnly;
 
-                // Closure that applies the size + category + brand OR block.
-                $applyPreferences = function ($q) use ($sizes, $categories, $subcategoryPairs, $brands) {
+                // Closure that applies the size + category + brand + style OR block.
+                $applyPreferences = function ($q) use ($sizes, $categories, $subcategoryPairs, $brands, $styles) {
                     if (! empty($sizes)) $q->orWhereIn('size', $sizes);
+
+                    if (! empty($styles)) {
+                        $q->orWhere(function ($sq) use ($styles) {
+                            foreach ($styles as $style) {
+                                $sq->orWhereJsonContains('styles', $style);
+                            }
+                        });
+                    }
 
                     if ($subcategoryPairs->isNotEmpty()) {
                         $q->orWhere(function ($sq) use ($subcategoryPairs) {
