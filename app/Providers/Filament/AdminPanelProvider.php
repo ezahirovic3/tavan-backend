@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Dashboard;
 use App\Filament\Widgets\ListingsOverTimeChart;
+use App\Http\Middleware\SetAdminPanelLocale;
 use App\Filament\Widgets\QuickModerationQueue;
 use App\Filament\Widgets\RecentActivityFeed;
 use App\Filament\Widgets\TavanStatsOverview;
@@ -88,6 +89,7 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                SetAdminPanelLocale::class,
             ])
             ->authMiddleware([
                 Authenticate::class,

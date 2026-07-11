@@ -1,8 +1,8 @@
 @import '/vendor/filament/filament/resources/css/theme.css';
 
-@source '../../../app/Filament/**/*.php';
-@source '../../../resources/views/filament/**/*.blade.php';
-@source '../../../vendor/filament/**/*.blade.php';
+@source '../../../../app/Filament/**/*.php';
+@source '../../../../resources/views/filament/**/*.blade.php';
+@source '../../../../vendor/filament/**/*.blade.php';
 
 @theme {
     --font-display: 'Archivo Narrow', 'Archivo', 'Inter Tight', system-ui, sans-serif;
@@ -382,6 +382,23 @@
 }
 .fi-body ::-webkit-scrollbar-track,
 .fi-main ::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------------------------------------------------------------------------
+   Sidebar nav scrollbar — hairline, invisible until needed
+   --------------------------------------------------------------------------- */
+.fi-sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: var(--tavan-line-strong) transparent;
+}
+.dark .fi-sidebar-nav {
+    scrollbar-color: var(--tavan-ink-3) transparent;
+}
+
+/* Global search field in the topbar — same sharp corners as everything else */
+.fi-global-search-field .fi-input-wrp,
+.fi-global-search-field input {
+    border-radius: var(--tavan-radius-sm) !important;
+}
 
 /* ---------------------------------------------------------------------------
    Default focus ring across the panel — pink, never browser-blue

@@ -151,9 +151,10 @@ class ProductsTable
                 Filter::make('seller_pending_deletion')
                     ->label('Prodavac na brisanju')
                     ->toggle()
-                    ->query(fn (Builder $q, array $data) => $data['isActive']
-                        ? $q->whereHas('seller', fn ($q) => $q->whereNotNull('deletion_requested_at'))
-                        : $q),
+                    // NB: parameter must be named $query — Filament injects it by name.
+                    ->query(fn (Builder $query, array $data) => $data['isActive']
+                        ? $query->whereHas('seller', fn ($q) => $q->whereNotNull('deletion_requested_at'))
+                        : $query),
 
                 Filter::make('created_at')
                     ->label('Datum')
@@ -161,8 +162,8 @@ class ProductsTable
                         DatePicker::make('from')->label('Od'),
                         DatePicker::make('to')->label('Do'),
                     ])
-                    ->query(function (Builder $q, array $data): Builder {
-                        return $q
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
                             ->when($data['from'], fn ($q, $d) => $q->whereDate('created_at', '>=', $d))
                             ->when($data['to'],   fn ($q, $d) => $q->whereDate('created_at', '<=', $d));
                     }),

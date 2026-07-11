@@ -285,18 +285,20 @@ class UserResource extends Resource
                     ->placeholder('Svi')
                     ->trueLabel('Samo founding')
                     ->falseLabel('Bez founding'),
+                // NB: the closure's query parameter MUST be named $query — Filament
+                // injects it by name; any other name gets a fresh unrelated Builder.
                 Filter::make('banned')
                     ->label('Banirani')
                     ->toggle()
-                    ->query(fn (Builder $q, array $data) => $data['isActive']
-                        ? $q->where('banned_until', '>', now())
-                        : $q),
+                    ->query(fn (Builder $query, array $data) => $data['isActive']
+                        ? $query->where('banned_until', '>', now())
+                        : $query),
                 Filter::make('pending_deletion')
                     ->label('Na čekanju brisanja')
                     ->toggle()
-                    ->query(fn (Builder $q, array $data) => $data['isActive']
-                        ? $q->whereNotNull('deletion_requested_at')
-                        : $q),
+                    ->query(fn (Builder $query, array $data) => $data['isActive']
+                        ? $query->whereNotNull('deletion_requested_at')
+                        : $query),
 
             ])
             ->recordActions([
