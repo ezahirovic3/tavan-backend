@@ -110,7 +110,7 @@ bundle-buy mobile UI consumes it later (old orders render via `product` fallback
 
 ---
 
-## 2. Bundle Buy (Backend: DONE — mobile UI pending)
+## 2. Bundle Buy (Backend: DONE — mobile UI: DONE, live)
 
 ### Concept
 
@@ -145,7 +145,7 @@ offer for the ordered product; single-item orders only). Push notification says
   need their own design later.
 - **Push/system-message copy**: bundle orders say "N artikala" instead of a single title.
 
-### Remaining to design: mobile UX (bundle selection from seller profile, multi-item checkout, order screens rendering `items[]`).
+### Mobile UX: shipped (bundle selection from seller profile, multi-item checkout, order screens rendering `items[]`).
 
 ---
 
@@ -271,8 +271,8 @@ pattern and `product_ids[]` checkout the basket reuses.
 ```
 [DONE]        order_items refactor (§1) — prerequisite for 1.5.0 drops basket
 [DONE 07-11]  1.3.0 — styles + founding badge (backend + mobile)
-[Next]        bundle buy mobile UX (backend done)
-[Mid-Aug]     1.4.0 — follows + notification fan-out
+[DONE]        bundle buy mobile UX (backend + mobile both live)
+[Next]        1.4.0 — follows + notification fan-out (mid-Aug)
 [After meet]  courier integration — EuroExpress fields + status flow (any open release)
 [Sep–Oct]     1.5.0 — drops (needs order_items + reuses bundle-buy reservation)
 [November]    2.0.0 — kids root + categories
