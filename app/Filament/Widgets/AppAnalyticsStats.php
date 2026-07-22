@@ -43,27 +43,38 @@ class AppAnalyticsStats extends BaseWidget
         $scope     = PostHogService::scopeSql($range['from'], $range['to']);
         $prevScope = PostHogService::scopeSql($range['prevFrom'], $range['prevTo']);
 
-        // Daily uniques across the range — feeds the sparkline.
-        $daily = $posthog->query(<<<HOGQL
-            SELECT
-                toDate(toTimeZone(timestamp, '{$tz}')) AS day,
-                count(DISTINCT person_id) AS users
-            FROM events
-            WHERE {$scope}
-            GROUP BY day
-            ORDER BY day
-            HOGQL) ?? [];
+        // All queries for this widget fire concurrently (Http::pool) instead
+        // of one round trip each — sequential HTTP to PostHog was blocking
+        // this Livewire request for ~6s on a cold cache.
+        $results = $posthog->queryMany([
+            'daily' => <<<HOGQL
+                SELECT
+                    toDate(toTimeZone(timestamp, '{$tz}')) AS day,
+                    count(DISTINCT person_id) AS users
+                FROM events
+                WHERE {$scope}
+                GROUP BY day
+                ORDER BY day
+                HOGQL,
+            'activeNow'    => "SELECT count(DISTINCT person_id) FROM events WHERE {$scope}",
+            'activePrev'   => "SELECT count(DISTINCT person_id) FROM events WHERE {$prevScope}",
+            'sessionsNow'  => $this->sessionStatsSql($scope),
+            'sessionsPrev' => $this->sessionStatsSql($prevScope),
+            'installsNow'  => "SELECT count() FROM events WHERE event = 'Application Installed' AND {$scope}",
+            'installsPrev' => "SELECT count() FROM events WHERE event = 'Application Installed' AND {$prevScope}",
+        ]);
 
+        $daily      = $results['daily'] ?? [];
         $userSeries = array_map(fn ($row) => (int) $row[1], $daily);
 
-        $activeNow  = (int) $posthog->scalar("SELECT count(DISTINCT person_id) FROM events WHERE {$scope}", 0);
-        $activePrev = (int) $posthog->scalar("SELECT count(DISTINCT person_id) FROM events WHERE {$prevScope}", 0);
+        $activeNow  = (int) ($results['activeNow'][0][0] ?? 0);
+        $activePrev = (int) ($results['activePrev'][0][0] ?? 0);
 
-        [$sessionsNow, $avgDurNow]   = $this->sessionStats($posthog, $scope);
-        [$sessionsPrev, $avgDurPrev] = $this->sessionStats($posthog, $prevScope);
+        [$sessionsNow, $avgDurNow]   = $this->sessionStatsResult($results['sessionsNow'] ?? null);
+        [$sessionsPrev, $avgDurPrev] = $this->sessionStatsResult($results['sessionsPrev'] ?? null);
 
-        $installsNow  = (int) $posthog->scalar("SELECT count() FROM events WHERE event = 'Application Installed' AND {$scope}", 0);
-        $installsPrev = (int) $posthog->scalar("SELECT count() FROM events WHERE event = 'Application Installed' AND {$prevScope}", 0);
+        $installsNow  = (int) ($results['installsNow'][0][0] ?? 0);
+        $installsPrev = (int) ($results['installsPrev'][0][0] ?? 0);
 
         $suffix = " · {$range['days']}d";
 
@@ -92,10 +103,9 @@ class AppAnalyticsStats extends BaseWidget
         ];
     }
 
-    /** @return array{0: int, 1: float} [session count, avg duration seconds] */
-    private function sessionStats(PostHogService $posthog, string $scope): array
+    private function sessionStatsSql(string $scope): string
     {
-        $row = $posthog->query(<<<HOGQL
+        return <<<HOGQL
             SELECT count() AS sessions, avg(dur) AS avg_dur
             FROM (
                 SELECT
@@ -106,9 +116,13 @@ class AppAnalyticsStats extends BaseWidget
                   AND properties.\$session_id IS NOT NULL
                 GROUP BY sid
             )
-            HOGQL);
+            HOGQL;
+    }
 
-        return [(int) ($row[0][0] ?? 0), (float) ($row[0][1] ?? 0)];
+    /** @return array{0: int, 1: float} [session count, avg duration seconds] */
+    private function sessionStatsResult(?array $rows): array
+    {
+        return [(int) ($rows[0][0] ?? 0), (float) ($rows[0][1] ?? 0)];
     }
 
     private function formatDuration(float $seconds): string
