@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -94,6 +96,81 @@ class PostHogService
         $results = $this->query($hogql, $ttl);
 
         return $results[0][0] ?? $default;
+    }
+
+    /**
+     * Run several HogQL queries concurrently and return their result rows,
+     * keyed the same way as $queries. Cached queries never touch the
+     * network; only cache misses are dispatched, in parallel via
+     * Http::pool(), so a widget needing N queries pays for one round trip
+     * instead of N sequential ones.
+     *
+     * @param  array<string, string>  $queries  key => HogQL
+     * @return array<string, array<int, array<int, mixed>>|null>
+     */
+    public function queryMany(array $queries, int $ttl = 600): array
+    {
+        if (! $this->isConfigured()) {
+            return array_fill_keys(array_keys($queries), null);
+        }
+
+        $results = [];
+        $pending = [];
+
+        foreach ($queries as $key => $hogql) {
+            $cacheKey = 'posthog:query:' . md5($hogql);
+            $cached   = Cache::get($cacheKey);
+
+            if ($cached === 'FAILED') {
+                $results[$key] = null;
+            } elseif ($cached !== null) {
+                $results[$key] = $cached;
+            } else {
+                $pending[$key] = ['hogql' => $hogql, 'cacheKey' => $cacheKey];
+            }
+        }
+
+        if ($pending === []) {
+            return $results;
+        }
+
+        $endpoint = rtrim(config('services.posthog.host'), '/')
+            . '/api/projects/' . config('services.posthog.project_id') . '/query';
+        $apiKey = config('services.posthog.api_key');
+
+        $responses = Http::pool(fn (Pool $pool) => array_map(
+            fn ($p, $key) => $pool->as($key)
+                ->withToken($apiKey)
+                ->timeout(15)
+                ->post($endpoint, ['query' => ['kind' => 'HogQLQuery', 'query' => $p['hogql']]]),
+            $pending,
+            array_keys($pending),
+        ));
+
+        foreach ($pending as $key => $p) {
+            $response = $responses[$key] ?? null;
+
+            if (! $response instanceof Response || $response->failed()) {
+                Log::warning('PostHog query failed', [
+                    'status' => $response instanceof Response ? $response->status() : null,
+                    'body'   => $response instanceof Response
+                        ? mb_substr($response->body(), 0, 500)
+                        : ($response instanceof \Throwable ? $response->getMessage() : 'connection error'),
+                ]);
+
+                Cache::put($p['cacheKey'], 'FAILED', 60);
+                $results[$key] = null;
+
+                continue;
+            }
+
+            $rows = $response->json('results') ?? [];
+
+            Cache::put($p['cacheKey'], $rows, $ttl);
+            $results[$key] = $rows;
+        }
+
+        return $results;
     }
 
     /**
