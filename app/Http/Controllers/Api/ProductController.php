@@ -23,6 +23,12 @@ class ProductController extends Controller
         // wishlist flags. Auth::guard('sanctum')->user() does this without requiring auth.
         $authUser = $request->user() ?? \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
 
+        // Pin the resolved user onto the request so ProductResource's own
+        // $request->user() ?? Auth::guard('sanctum')->user() fallback (called
+        // once per product in the collection) short-circuits instead of
+        // re-resolving the sanctum token from cache + DB for every item.
+        $request->setUserResolver(fn () => $authUser);
+
         $query = Product::active()
             ->with(['images', 'brand', 'seller']);
 
@@ -363,6 +369,11 @@ class ProductController extends Controller
         $viewCount->incrementProductView($request, $product);
 
         $authUser = $request->user() ?? \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
+
+        // See index() — pins the resolved user so ProductResource's per-item
+        // fallback doesn't re-resolve the sanctum token for every product
+        // rendered below (main product + sellerProducts + similarProducts).
+        $request->setUserResolver(fn () => $authUser);
 
         if ($authUser) {
             $product->is_wishlisted = WishlistItem::where('user_id', $authUser->id)

@@ -147,6 +147,10 @@ class UserController extends Controller
         // is present. Resolve the Sanctum user manually (same pattern as ProductController).
         $authUser = $request->user() ?? \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
 
+        // Pin it onto the request so ProductResource::collection() below doesn't
+        // re-resolve the sanctum token (cache + DB) once per product returned.
+        $request->setUserResolver(fn () => $authUser);
+
         $requestedStatus     = $request->get('status', 'active');
         $authenticatedUserId = $authUser?->id;
         $isOwner             = $authenticatedUserId === $user->id;
