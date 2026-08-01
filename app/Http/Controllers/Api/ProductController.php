@@ -180,11 +180,18 @@ class ProductController extends Controller
 
         // ── Sorting ────────────────────────────────────────────────────────────
         // Frontend sends sortBy → middleware converts to sort_by
+        //
+        // TODO(bump-feature): 'newest' sorts by updated_at as a stopgap so that
+        // editing a listing bumps it back to the top of the feed, since we don't
+        // have a real "bump" feature yet. Caveat: this also bumps on non-edit
+        // updates (vintage/designer review, admin moderation actions), not just
+        // seller edits. Once a proper paid bump feature ships, drop this and go
+        // back to created_at (or a dedicated bumped_at column).
         match ($request->input('sort_by', 'newest')) {
             'price_asc', 'priceAsc'   => $query->orderBy('price', 'asc'),
             'price_desc', 'priceDesc' => $query->orderBy('price', 'desc'),
             'oldest'                  => $query->oldest(),
-            default                   => $query->latest(),
+            default                   => $query->orderBy('updated_at', 'desc'),
         };
 
         // Personalized feed — filter by the authenticated user's saved preferences.
