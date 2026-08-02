@@ -7,6 +7,7 @@ use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Models\User;
 use App\Models\WishlistItem;
 use App\Services\ProductSearchService;
 use App\Services\ViewCountService;
@@ -359,9 +360,29 @@ class ProductController extends Controller
             $data['status'] = $seller->listings_require_review ? 'pending_review' : 'active';
         }
 
+        $data = array_merge($data, $this->autoDesignerFields($seller));
+
         $product = $seller->products()->create($data);
 
         return response()->json(['data' => new ProductResource($product->load('images', 'brand'))], 201);
+    }
+
+    /**
+     * Designer makers (own original pieces, no brand to verify) get every
+     * listing auto-tagged as designer at creation — no per-listing application.
+     */
+    private function autoDesignerFields(User $seller): array
+    {
+        if (! $seller->is_designer_maker) {
+            return [];
+        }
+
+        return [
+            'designer_status'      => 'approved',
+            'designer_brand'       => $seller->name,
+            'designer_reviewed_by' => $seller->id,
+            'designer_reviewed_at' => now(),
+        ];
     }
 
     public function show(Request $request, Product $product, ViewCountService $viewCount): JsonResponse
@@ -478,13 +499,16 @@ class ProductController extends Controller
             'notes' => ['required', 'string', 'max:1000'],
         ]);
 
+        $seller         = $request->user();
+        $designerStatus = $seller->is_designer_reseller ? 'approved' : 'pending';
+
         $product->update([
-            'designer_status'      => 'pending',
-            'designer_brand'       => $data['brand'],
-            'designer_notes'       => $data['notes'],
+            'designer_status'        => $designerStatus,
+            'designer_brand'         => $data['brand'],
+            'designer_notes'         => $data['notes'],
             'designer_reject_reason' => null,
-            'designer_reviewed_by' => null,
-            'designer_reviewed_at' => null,
+            'designer_reviewed_by'   => $seller->is_designer_reseller ? $seller->id : null,
+            'designer_reviewed_at'   => $seller->is_designer_reseller ? now() : null,
         ]);
 
         return response()->json(['data' => new ProductResource($product->fresh()->load('images', 'brand'))]);
