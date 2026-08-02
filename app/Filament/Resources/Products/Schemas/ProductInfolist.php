@@ -33,7 +33,11 @@ class ProductInfolist
                             ->square()
                             ->size(420)
                             ->limit(1)
-                            ->extraImgAttributes(['class' => 'object-cover w-full']),
+                            ->extraImgAttributes([
+                                'class'       => 'object-cover w-full',
+                                'style'       => 'cursor: zoom-in;',
+                                'x-on:click'  => "window.dispatchEvent(new CustomEvent('tavan-image-preview', { detail: { src: \$event.target.src } }))",
+                            ]),
 
                         // Thumbnail strip below hero image
                         ImageEntry::make('thumbnail_strip')
@@ -44,7 +48,11 @@ class ProductInfolist
                             ->size(72)
                             ->limit(7)
                             ->limitedRemainingText()
-                            ->extraImgAttributes(['class' => 'object-cover']),
+                            ->extraImgAttributes([
+                                'class'       => 'object-cover',
+                                'style'       => 'cursor: zoom-in;',
+                                'x-on:click'  => "window.dispatchEvent(new CustomEvent('tavan-image-preview', { detail: { src: \$event.target.src } }))",
+                            ]),
                     ]),
 
                 Section::make()
