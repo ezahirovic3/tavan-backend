@@ -122,6 +122,18 @@ class UserResource extends Resource
                             ->onColor('warning')
                             ->disabled(fn ($record) => $record && self::isLocked($record)),
 
+                        Toggle::make('is_designer_reseller')
+                            ->label('Designer Reseller')
+                            ->helperText('Sve designer prijave ovog prodavca se automatski odobravaju.')
+                            ->onColor('warning')
+                            ->disabled(fn ($record) => $record && self::isLocked($record)),
+
+                        Toggle::make('is_designer_maker')
+                            ->label('Designer Maker')
+                            ->helperText('Svi novi oglasi ovog prodavca se automatski označavaju kao Designer, bez prijave.')
+                            ->onColor('warning')
+                            ->disabled(fn ($record) => $record && self::isLocked($record)),
+
                         Toggle::make('is_founding_seller')
                             ->label('Founding Seller')
                             ->helperText('Bio među prvim prodavačima na TAVAN-u — dobija Founding Seller bedž u aplikaciji.')
@@ -206,6 +218,22 @@ class UserResource extends Resource
 
                 IconColumn::make('is_vintage_seller')
                     ->label('Vintage')
+                    ->boolean()
+                    ->trueIcon('heroicon-m-sparkles')
+                    ->trueColor('warning')
+                    ->falseIcon('heroicon-m-minus-small')
+                    ->falseColor('gray'),
+
+                IconColumn::make('is_designer_reseller')
+                    ->label('Designer Reseller')
+                    ->boolean()
+                    ->trueIcon('heroicon-m-sparkles')
+                    ->trueColor('warning')
+                    ->falseIcon('heroicon-m-minus-small')
+                    ->falseColor('gray'),
+
+                IconColumn::make('is_designer_maker')
+                    ->label('Designer Maker')
                     ->boolean()
                     ->trueIcon('heroicon-m-sparkles')
                     ->trueColor('warning')
@@ -339,6 +367,36 @@ class UserResource extends Resource
                     ->action(function ($record) {
                         $record->update(['is_vintage_seller' => ! $record->is_vintage_seller]);
                         Notification::make()->success()->title('Vintage Proved status ažuriran')->send();
+                    }),
+
+                Action::make('toggleDesignerReseller')
+                    ->label(fn ($record) => $record->is_designer_reseller ? 'Ukloni Designer Reseller' : 'Označi Designer Reseller')
+                    ->icon('heroicon-m-sparkles')
+                    ->color(fn ($record) => $record->is_designer_reseller ? 'gray' : 'warning')
+                    ->visible(fn ($record) => ! self::isLocked($record))
+                    ->requiresConfirmation()
+                    ->modalHeading(fn ($record) => $record->is_designer_reseller ? 'Ukloni Designer Reseller status' : 'Označi kao Designer Reseller')
+                    ->modalDescription(fn ($record) => $record->is_designer_reseller
+                        ? 'Buduće designer prijave ovog prodavca neće se više automatski odobravati.'
+                        : 'Sve buduće designer prijave ovog prodavca će se automatski odobravati.')
+                    ->action(function ($record) {
+                        $record->update(['is_designer_reseller' => ! $record->is_designer_reseller]);
+                        Notification::make()->success()->title('Designer Reseller status ažuriran')->send();
+                    }),
+
+                Action::make('toggleDesignerMaker')
+                    ->label(fn ($record) => $record->is_designer_maker ? 'Ukloni Designer Maker' : 'Označi Designer Maker')
+                    ->icon('heroicon-m-sparkles')
+                    ->color(fn ($record) => $record->is_designer_maker ? 'gray' : 'warning')
+                    ->visible(fn ($record) => ! self::isLocked($record))
+                    ->requiresConfirmation()
+                    ->modalHeading(fn ($record) => $record->is_designer_maker ? 'Ukloni Designer Maker status' : 'Označi kao Designer Maker')
+                    ->modalDescription(fn ($record) => $record->is_designer_maker
+                        ? 'Novi oglasi ovog prodavca se više neće automatski označavati kao Designer.'
+                        : 'Svi budući oglasi ovog prodavca će se automatski označavati kao Designer, bez prijave.')
+                    ->action(function ($record) {
+                        $record->update(['is_designer_maker' => ! $record->is_designer_maker]);
+                        Notification::make()->success()->title('Designer Maker status ažuriran')->send();
                     }),
 
                 EditAction::make()

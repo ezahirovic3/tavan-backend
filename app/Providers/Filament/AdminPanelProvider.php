@@ -17,6 +17,7 @@ use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -57,6 +58,10 @@ class AdminPanelProvider extends PanelProvider
             ->breadcrumbs(true)
             ->databaseNotifications()
             ->databaseNotificationsPolling('60s')
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.components.image-lightbox'),
+            )
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
             ->navigationGroups([
                 NavigationGroup::make('Sadržaj'),
