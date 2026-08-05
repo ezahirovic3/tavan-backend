@@ -230,6 +230,33 @@ class ProductStyleTest extends TestCase
         $this->assertNotContains('Right gender, wrong size', $titles);
     }
 
+    public function test_personalized_feed_does_not_cross_match_bottom_and_shoe_size_scales(): void
+    {
+        // Regression for a follow-up report: a user set bottom sizes 48/50 and shoe
+        // sizes 42/43, but the feed surfaced size-42 jeans/shorts. bottom_sizes and
+        // shoe_sizes are separate numbering scales that happen to overlap (both run
+        // through the 34-46 range), and product.size alone can't tell them apart —
+        // only product.category can. A flat size match against the merged
+        // top/bottom/shoe list let a shoe-size preference pull in same-numbered
+        // bottoms that had nothing to do with the selected shoe size.
+        $user = User::factory()->create();
+        $user->preference()->create([
+            'bottom_sizes' => ['48', '50'],
+            'shoe_sizes'   => ['42', '43'],
+        ]);
+
+        Product::factory()->create(['title' => 'Bottoms, right size', 'category' => 'bottoms', 'size' => '48']);
+        Product::factory()->create(['title' => 'Bottoms, shoe-scale size leak', 'category' => 'bottoms', 'size' => '42']);
+        Product::factory()->create(['title' => 'Shoes, right size', 'category' => 'shoes', 'size' => '42']);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/products?personalized=true');
+
+        $titles = collect($response->json('data'))->pluck('title');
+        $this->assertContains('Bottoms, right size', $titles);
+        $this->assertContains('Shoes, right size', $titles);
+        $this->assertNotContains('Bottoms, shoe-scale size leak', $titles);
+    }
+
     // ─── Founding seller flag ─────────────────────────────────────────────────
 
     public function test_founding_seller_flag_is_exposed_on_user_resource(): void
