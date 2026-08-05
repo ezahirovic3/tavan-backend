@@ -153,8 +153,12 @@ class ProductStyleTest extends TestCase
             ->assertStatus(422);
     }
 
-    public function test_personalized_feed_matches_style_preference(): void
+    public function test_style_preference_alone_does_not_filter_the_personalized_feed(): void
     {
+        // `styles` is a sparse, fully optional tag — most listings aren't tagged.
+        // It's intentionally excluded from the personalized="true" hard match (see
+        // ProductController) so a style preference can't zero out the feed by
+        // AND-ing against untagged inventory. Both items should surface.
         $user = User::factory()->create();
         $user->preference()->create(['styles' => ['y2k']]);
 
@@ -165,7 +169,41 @@ class ProductStyleTest extends TestCase
 
         $titles = collect($response->json('data'))->pluck('title');
         $this->assertContains('Y2K top', $titles);
-        $this->assertNotContains('Plain top', $titles);
+        $this->assertContains('Plain top', $titles);
+    }
+
+    public function test_personalized_feed_ignores_style_preference_when_combined_with_gender_and_size(): void
+    {
+        // Regression for a follow-up report: after AND-ing gender+size, a user
+        // with a style preference set (on top of gender+size) got an EMPTY feed,
+        // because style was being AND'd in too and almost nothing in the catalog
+        // is style-tagged. Style must not gate the match — the gender+size match
+        // should surface regardless of whether it also carries the style tag.
+        $user = User::factory()->create();
+        $user->preference()->create([
+            'categories' => ['women'],
+            'top_sizes'  => ['M'],
+            'styles'     => ['y2k'],
+        ]);
+
+        Product::factory()->create([
+            'title'         => 'Untagged match',
+            'root_category' => 'women',
+            'size'          => 'M',
+            'styles'        => null,
+        ]);
+        Product::factory()->create([
+            'title'         => 'Wrong gender',
+            'root_category' => 'men',
+            'size'          => 'M',
+            'styles'        => ['y2k'],
+        ]);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/products?personalized=true');
+
+        $titles = collect($response->json('data'))->pluck('title');
+        $this->assertContains('Untagged match', $titles);
+        $this->assertNotContains('Wrong gender', $titles);
     }
 
     public function test_personalized_feed_ands_gender_and_size_instead_of_oring_them(): void
