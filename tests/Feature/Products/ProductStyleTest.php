@@ -168,6 +168,30 @@ class ProductStyleTest extends TestCase
         $this->assertNotContains('Plain top', $titles);
     }
 
+    public function test_personalized_feed_ands_gender_and_size_instead_of_oring_them(): void
+    {
+        // Regression for a user report: setting gender=women + a specific size
+        // in preferences was still surfacing menswear (matched on size alone)
+        // and off-size womenswear (matched on gender alone), because the facets
+        // were OR'd together instead of AND'd.
+        $user = User::factory()->create();
+        $user->preference()->create([
+            'categories' => ['women'],
+            'top_sizes'  => ['M'],
+        ]);
+
+        Product::factory()->create(['title' => 'Match', 'root_category' => 'women', 'size' => 'M']);
+        Product::factory()->create(['title' => 'Right size, wrong gender', 'root_category' => 'men', 'size' => 'M']);
+        Product::factory()->create(['title' => 'Right gender, wrong size', 'root_category' => 'women', 'size' => 'L']);
+
+        $response = $this->actingAs($user)->getJson('/api/v1/products?personalized=true');
+
+        $titles = collect($response->json('data'))->pluck('title');
+        $this->assertContains('Match', $titles);
+        $this->assertNotContains('Right size, wrong gender', $titles);
+        $this->assertNotContains('Right gender, wrong size', $titles);
+    }
+
     // ─── Founding seller flag ─────────────────────────────────────────────────
 
     public function test_founding_seller_flag_is_exposed_on_user_resource(): void
