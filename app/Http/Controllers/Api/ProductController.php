@@ -214,8 +214,9 @@ class ProductController extends Controller
                 );
                 $categories = $prefs->categories ?? [];
                 $cities     = $prefs->cities     ?? [];
-                $brands     = $prefs->brands     ?? [];
-                $styles     = $prefs->styles     ?? [];
+
+                // brands/styles are read but deliberately NOT used to filter the
+                // personalized="true" match below — see note on $applyPreferences.
 
                 // Parse subcategory preference keys like "men-tops" → {root, category} pairs.
                 // Keys are always "{rootId}-{categoryKey}" with no hyphens in either segment.
@@ -229,31 +230,29 @@ class ProductController extends Controller
                     ->filter()
                     ->values();
 
-                $hasSizesOrCategories = ! empty($sizes) || $subcategoryPairs->isNotEmpty() || ! empty($categories) || ! empty($styles);
-                $hasBrands            = ! empty($brands);
+                $hasSizesOrCategories = ! empty($sizes) || $subcategoryPairs->isNotEmpty() || ! empty($categories);
                 $hasCities            = ! empty($cities);
-                $hasFilter            = $hasSizesOrCategories || $hasBrands || $hasCities;
+                $hasFilter            = $hasSizesOrCategories || $hasCities;
                 $hasVintageOnly       = $prefs->vintage_only  ?? false;
                 $hasDesignerOnly      = $prefs->designer_only ?? false;
                 $hasBadgeFilter       = $hasVintageOnly || $hasDesignerOnly;
 
-                // Closure that applies the size + category + brand + style match.
-                // Each set facet is its own AND'd group — a product must satisfy every
-                // facet the user configured (gender AND size AND style AND brand), with
-                // OR only *within* a facet (any of the selected sizes, any of the
-                // selected brands, etc). Previously these facets were OR'd against each
-                // other, so e.g. any item in the right size — regardless of gender —
-                // would match; that's what let menswear leak into a "women" + size feed.
-                $applyPreferences = function ($q) use ($sizes, $categories, $subcategoryPairs, $brands, $styles) {
+                // Closure that applies the size + category match. A product must satisfy
+                // every facet the user configured (gender AND size), with OR only *within*
+                // a facet (any of the selected sizes, any of the selected subcategories).
+                // Previously these facets were OR'd against each other, so e.g. any item in
+                // the right size — regardless of gender — would match; that's what let
+                // menswear leak into a "women" + size feed.
+                //
+                // brands/styles are intentionally excluded from this hard match. Unlike
+                // size/category — which every active listing has, enforced by the app's
+                // publish flow — `styles` is a sparse, fully optional tag (few listings are
+                // tagged), and AND'ing it in alongside size+category could easily zero out
+                // the feed for anyone with a style preference set. Revisit once tag coverage
+                // is high enough, and prefer using them as a ranking boost rather than a
+                // hard filter that can empty the feed.
+                $applyPreferences = function ($q) use ($sizes, $categories, $subcategoryPairs) {
                     if (! empty($sizes)) $q->whereIn('size', $sizes);
-
-                    if (! empty($styles)) {
-                        $q->where(function ($sq) use ($styles) {
-                            foreach ($styles as $style) {
-                                $sq->orWhereJsonContains('styles', $style);
-                            }
-                        });
-                    }
 
                     if ($subcategoryPairs->isNotEmpty()) {
                         $q->where(function ($sq) use ($subcategoryPairs) {
@@ -267,21 +266,15 @@ class ProductController extends Controller
                     } elseif (! empty($categories)) {
                         $q->whereIn('root_category', $categories);
                     }
-
-                    if (! empty($brands)) {
-                        $q->whereHas('brand', fn ($bq) => $bq->whereIn('id', $brands));
-                    }
                 };
 
                 // Build the match condition depending on which preference types are set.
-                // When sizes/categories/brands AND cities are both set, city is AND-ed so it
+                // When sizes/categories AND cities are both set, city is AND-ed so it
                 // restricts to local matches rather than independently including all city items.
-                $hasSizesOrCategoriesOrBrands = $hasSizesOrCategories || $hasBrands;
-
-                $applyMatch = function ($q) use ($hasSizesOrCategoriesOrBrands, $hasCities, $cities, $applyPreferences) {
-                    if ($hasSizesOrCategoriesOrBrands && $hasCities) {
+                $applyMatch = function ($q) use ($hasSizesOrCategories, $hasCities, $cities, $applyPreferences) {
+                    if ($hasSizesOrCategories && $hasCities) {
                         $q->where($applyPreferences)->whereIn('location', $cities);
-                    } elseif ($hasSizesOrCategoriesOrBrands) {
+                    } elseif ($hasSizesOrCategories) {
                         $q->where($applyPreferences);
                     } else {
                         $q->whereIn('location', $cities);
