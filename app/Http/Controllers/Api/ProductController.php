@@ -207,13 +207,11 @@ class ProductController extends Controller
             $prefs = $authUser->preference;
 
             if ($prefs) {
-                $sizes = array_merge(
-                    $prefs->top_sizes    ?? [],
-                    $prefs->bottom_sizes ?? [],
-                    $prefs->shoe_sizes   ?? []
-                );
-                $categories = $prefs->categories ?? [];
-                $cities     = $prefs->cities     ?? [];
+                $topSizes    = $prefs->top_sizes    ?? [];
+                $bottomSizes = $prefs->bottom_sizes ?? [];
+                $shoeSizes   = $prefs->shoe_sizes   ?? [];
+                $categories  = $prefs->categories   ?? [];
+                $cities      = $prefs->cities       ?? [];
 
                 // brands/styles are read but deliberately NOT used to filter the
                 // personalized="true" match below — see note on $applyPreferences.
@@ -230,7 +228,8 @@ class ProductController extends Controller
                     ->filter()
                     ->values();
 
-                $hasSizesOrCategories = ! empty($sizes) || $subcategoryPairs->isNotEmpty() || ! empty($categories);
+                $hasSizesOrCategories = ! empty($topSizes) || ! empty($bottomSizes) || ! empty($shoeSizes)
+                    || $subcategoryPairs->isNotEmpty() || ! empty($categories);
                 $hasCities            = ! empty($cities);
                 $hasFilter            = $hasSizesOrCategories || $hasCities;
                 $hasVintageOnly       = $prefs->vintage_only  ?? false;
@@ -251,8 +250,33 @@ class ProductController extends Controller
                 // the feed for anyone with a style preference set. Revisit once tag coverage
                 // is high enough, and prefer using them as a ranking boost rather than a
                 // hard filter that can empty the feed.
-                $applyPreferences = function ($q) use ($sizes, $categories, $subcategoryPairs) {
-                    if (! empty($sizes)) $q->whereIn('size', $sizes);
+                //
+                // Sizes are NOT a single flat scale — top/bottom/shoe preferences each use
+                // their own numbering (mirrors PREFERENCE_SIZES in the mobile app's
+                // constants/sizes.js), and those scales overlap numerically (bottoms and
+                // shoes both run through the 34-46 range). A product's `size` value only
+                // means something once you know which of the three scales it was picked
+                // from — which is exactly what its `category` tells us. So each size
+                // preference is scoped to the product categories that use that scale,
+                // instead of matching `size` against one merged list regardless of category
+                // — that's what let a shoe-size preference of 42 pull in a size-42 pair of
+                // jeans, which has nothing to do with shoes.
+                $apparelSections = ['tops', 'jackets', 'dresses', 'occasion', 'swimwear'];
+
+                $applyPreferences = function ($q) use ($topSizes, $bottomSizes, $shoeSizes, $apparelSections, $categories, $subcategoryPairs) {
+                    if (! empty($topSizes) || ! empty($bottomSizes) || ! empty($shoeSizes)) {
+                        $q->where(function ($sq) use ($topSizes, $bottomSizes, $shoeSizes, $apparelSections) {
+                            if (! empty($topSizes)) {
+                                $sq->orWhere(fn ($tq) => $tq->whereIn('category', $apparelSections)->whereIn('size', $topSizes));
+                            }
+                            if (! empty($bottomSizes)) {
+                                $sq->orWhere(fn ($bq) => $bq->where('category', 'bottoms')->whereIn('size', $bottomSizes));
+                            }
+                            if (! empty($shoeSizes)) {
+                                $sq->orWhere(fn ($shq) => $shq->where('category', 'shoes')->whereIn('size', $shoeSizes));
+                            }
+                        });
+                    }
 
                     if ($subcategoryPairs->isNotEmpty()) {
                         $q->where(function ($sq) use ($subcategoryPairs) {
