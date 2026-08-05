@@ -237,12 +237,18 @@ class ProductController extends Controller
                 $hasDesignerOnly      = $prefs->designer_only ?? false;
                 $hasBadgeFilter       = $hasVintageOnly || $hasDesignerOnly;
 
-                // Closure that applies the size + category + brand + style OR block.
+                // Closure that applies the size + category + brand + style match.
+                // Each set facet is its own AND'd group — a product must satisfy every
+                // facet the user configured (gender AND size AND style AND brand), with
+                // OR only *within* a facet (any of the selected sizes, any of the
+                // selected brands, etc). Previously these facets were OR'd against each
+                // other, so e.g. any item in the right size — regardless of gender —
+                // would match; that's what let menswear leak into a "women" + size feed.
                 $applyPreferences = function ($q) use ($sizes, $categories, $subcategoryPairs, $brands, $styles) {
-                    if (! empty($sizes)) $q->orWhereIn('size', $sizes);
+                    if (! empty($sizes)) $q->whereIn('size', $sizes);
 
                     if (! empty($styles)) {
-                        $q->orWhere(function ($sq) use ($styles) {
+                        $q->where(function ($sq) use ($styles) {
                             foreach ($styles as $style) {
                                 $sq->orWhereJsonContains('styles', $style);
                             }
@@ -250,7 +256,7 @@ class ProductController extends Controller
                     }
 
                     if ($subcategoryPairs->isNotEmpty()) {
-                        $q->orWhere(function ($sq) use ($subcategoryPairs) {
+                        $q->where(function ($sq) use ($subcategoryPairs) {
                             foreach ($subcategoryPairs as $pair) {
                                 $sq->orWhere(function ($pq) use ($pair) {
                                     $pq->where('root_category', $pair['root'])
@@ -259,11 +265,11 @@ class ProductController extends Controller
                             }
                         });
                     } elseif (! empty($categories)) {
-                        $q->orWhereIn('root_category', $categories);
+                        $q->whereIn('root_category', $categories);
                     }
 
                     if (! empty($brands)) {
-                        $q->orWhereHas('brand', fn ($bq) => $bq->whereIn('id', $brands));
+                        $q->whereHas('brand', fn ($bq) => $bq->whereIn('id', $brands));
                     }
                 };
 
