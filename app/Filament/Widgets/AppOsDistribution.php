@@ -28,13 +28,12 @@ class AppOsDistribution extends ChartWidget
         return 'doughnut';
     }
 
-    protected function getData(): array
+    /** HogQL for this widget's chart. Static so the page can pre-warm the cache. */
+    public static function query(array $range): string
     {
-        $posthog = app(PostHogService::class);
-        $range   = PostHogService::resolveRange($this->pageFilters);
-        $scope   = PostHogService::scopeSql($range['from'], $range['to']);
+        $scope = PostHogService::scopeSql($range['from'], $range['to']);
 
-        $rows = $posthog->query(<<<HOGQL
+        return <<<HOGQL
             SELECT
                 coalesce(properties.\$os, 'Nepoznato') AS os,
                 count(DISTINCT coalesce(properties.\$device_id, distinct_id)) AS devices
@@ -42,7 +41,15 @@ class AppOsDistribution extends ChartWidget
             WHERE {$scope}
             GROUP BY os
             ORDER BY devices DESC
-            HOGQL) ?? [];
+            HOGQL;
+    }
+
+    protected function getData(): array
+    {
+        $posthog = app(PostHogService::class);
+        $range   = PostHogService::resolveRange($this->pageFilters);
+
+        $rows = $posthog->query(self::query($range)) ?? [];
 
         $labels = array_map(fn ($r) => (string) $r[0], $rows);
         $data   = array_map(fn ($r) => (int) $r[1], $rows);

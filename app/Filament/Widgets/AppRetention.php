@@ -26,11 +26,10 @@ class AppRetention extends Widget
 
     private const DAYS = [1, 7, 14, 30];
 
-    public function getViewData(): array
+    /** HogQL for the retention cohorts. Static so the page can pre-warm the cache. */
+    public static function query(array $range): string
     {
-        $posthog = app(PostHogService::class);
-        $lib     = PostHogService::MOBILE_LIB;
-        $range   = PostHogService::resolveRange($this->pageFilters);
+        $lib = PostHogService::MOBILE_LIB;
 
         $selects = [];
         foreach (self::DAYS as $n) {
@@ -39,7 +38,7 @@ class AppRetention extends Widget
         }
         $selectSql = implode(",\n                ", $selects);
 
-        $rows = $posthog->query(<<<HOGQL
+        return <<<HOGQL
             SELECT
                 {$selectSql}
             FROM (
@@ -53,7 +52,15 @@ class AppRetention extends Widget
                 HAVING first_seen >= toDateTime('{$range['from']}')
                    AND first_seen < toDateTime('{$range['to']}')
             )
-            HOGQL) ?? [];
+            HOGQL;
+    }
+
+    public function getViewData(): array
+    {
+        $posthog = app(PostHogService::class);
+        $range   = PostHogService::resolveRange($this->pageFilters);
+
+        $rows = $posthog->query(self::query($range)) ?? [];
 
         $row  = $rows[0] ?? [];
         $data = [];

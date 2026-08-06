@@ -29,14 +29,13 @@ class AppActiveUsersChart extends ChartWidget
         return 'line';
     }
 
-    protected function getData(): array
+    /** HogQL for this widget's chart. Static so the page can pre-warm the cache. */
+    public static function query(array $range): string
     {
-        $posthog = app(PostHogService::class);
-        $tz      = PostHogService::TIMEZONE;
-        $range   = PostHogService::resolveRange($this->pageFilters);
-        $scope   = PostHogService::scopeSql($range['from'], $range['to']);
+        $tz    = PostHogService::TIMEZONE;
+        $scope = PostHogService::scopeSql($range['from'], $range['to']);
 
-        $rows = $posthog->query(<<<HOGQL
+        return <<<HOGQL
             SELECT
                 toDate(toTimeZone(timestamp, '{$tz}')) AS day,
                 count(DISTINCT person_id) AS users
@@ -44,7 +43,16 @@ class AppActiveUsersChart extends ChartWidget
             WHERE {$scope}
             GROUP BY day
             ORDER BY day
-            HOGQL) ?? [];
+            HOGQL;
+    }
+
+    protected function getData(): array
+    {
+        $posthog = app(PostHogService::class);
+        $tz      = PostHogService::TIMEZONE;
+        $range   = PostHogService::resolveRange($this->pageFilters);
+
+        $rows = $posthog->query(self::query($range)) ?? [];
 
         // Fill missing days with 0 so gaps don't get interpolated away.
         $byDay = [];

@@ -22,15 +22,17 @@ class AppVersionAdoption extends Widget
 
     protected ?string $pollingInterval = null;
 
-    public function getViewData(): array
+    /**
+     * HogQL for the version-adoption table. Static so the page can pre-warm
+     * the cache. Users counted inside the selected range; first_seen over
+     * all time so "Od <datum>" is the version's real release date, not the
+     * range start.
+     */
+    public static function query(array $range): string
     {
-        $posthog = app(PostHogService::class);
-        $lib     = PostHogService::MOBILE_LIB;
-        $range   = PostHogService::resolveRange($this->pageFilters);
+        $lib = PostHogService::MOBILE_LIB;
 
-        // Users counted inside the selected range; first_seen over all time
-        // so "Od <datum>" is the version's real release date, not the range start.
-        $rows = $posthog->query(<<<HOGQL
+        return <<<HOGQL
             SELECT
                 coalesce(properties.\$app_version, 'Nepoznato') AS version,
                 uniqIf(person_id, timestamp >= toDateTime('{$range['from']}') AND timestamp < toDateTime('{$range['to']}')) AS users,
@@ -41,7 +43,15 @@ class AppVersionAdoption extends Widget
             HAVING users > 0
             ORDER BY users DESC
             LIMIT 6
-            HOGQL) ?? [];
+            HOGQL;
+    }
+
+    public function getViewData(): array
+    {
+        $posthog = app(PostHogService::class);
+        $range   = PostHogService::resolveRange($this->pageFilters);
+
+        $rows = $posthog->query(self::query($range)) ?? [];
 
         $total = array_sum(array_map(fn ($r) => (int) $r[1], $rows));
 

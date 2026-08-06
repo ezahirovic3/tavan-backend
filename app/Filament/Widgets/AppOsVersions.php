@@ -17,13 +17,12 @@ class AppOsVersions extends Widget
 
     protected ?string $pollingInterval = null;
 
-    public function getViewData(): array
+    /** HogQL for the OS-version breakdown. Static so the page can pre-warm the cache. */
+    public static function query(array $range): string
     {
-        $posthog = app(PostHogService::class);
-        $range   = PostHogService::resolveRange($this->pageFilters);
-        $scope   = PostHogService::scopeSql($range['from'], $range['to']);
+        $scope = PostHogService::scopeSql($range['from'], $range['to']);
 
-        $rows = $posthog->query(<<<HOGQL
+        return <<<HOGQL
             SELECT
                 trim(concat(coalesce(properties.\$os, 'Nepoznato'), ' ', coalesce(properties.\$os_version, ''))) AS osv,
                 count(DISTINCT person_id) AS users
@@ -32,9 +31,25 @@ class AppOsVersions extends Widget
             GROUP BY osv
             ORDER BY users DESC
             LIMIT 6
-            HOGQL) ?? [];
+            HOGQL;
+    }
 
-        $total = (int) $posthog->scalar("SELECT count(DISTINCT person_id) FROM events WHERE {$scope}", 0);
+    /** HogQL for the "total devices" scalar used to compute percentages. */
+    public static function totalQuery(array $range): string
+    {
+        $scope = PostHogService::scopeSql($range['from'], $range['to']);
+
+        return "SELECT count(DISTINCT person_id) FROM events WHERE {$scope}";
+    }
+
+    public function getViewData(): array
+    {
+        $posthog = app(PostHogService::class);
+        $range   = PostHogService::resolveRange($this->pageFilters);
+
+        $rows = $posthog->query(self::query($range)) ?? [];
+
+        $total = (int) $posthog->scalar(self::totalQuery($range), 0);
 
         return [
             'rows' => array_map(fn ($r) => [
