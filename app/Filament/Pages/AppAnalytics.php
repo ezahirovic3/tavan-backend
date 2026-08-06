@@ -25,7 +25,9 @@ use UnitEnum;
  */
 class AppAnalytics extends BaseDashboard
 {
-    use HasFiltersForm;
+    use HasFiltersForm {
+        updatedFilters as protected updatedFiltersInSession;
+    }
 
     protected static string $routePath = 'aplikacija';
 
@@ -65,6 +67,49 @@ class AppAnalytics extends BaseDashboard
                 ->label('Do')
                 ->maxDate(now())
                 ->visible(fn (Get $get): bool => $get('period') === 'custom'),
+        ]);
+    }
+
+    /** Runs once mount() has resolved $this->filters, before this page's own render(). */
+    public function booted(): void
+    {
+        $this->prefetchWidgetQueries();
+    }
+
+    /** Livewire's post-update hook for the `filters` property (see HasFilters::updatedFilters()). */
+    public function updatedFilters(): void
+    {
+        $this->updatedFiltersInSession();
+        $this->prefetchWidgetQueries();
+    }
+
+    /**
+     * Every widget on this dashboard runs its own PostHog query during
+     * Livewire hydration. Left alone, that's 6+ widgets each blocking on
+     * their own HTTP round trip in sequence (~1s apiece, ~7s total on a
+     * cold cache — see Sentry PHP-LARAVEL-11). Pre-warming the shared
+     * query cache here, in one Http::pool() batch, means each widget's own
+     * PostHogService::query() call below is a cache hit by the time it runs.
+     */
+    private function prefetchWidgetQueries(): void
+    {
+        $posthog = app(PostHogService::class);
+
+        if (! $posthog->isConfigured()) {
+            return;
+        }
+
+        $range = PostHogService::resolveRange($this->filters);
+
+        $posthog->queryMany([
+            ...AppAnalyticsStats::queries($range),
+            'activeUsersChart' => AppActiveUsersChart::query($range),
+            'osDistribution'   => AppOsDistribution::query($range),
+            'osVersionsList'   => AppOsVersions::query($range),
+            'osVersionsTotal'  => AppOsVersions::totalQuery($range),
+            'usageHeatmap'     => AppUsageHeatmap::query($range),
+            'versionAdoption'  => AppVersionAdoption::query($range),
+            'retention'        => AppRetention::query($range),
         ]);
     }
 

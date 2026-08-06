@@ -21,14 +21,13 @@ class AppUsageHeatmap extends Widget
 
     protected ?string $pollingInterval = null;
 
-    public function getViewData(): array
+    /** HogQL for the heatmap. Static so the page can pre-warm the cache. */
+    public static function query(array $range): string
     {
-        $posthog = app(PostHogService::class);
-        $tz      = PostHogService::TIMEZONE;
-        $range   = PostHogService::resolveRange($this->pageFilters);
-        $scope   = PostHogService::scopeSql($range['from'], $range['to']);
+        $tz    = PostHogService::TIMEZONE;
+        $scope = PostHogService::scopeSql($range['from'], $range['to']);
 
-        $rows = $posthog->query(<<<HOGQL
+        return <<<HOGQL
             SELECT
                 toDayOfWeek(toTimeZone(timestamp, '{$tz}')) AS dow,
                 toHour(toTimeZone(timestamp, '{$tz}')) AS hour,
@@ -36,7 +35,15 @@ class AppUsageHeatmap extends Widget
             FROM events
             WHERE {$scope}
             GROUP BY dow, hour
-            HOGQL) ?? [];
+            HOGQL;
+    }
+
+    public function getViewData(): array
+    {
+        $posthog = app(PostHogService::class);
+        $range   = PostHogService::resolveRange($this->pageFilters);
+
+        $rows = $posthog->query(self::query($range)) ?? [];
 
         // grid[dow 1-7 Mon-Sun][hour 0-23] = count
         $grid = array_fill(1, 7, array_fill(0, 24, 0));

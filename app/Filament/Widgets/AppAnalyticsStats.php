@@ -38,31 +38,11 @@ class AppAnalyticsStats extends BaseWidget
         }
 
         $range = PostHogService::resolveRange($this->pageFilters);
-        $tz    = PostHogService::TIMEZONE;
-
-        $scope     = PostHogService::scopeSql($range['from'], $range['to']);
-        $prevScope = PostHogService::scopeSql($range['prevFrom'], $range['prevTo']);
 
         // All queries for this widget fire concurrently (Http::pool) instead
         // of one round trip each — sequential HTTP to PostHog was blocking
         // this Livewire request for ~6s on a cold cache.
-        $results = $posthog->queryMany([
-            'daily' => <<<HOGQL
-                SELECT
-                    toDate(toTimeZone(timestamp, '{$tz}')) AS day,
-                    count(DISTINCT person_id) AS users
-                FROM events
-                WHERE {$scope}
-                GROUP BY day
-                ORDER BY day
-                HOGQL,
-            'activeNow'    => "SELECT count(DISTINCT person_id) FROM events WHERE {$scope}",
-            'activePrev'   => "SELECT count(DISTINCT person_id) FROM events WHERE {$prevScope}",
-            'sessionsNow'  => $this->sessionStatsSql($scope),
-            'sessionsPrev' => $this->sessionStatsSql($prevScope),
-            'installsNow'  => "SELECT count() FROM events WHERE event = 'Application Installed' AND {$scope}",
-            'installsPrev' => "SELECT count() FROM events WHERE event = 'Application Installed' AND {$prevScope}",
-        ]);
+        $results = $posthog->queryMany(self::queries($range));
 
         $daily      = $results['daily'] ?? [];
         $userSeries = array_map(fn ($row) => (int) $row[1], $daily);
@@ -103,7 +83,41 @@ class AppAnalyticsStats extends BaseWidget
         ];
     }
 
-    private function sessionStatsSql(string $scope): string
+    /**
+     * All HogQL queries this widget needs, keyed for queryMany(). Static so
+     * the page can pre-warm the shared cache in one round trip alongside
+     * every other widget's queries, instead of each widget hitting PostHog
+     * on its own during Livewire hydration.
+     *
+     * @return array<string, string>
+     */
+    public static function queries(array $range): array
+    {
+        $tz = PostHogService::TIMEZONE;
+
+        $scope     = PostHogService::scopeSql($range['from'], $range['to']);
+        $prevScope = PostHogService::scopeSql($range['prevFrom'], $range['prevTo']);
+
+        return [
+            'daily' => <<<HOGQL
+                SELECT
+                    toDate(toTimeZone(timestamp, '{$tz}')) AS day,
+                    count(DISTINCT person_id) AS users
+                FROM events
+                WHERE {$scope}
+                GROUP BY day
+                ORDER BY day
+                HOGQL,
+            'activeNow'    => "SELECT count(DISTINCT person_id) FROM events WHERE {$scope}",
+            'activePrev'   => "SELECT count(DISTINCT person_id) FROM events WHERE {$prevScope}",
+            'sessionsNow'  => self::sessionStatsSql($scope),
+            'sessionsPrev' => self::sessionStatsSql($prevScope),
+            'installsNow'  => "SELECT count() FROM events WHERE event = 'Application Installed' AND {$scope}",
+            'installsPrev' => "SELECT count() FROM events WHERE event = 'Application Installed' AND {$prevScope}",
+        ];
+    }
+
+    private static function sessionStatsSql(string $scope): string
     {
         return <<<HOGQL
             SELECT count() AS sessions, avg(dur) AS avg_dur

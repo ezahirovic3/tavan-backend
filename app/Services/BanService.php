@@ -22,7 +22,7 @@ class BanService
         ]);
 
         // Revoke all Sanctum tokens — user is logged out immediately
-        $user->tokens()->delete();
+        $user->revokeTokens();
 
         // Hide active/reserved listings — preserved as draft for audit
         $user->products()->whereIn('status', ['active', 'reserved'])->update(['status' => 'draft']);

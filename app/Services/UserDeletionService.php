@@ -53,7 +53,7 @@ class UserDeletionService
             ->update(['allow_replies' => false]);
 
         // 3. Revoke all tokens
-        $user->tokens()->delete();
+        $user->revokeTokens();
 
         // 4. Delete avatar from R2
         if ($user->avatar) {
