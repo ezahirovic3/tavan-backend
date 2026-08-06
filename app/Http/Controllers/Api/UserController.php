@@ -111,7 +111,7 @@ class UserController extends Controller
         $deletion->cancelActiveOrders($user);
 
         $user->update(['deletion_requested_at' => now()]);
-        $user->tokens()->delete();
+        $user->revokeTokens();
 
         return response()->json(null, 204);
     }
@@ -122,7 +122,7 @@ class UserController extends Controller
 
         $user->update(['deletion_requested_at' => null]);
 
-        $user->tokens()->delete();
+        $user->revokeTokens();
         $token = $user->createToken('mobile')->plainTextToken;
 
         return response()->json([

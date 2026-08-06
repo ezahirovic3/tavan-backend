@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -194,5 +195,33 @@ class User extends Authenticatable implements FilamentUser
             ->toArray();
 
         return $this->cachedBlockedUserIds;
+    }
+
+    /**
+     * Revoke this user's Sanctum tokens, busting each one's Redis cache
+     * entry first.
+     *
+     * $user->tokens()->delete() is a bulk delete through the query builder,
+     * which bypasses Eloquent model events entirely — the deleted() listener
+     * on CachedPersonalAccessToken (which forgets the Redis cache) never
+     * fires for it. Left alone, a just-revoked token can keep authenticating
+     * from a stale cache entry for up to 5 more minutes (PHP-LARAVEL-14).
+     * Always revoke tokens through this method instead of calling
+     * ->tokens()->delete() directly.
+     *
+     * @param  (callable(\Illuminate\Database\Eloquent\Relations\MorphMany): \Illuminate\Database\Eloquent\Relations\MorphMany)|null  $scope
+     *         Optional query customization, e.g. fn ($q) => $q->where('name', 'mobile').
+     */
+    public function revokeTokens(?callable $scope = null): void
+    {
+        $ids = ($scope ? $scope($this->tokens()) : $this->tokens())->pluck('id');
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $ids->each(fn ($id) => Cache::forget("sanctum_token_{$id}"));
+
+        $this->tokens()->whereIn('id', $ids)->delete();
     }
 }

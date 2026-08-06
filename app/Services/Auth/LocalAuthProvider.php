@@ -54,7 +54,7 @@ class LocalAuthProvider implements AuthProviderInterface
             );
         }
 
-        $user->tokens()->where('name', 'mobile')->delete();
+        $user->revokeTokens(fn ($q) => $q->where('name', 'mobile'));
         $token = $user->createToken('mobile')->plainTextToken;
 
         return ['user' => $user, 'token' => $token];
