@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Auth;
 
 class ProductResource extends JsonResource
 {
@@ -34,10 +33,15 @@ class ProductResource extends JsonResource
             'likes'         => $this->likes,
             // Owner-only until the marketplace is big enough for public view
             // counts to read as social proof rather than low liquidity.
-            // Product routes use optional auth, so fall back to the sanctum
-            // guard — $request->user() is null on public routes.
+            // Product routes use optional auth: the controller resolves the
+            // user once (falling back to the sanctum guard itself) and pins
+            // it via $request->setUserResolver(). Do NOT re-add an
+            // `Auth::guard('sanctum')->user()` fallback here — when the guard
+            // can't resolve a user it doesn't memoize the null result, so
+            // calling it per product re-runs the sanctum token cache+DB
+            // lookup for every item in the collection (PHP-LARAVEL-14).
             'view_count'    => $this->when(
-                ($request->user() ?? Auth::guard('sanctum')->user())?->id === $this->seller_id,
+                $request->user()?->id === $this->seller_id,
                 fn () => (int) $this->view_count
             ),
             'measurements'  => $this->measurements,
