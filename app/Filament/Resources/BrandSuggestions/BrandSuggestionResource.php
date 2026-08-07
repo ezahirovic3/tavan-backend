@@ -5,8 +5,7 @@ namespace App\Filament\Resources\BrandSuggestions;
 use App\Filament\Resources\BrandSuggestions\Pages\ListBrandSuggestions;
 use App\Filament\Resources\BrandSuggestions\Pages\ViewBrandSuggestion;
 use App\Models\BrandSuggestion;
-use App\Models\Conversation;
-use App\Models\Message;
+use App\Services\ConversationService;
 use App\Services\PushNotificationService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
@@ -199,30 +198,9 @@ class BrandSuggestionResource extends Resource
 
     public static function postSupportMessage(string $userId, string $body): void
     {
-        $convo = Conversation::firstOrCreate(
-            [
-                'participant_one_id' => $userId,
-                'participant_two_id' => config('tavan.system_user_id'),
-            ],
-            [
-                'allow_replies'   => true,
-                'status'          => 'open',
-                'type'            => 'admin_support',
-                'last_message_at' => now(),
-            ]
-        );
-
-        if (! $convo->wasRecentlyCreated && $convo->status === 'closed') {
-            $convo->update(['status' => 'open', 'allow_replies' => true]);
-        }
-
-        Message::create([
-            'conversation_id' => $convo->id,
-            'sender_id'       => auth()->id(),
-            'body'            => $body,
-        ]);
-
-        $convo->update(['last_message_at' => now()]);
+        $conversations = app(ConversationService::class);
+        $convo = $conversations->findOrCreateSupportConversation($userId);
+        $conversations->sendSupportReply($convo, auth()->user(), $body);
     }
 
     public static function getPages(): array
