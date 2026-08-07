@@ -42,6 +42,11 @@ class ConversationService
      * Send a message from the admin side of a support conversation.
      * The message is stored with sender_id = system user so mobile shows "Tavan Podrška".
      * The real admin's ID is preserved in the payload for audit purposes.
+     *
+     * Semantics: "open" means a real user is waiting on us; "resolved" means nothing is
+     * pending on our side. So once the admin/system sends a message, the ball is back in
+     * the user's court — the conversation is auto-resolved. It reopens automatically the
+     * moment the user replies (see sendText/sendImage below).
      */
     public function sendSupportReply(Conversation $conversation, User $adminUser, string $body): Message
     {
@@ -53,9 +58,8 @@ class ConversationService
             ['admin_id' => $adminUser->id, 'admin_name' => $adminUser->name],
         );
 
-        // Re-open conversation if it was resolved
-        if ($conversation->status === 'resolved') {
-            $conversation->update(['status' => 'open']);
+        if ($conversation->status !== 'resolved') {
+            $conversation->update(['status' => 'resolved']);
         }
 
         broadcast(new NewMessage($message))->toOthers();
@@ -67,6 +71,8 @@ class ConversationService
     {
         $message = $this->createMessage($conversation, $sender->id, 'text', $body, null);
 
+        $this->reopenIfUserReplied($conversation, $sender);
+
         broadcast(new NewMessage($message))->toOthers();
 
         return $message;
@@ -76,9 +82,24 @@ class ConversationService
     {
         $message = $this->createMessage($conversation, $sender->id, 'image', $imageUrl, null);
 
+        $this->reopenIfUserReplied($conversation, $sender);
+
         broadcast(new NewMessage($message))->toOthers();
 
         return $message;
+    }
+
+    /**
+     * A real user (not the system/admin user) messaging into a support conversation always
+     * means it needs admin attention again — reopen it even if it was previously resolved.
+     */
+    private function reopenIfUserReplied(Conversation $conversation, User $sender): void
+    {
+        if ($conversation->isAdminSupport()
+            && $sender->id !== config('tavan.system_user_id')
+            && $conversation->status !== 'open') {
+            $conversation->update(['status' => 'open']);
+        }
     }
 
     public function sendSystemMessage(

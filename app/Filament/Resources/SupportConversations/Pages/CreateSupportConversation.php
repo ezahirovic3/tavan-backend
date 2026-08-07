@@ -4,7 +4,8 @@ namespace App\Filament\Resources\SupportConversations\Pages;
 
 use App\Filament\Resources\SupportConversations\SupportConversationResource;
 use App\Models\Conversation;
-use App\Models\Message;
+use App\Services\ConversationService;
+use App\Services\PushNotificationService;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateSupportConversation extends CreateRecord
@@ -26,17 +27,21 @@ class CreateSupportConversation extends CreateRecord
             ]
         );
 
-        if (!$convo->wasRecentlyCreated && $convo->status === 'closed') {
-            $convo->update(['status' => 'open', 'allow_replies' => true]);
+        if (! $convo->wasRecentlyCreated) {
+            $convo->update(['allow_replies' => $data['allow_replies'] ?? true]);
         }
 
-        Message::create([
-            'conversation_id' => $convo->id,
-            'sender_id'       => auth()->id(),
-            'body'            => $data['initial_message'],
-        ]);
+        $conversations = app(ConversationService::class);
+        $conversations->sendSupportReply($convo, auth()->user(), $data['initial_message']);
 
-        return $convo;
+        app(PushNotificationService::class)->sendToUser(
+            $data['participant_one_id'],
+            'Tavan Podrška',
+            $data['initial_message'],
+            ['type' => 'support_message', 'conversationId' => $convo->id],
+        );
+
+        return $convo->fresh();
     }
 
     protected function handleRecordCreation(array $data): Conversation

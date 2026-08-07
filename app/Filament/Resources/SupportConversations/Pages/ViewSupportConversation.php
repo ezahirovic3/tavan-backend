@@ -4,7 +4,8 @@ namespace App\Filament\Resources\SupportConversations\Pages;
 
 use App\Filament\Resources\SupportConversations\SupportConversationResource;
 use App\Models\Conversation;
-use App\Models\Message;
+use App\Services\ConversationService;
+use App\Services\PushNotificationService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
@@ -58,12 +59,16 @@ class ViewSupportConversation extends Page
                 ->modalSubmitActionLabel('Pošalji')
                 ->action(function (array $data) {
                     $record = $this->getRecord();
-                    Message::create([
-                        'conversation_id' => $record->id,
-                        'sender_id'       => auth()->id(),
-                        'body'            => $data['body'],
-                    ]);
-                    $record->update(['last_activity_at' => now()]);
+
+                    app(ConversationService::class)->sendSupportReply($record, auth()->user(), $data['body']);
+
+                    app(PushNotificationService::class)->sendToUser(
+                        $record->participant_one_id,
+                        'Tavan Podrška',
+                        $data['body'],
+                        ['type' => 'support_message', 'conversationId' => $record->id],
+                    );
+
                     Notification::make()->success()->title('Poruka poslana')->send();
                     $this->redirect(static::getUrl(['record' => $record]));
                 }),
