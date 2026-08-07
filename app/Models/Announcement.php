@@ -50,6 +50,13 @@ class Announcement extends Model
             'verified'               => $query->where('is_verified', true),
             'city'                   => $query->where('location', $this->target_value),
             'listings_require_review'=> $query->where('listings_require_review', true),
+            // ≥1 completed order (either side) or ≥1 published listing — the
+            // "has actually used the app" gate for the one-off review-growth
+            // push, see docs/roadmap.md 1.5.3 in tavan-mobile.
+            'active_users'           => $query->where(fn ($q) => $q
+                ->whereHas('ordersAsBuyer', fn ($o) => $o->where('status', 'completed'))
+                ->orWhereHas('ordersAsSeller', fn ($o) => $o->where('status', 'completed'))
+                ->orWhereHas('products', fn ($p) => $p->where('status', '!=', 'draft'))),
             default                  => $query, // 'all'
         };
     }

@@ -42,6 +42,7 @@ class AnnouncementResource extends Resource
         'verified'               => 'Verificirani',
         'city'                   => 'Grad',
         'listings_require_review' => 'Pregled oglasa',
+        'active_users'           => 'Aktivni korisnici (narudžba ili oglas)',
     ];
 
     public static function form(Schema $schema): Schema
@@ -100,11 +101,12 @@ class AnnouncementResource extends Resource
                     ->label('Grupa')
                     ->badge()
                     ->color(fn ($state) => match ($state) {
-                        'all'      => 'primary',
-                        'verified' => 'success',
-                        'city'     => 'info',
+                        'all'          => 'primary',
+                        'verified'     => 'success',
+                        'city'         => 'info',
                         'pending_review' => 'warning',
-                        default    => 'gray',
+                        'active_users' => 'warning',
+                        default        => 'gray',
                     })
                     ->formatStateUsing(fn ($state, $record) =>
                         ($state === 'city' && $record->target_city)
