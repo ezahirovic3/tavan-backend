@@ -6,7 +6,9 @@ use App\Models\Offer;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Notifications\NewOrderNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class OrderTest extends TestCase
@@ -50,6 +52,48 @@ class OrderTest extends TestCase
 
         // Product should be reserved while waiting for seller confirmation
         $this->assertEquals('reserved', $product->fresh()->status);
+    }
+
+    public function test_seller_gets_an_email_backstop_for_a_new_order(): void
+    {
+        Notification::fake();
+
+        $buyer   = User::factory()->create();
+        $seller  = User::factory()->create();
+        $product = Product::factory()->create([
+            'seller_id'     => $seller->id,
+            'status'        => 'active',
+            'free_shipping' => true,
+        ]);
+
+        $this->actingAs($buyer)->postJson('/api/v1/orders', [
+            'product_id'      => $product->id,
+            'payment_method'  => 'cash',
+            'delivery_method' => 'pickup',
+        ])->assertStatus(201);
+
+        Notification::assertSentTo($seller, NewOrderNotification::class);
+    }
+
+    public function test_no_email_backstop_is_sent_when_seller_has_no_email(): void
+    {
+        Notification::fake();
+
+        $buyer   = User::factory()->create();
+        $seller  = User::factory()->create(['email' => null]);
+        $product = Product::factory()->create([
+            'seller_id'     => $seller->id,
+            'status'        => 'active',
+            'free_shipping' => true,
+        ]);
+
+        $this->actingAs($buyer)->postJson('/api/v1/orders', [
+            'product_id'      => $product->id,
+            'payment_method'  => 'cash',
+            'delivery_method' => 'pickup',
+        ])->assertStatus(201);
+
+        Notification::assertNotSentTo($seller, NewOrderNotification::class);
     }
 
     public function test_cannot_order_own_product(): void
