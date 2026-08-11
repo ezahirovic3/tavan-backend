@@ -8,6 +8,7 @@ use App\Http\Resources\OrderResource;
 use App\Jobs\SendReminderNotificationJob;
 use App\Models\Order;
 use App\Models\User;
+use App\Notifications\NewOrderNotification;
 use App\Services\ConversationService;
 use App\Services\OrderService;
 use App\Services\PushNotificationService;
@@ -73,6 +74,16 @@ class OrderController extends Controller
             $pushBody,
             ['type' => 'order', 'orderId' => $order->id],
         );
+
+        // Email backstop in case the seller misses the push notification.
+        if ($order->seller?->email) {
+            $order->seller->notify(new NewOrderNotification(
+                $order,
+                $request->user()->name,
+                $firstProduct?->title,
+                $itemCount,
+            ));
+        }
 
         SendReminderNotificationJob::dispatch('order', $order->id, 'pending_seller')
             ->delay(now()->addHours(24));
