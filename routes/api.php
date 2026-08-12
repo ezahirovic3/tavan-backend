@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\UserReportController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\UserPreferenceController;
 use App\Http\Controllers\Api\AnnouncementController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\BlogPostController;
 use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\Api\TrackingController;
@@ -176,6 +177,12 @@ Route::prefix('v1')->group(function () {
         // Announcements (index is public; read-tracking routes require auth)
         Route::get('announcements/unread-count', [AnnouncementController::class, 'unreadCount']);
         Route::post('announcements/{announcement}/read', [AnnouncementController::class, 'markRead']);
+
+        // Notifications — bell-icon activity feed (orders/reviews/moderation/price-drops)
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
+        Route::post('notifications/read-all', [NotificationController::class, 'markAllRead']);
+        Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead']);
 
         // Conversations — read access open (show history, unread count)
         Route::get('conversations', [ConversationController::class, 'index']);

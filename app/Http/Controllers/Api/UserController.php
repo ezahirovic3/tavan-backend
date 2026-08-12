@@ -86,22 +86,57 @@ class UserController extends Controller
         return response()->json(['data' => new UserResource($request->user()->fresh())]);
     }
 
+    /**
+     * The 5 opt-out categories, keyed by their API field name → users column.
+     * Same set as App\Support\NotificationCategory, just phrased as the
+     * user-facing preference fields rather than push-type buckets.
+     */
+    private const NOTIFICATION_CATEGORY_FIELDS = [
+        'notify_messages'      => 'notify_messages',
+        'notify_orders'        => 'notify_orders',
+        'notify_activity'      => 'notify_activity',
+        'notify_price_drops'   => 'notify_price_drops',
+        'notify_announcements' => 'notify_announcements',
+    ];
+
     public function getNotificationPref(Request $request): JsonResponse
     {
         return response()->json([
-            'data' => ['notifications_enabled' => (bool) $request->user()->notifications_enabled],
+            'data' => $this->notificationPrefResponse($request->user()),
         ]);
     }
 
     public function setNotificationPref(Request $request): JsonResponse
     {
-        $data = $request->validate(['notifications_enabled' => ['required', 'boolean']]);
+        $data = $request->validate([
+            'notifications_enabled' => ['sometimes', 'boolean'],
+            'notify_messages'       => ['sometimes', 'boolean'],
+            'notify_orders'         => ['sometimes', 'boolean'],
+            'notify_activity'       => ['sometimes', 'boolean'],
+            'notify_price_drops'    => ['sometimes', 'boolean'],
+            'notify_announcements'  => ['sometimes', 'boolean'],
+        ]);
 
-        $request->user()->update(['notifications_enabled' => $data['notifications_enabled']]);
+        if (empty($data)) {
+            return response()->json(['message' => 'Nema promjena.'], 422);
+        }
+
+        $request->user()->update($data);
 
         return response()->json([
-            'data' => ['notifications_enabled' => (bool) $data['notifications_enabled']],
+            'data' => $this->notificationPrefResponse($request->user()->fresh()),
         ]);
+    }
+
+    private function notificationPrefResponse(User $user): array
+    {
+        return [
+            'notifications_enabled' => (bool) $user->notifications_enabled,
+            ...array_map(
+                fn (string $column) => (bool) $user->{$column},
+                self::NOTIFICATION_CATEGORY_FIELDS,
+            ),
+        ];
     }
 
     public function destroy(Request $request, UserDeletionService $deletion): JsonResponse

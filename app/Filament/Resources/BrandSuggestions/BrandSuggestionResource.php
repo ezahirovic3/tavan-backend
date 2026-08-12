@@ -7,6 +7,7 @@ use App\Filament\Resources\BrandSuggestions\Pages\ViewBrandSuggestion;
 use App\Models\BrandSuggestion;
 use App\Services\ConversationService;
 use App\Services\PushNotificationService;
+use App\Services\UserNotificationService;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -139,12 +140,21 @@ class BrandSuggestionResource extends Resource
                             'reviewed_at' => now(),
                         ]);
 
+                        $pushTitle   = 'Prijedlog brenda odobren ✓';
                         $pushMessage = 'Tvoj prijedlog brenda "' . $record->name . '" je odobren.';
                         app(PushNotificationService::class)->sendToUser(
                             $record->user_id,
-                            'Prijedlog brenda odobren ✓',
+                            $pushTitle,
                             $pushMessage,
                             ['type' => 'brand_suggestion_approved'],
+                        );
+
+                        app(UserNotificationService::class)->record(
+                            $record->user,
+                            'brand_suggestion_approved',
+                            $pushTitle,
+                            $pushMessage,
+                            ['brandSuggestionId' => $record->id],
                         );
 
                         $supportMessage = $data['note'] ?: $pushMessage;
@@ -174,12 +184,21 @@ class BrandSuggestionResource extends Resource
                             'reviewed_at' => now(),
                         ]);
 
+                        $pushTitle   = 'Prijedlog brenda odbijen';
                         $pushMessage = 'Tvoj prijedlog brenda "' . $record->name . '" nije odobren.';
                         app(PushNotificationService::class)->sendToUser(
                             $record->user_id,
-                            'Prijedlog brenda odbijen',
+                            $pushTitle,
                             $pushMessage,
                             ['type' => 'brand_suggestion_rejected'],
+                        );
+
+                        app(UserNotificationService::class)->record(
+                            $record->user,
+                            'brand_suggestion_rejected',
+                            $pushTitle,
+                            $pushMessage,
+                            ['brandSuggestionId' => $record->id],
                         );
 
                         $supportMessage = $data['note'] ?: $pushMessage;
