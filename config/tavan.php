@@ -22,4 +22,15 @@ return [
      */
     'active_product_milestone' => env('ACTIVE_PRODUCT_MILESTONE', 1000),
 
+    /*
+     * Wishlist price-drop notifications (App\Jobs\NotifyWishlistPriceDrop,
+     * triggered from App\Observers\ProductObserver::checkPriceDrop).
+     * A drop only fans out to wishlisters if it clears EITHER threshold, and
+     * only once per product per cooldown window — otherwise a seller nudging
+     * price up/down repeatedly would spam every wishlister on each edit.
+     */
+    'price_drop_min_percent' => (float) env('PRICE_DROP_MIN_PERCENT', 5),
+    'price_drop_min_amount' => (float) env('PRICE_DROP_MIN_AMOUNT', 5),
+    'price_drop_cooldown_hours' => (int) env('PRICE_DROP_COOLDOWN_HOURS', 48),
+
 ];

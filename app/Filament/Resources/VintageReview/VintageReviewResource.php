@@ -7,6 +7,7 @@ use App\Filament\Resources\VintageReview\Pages\ListVintageReviews;
 use App\Models\Product;
 use App\Services\ConversationService;
 use App\Services\PushNotificationService;
+use App\Services\UserNotificationService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
@@ -143,11 +144,22 @@ class VintageReviewResource extends Resource
                             'vintage_reject_reason' => null,
                         ]);
 
+                        $title = 'Vintage badge odobren!';
+                        $body  = "Tvoj oglas \"{$record->title}\" je dobio Vintage badge.";
+
                         app(PushNotificationService::class)->sendToUser(
                             $record->seller_id,
-                            'Vintage badge odobren!',
-                            "Tvoj oglas \"{$record->title}\" je dobio Vintage badge.",
+                            $title,
+                            $body,
                             ['type' => 'vintage_approved', 'productId' => $record->id],
+                        );
+
+                        app(UserNotificationService::class)->record(
+                            $record->seller,
+                            'vintage_approved',
+                            $title,
+                            $body,
+                            ['productId' => $record->id],
                         );
 
                         Notification::make()->success()->title('Vintage badge odobren')->send();

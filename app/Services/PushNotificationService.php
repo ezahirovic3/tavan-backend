@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\PushToken;
+use App\Models\User;
+use App\Support\NotificationCategory;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -13,9 +15,17 @@ class PushNotificationService
 
     /**
      * Send a push notification to all registered devices for a user.
+     * Respects the master `notifications_enabled` switch and, if `data['type']`
+     * maps to a category (see NotificationCategory), that category's opt-out —
+     * muting only blocks the push, it never affects the in-app notifications
+     * list (UserNotificationService writes there unconditionally).
      */
     public function sendToUser(string $userId, string $title, string $body, array $data = []): void
     {
+        if (empty($this->optedInUserIds([$userId], $data))) {
+            return;
+        }
+
         $tokens = PushToken::where('user_id', $userId)->pluck('token')->all();
 
         if (empty($tokens)) {
@@ -42,12 +52,19 @@ class PushNotificationService
     }
 
     /**
-     * Send a push notification to multiple users at once.
+     * Send a push notification to multiple users at once. Same preference
+     * enforcement as sendToUser(), applied before the token lookup.
      *
      * @param  string[]  $userIds
      */
     public function sendToUsers(array $userIds, string $title, string $body, array $data = []): void
     {
+        if (empty($userIds)) {
+            return;
+        }
+
+        $userIds = $this->optedInUserIds($userIds, $data);
+
         if (empty($userIds)) {
             return;
         }
@@ -118,6 +135,29 @@ class PushNotificationService
         $this->dispatch($messages);
 
         return count($tokens);
+    }
+
+    /**
+     * Filter a list of user IDs down to those who haven't opted out of this
+     * push. Checks the master `notifications_enabled` switch, and — if
+     * `data['type']` resolves to a category — that category's opt-out too.
+     * An unmapped/missing type fails open (no category filter applied), so a
+     * push type we haven't categorized yet doesn't silently stop sending.
+     *
+     * @param  string[]  $userIds
+     * @return string[]
+     */
+    private function optedInUserIds(array $userIds, array $data): array
+    {
+        $query = User::whereIn('id', $userIds)->where('notifications_enabled', true);
+
+        $category = NotificationCategory::forType($data['type'] ?? null);
+
+        if ($category !== null) {
+            $query->where(NotificationCategory::preferenceColumn($category), true);
+        }
+
+        return $query->pluck('id')->all();
     }
 
     /**

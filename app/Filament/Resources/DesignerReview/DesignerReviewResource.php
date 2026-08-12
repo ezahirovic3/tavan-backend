@@ -7,6 +7,7 @@ use App\Filament\Resources\DesignerReview\Pages\ListDesignerReviews;
 use App\Models\Product;
 use App\Services\ConversationService;
 use App\Services\PushNotificationService;
+use App\Services\UserNotificationService;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
@@ -123,11 +124,22 @@ class DesignerReviewResource extends Resource
                             'designer_reject_reason' => null,
                         ]);
 
+                        $title = 'Designer badge odobren!';
+                        $body  = "Tvoj oglas \"{$record->title}\" je dobio Designer badge.";
+
                         app(PushNotificationService::class)->sendToUser(
                             $record->seller_id,
-                            'Designer badge odobren!',
-                            "Tvoj oglas \"{$record->title}\" je dobio Designer badge.",
+                            $title,
+                            $body,
                             ['type' => 'designer_approved', 'productId' => $record->id],
+                        );
+
+                        app(UserNotificationService::class)->record(
+                            $record->seller,
+                            'designer_approved',
+                            $title,
+                            $body,
+                            ['productId' => $record->id],
                         );
 
                         Notification::make()->success()->title('Designer badge odobren')->send();

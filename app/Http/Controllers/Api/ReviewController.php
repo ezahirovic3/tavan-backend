@@ -10,6 +10,7 @@ use App\Models\Review;
 use App\Models\User;
 use App\Services\PushNotificationService;
 use App\Services\ReviewService;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,6 +19,7 @@ class ReviewController extends Controller
     public function __construct(
         private readonly ReviewService $reviewService,
         private readonly PushNotificationService $push,
+        private readonly UserNotificationService $notifications,
     ) {}
 
     public function show(Request $request, Review $review): JsonResponse
@@ -52,11 +54,22 @@ class ReviewController extends Controller
         $review = $this->reviewService->create($order, $user, $request->validated());
 
         $stars = str_repeat('⭐', (int) $review->rating);
+        $title = 'Nova recenzija ' . $stars;
+        $body  = $user->name . ' je ostavio/la recenziju za vas.';
+
         $this->push->sendToUser(
             $review->reviewed_id,
-            'Nova recenzija ' . $stars,
-            $user->name . ' je ostavio/la recenziju za vas.',
+            $title,
+            $body,
             ['type' => 'review', 'reviewId' => $review->id],
+        );
+
+        $this->notifications->record(
+            $review->reviewed,
+            'review',
+            $title,
+            $body,
+            ['reviewId' => $review->id, 'orderId' => $order->id],
         );
 
         return response()->json(['data' => new ReviewResource($review->load('reviewer', 'reviewed'))], 201);

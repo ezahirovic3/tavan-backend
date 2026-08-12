@@ -12,6 +12,7 @@ use App\Notifications\NewOrderNotification;
 use App\Services\ConversationService;
 use App\Services\OrderService;
 use App\Services\PushNotificationService;
+use App\Services\UserNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -21,6 +22,7 @@ class OrderController extends Controller
         private readonly OrderService $orderService,
         private readonly ConversationService $conversations,
         private readonly PushNotificationService $push,
+        private readonly UserNotificationService $notifications,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -73,6 +75,14 @@ class OrderController extends Controller
             'Nova narudžba! 🛍️',
             $pushBody,
             ['type' => 'order', 'orderId' => $order->id],
+        );
+
+        $this->notifications->record(
+            $order->seller,
+            'order',
+            'Nova narudžba! 🛍️',
+            $pushBody,
+            ['orderId' => $order->id, 'status' => 'pending'],
         );
 
         // Email backstop in case the seller misses the push notification.
@@ -246,6 +256,15 @@ class OrderController extends Controller
             $title,
             $pushBody,
             ['type' => 'order', 'orderId' => $order->id, 'status' => $status],
+        );
+
+        $recipient = $isBuyerActor ? $order->seller : $order->buyer;
+        $this->notifications->record(
+            $recipient,
+            'order',
+            $title,
+            $pushBody,
+            ['orderId' => $order->id, 'status' => $status],
         );
     }
 }
