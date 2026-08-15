@@ -42,7 +42,11 @@ class BlogPostResource extends JsonResource
 
     /**
      * Resolve R2 file paths for image blocks to full public URLs.
-     * Other block types are returned as-is.
+     * Other block types (including `link`) are returned as-is — inline links
+     * live inside paragraph text and are parsed by the client renderer.
+     *
+     * The Filament image block stores the path under `image`, while seeded
+     * posts use `file`; both are accepted so neither source renders blank.
      */
     private function resolveBlocks(): array
     {
@@ -52,10 +56,17 @@ class BlogPostResource extends JsonResource
 
         return collect($this->blocks)
             ->map(function (array $block): array {
-                if ($block['type'] === 'image' && ! empty($block['file'])) {
-                    $block['url'] = Storage::disk('r2')->url($block['file']);
-                    unset($block['file']);
+                if (($block['type'] ?? null) !== 'image') {
+                    return $block;
                 }
+
+                $path = $block['file'] ?? $block['image'] ?? null;
+
+                if (! empty($path)) {
+                    $block['url'] = Storage::disk('r2')->url($path);
+                    unset($block['file'], $block['image']);
+                }
+
                 return $block;
             })
             ->values()

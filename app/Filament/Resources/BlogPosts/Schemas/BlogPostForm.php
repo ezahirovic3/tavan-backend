@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\BlogPosts\Schemas;
 
 use App\Models\BlogAuthor;
+use App\Support\BlockLinks;
 use Filament\Forms\Components\Builder;
 use Filament\Forms\Components\Builder\Block;
 use Filament\Forms\Components\ColorPicker;
@@ -16,6 +17,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
 class BlogPostForm
@@ -52,7 +54,7 @@ class BlogPostForm
                     ]),
 
                 Section::make('Tijelo posta')
-                    ->description('Block builder · heading, subheading, paragraph, image, Instagram embed, YouTube embed')
+                    ->description('Block builder · heading, subheading, paragraph, dugme/CTA, image, Instagram embed, YouTube embed')
                     ->columnSpan(8)
                     ->schema([
                         Builder::make('blocks')
@@ -80,7 +82,56 @@ class BlogPostForm
                                     ->label('Paragraph')
                                     ->icon('heroicon-o-bars-3-bottom-left')
                                     ->schema([
-                                        Textarea::make('text')->required()->rows(5),
+                                        Textarea::make('text')
+                                            ->required()
+                                            ->rows(5)
+                                            ->helperText(new HtmlString(
+                                                'Link u tekstu pišeš kao <code>[tekst linka](/blog/slug)</code>. '
+                                                .'Interni linkovi počinju sa <code>/</code>, vanjski sa <code>https://</code>.'
+                                            ))
+                                            ->rule(static function () {
+                                                return static function (string $attribute, $value, \Closure $fail): void {
+                                                    foreach (BlockLinks::extract((string) $value) as $link) {
+                                                        if (! BlockLinks::isSafeHref($link['url'])) {
+                                                            $fail("Link \"{$link['url']}\" nije ispravan. Koristi /putanju, https://, mailto: ili tel:.");
+                                                        }
+                                                    }
+                                                };
+                                            }),
+                                    ]),
+
+                                Block::make('link')
+                                    ->label('Dugme / CTA')
+                                    ->icon('heroicon-o-link')
+                                    ->schema([
+                                        TextInput::make('text')
+                                            ->label('Tekst na dugmetu')
+                                            ->required()
+                                            ->maxLength(80)
+                                            ->placeholder('Pogledaj sve vodiče'),
+
+                                        TextInput::make('url')
+                                            ->label('URL')
+                                            ->required()
+                                            ->maxLength(500)
+                                            ->placeholder('/blog/kako-prodati-odjecu-na-tavanu')
+                                            ->helperText('Interni link: /blog/slug · Vanjski: https://...')
+                                            ->rule(static function () {
+                                                return static function (string $attribute, $value, \Closure $fail): void {
+                                                    if (! BlockLinks::isSafeHref((string) $value)) {
+                                                        $fail('Dozvoljeni su samo /putanja, https://, http://, mailto: i tel: linkovi.');
+                                                    }
+                                                };
+                                            }),
+
+                                        Select::make('style')
+                                            ->label('Stil')
+                                            ->options([
+                                                'primary'   => 'Primarno dugme',
+                                                'secondary' => 'Sekundarno dugme',
+                                            ])
+                                            ->default('primary')
+                                            ->selectablePlaceholder(false),
                                     ]),
 
                                 Block::make('image')
