@@ -14,6 +14,7 @@ class BanService
             '7d'        => now()->addDays(7),
             '30d'       => now()->addDays(30),
             'permanent' => Carbon::create(2099, 1, 1),
+            default     => throw new \InvalidArgumentException("Unknown ban duration: {$duration}"),
         };
 
         $user->update([
