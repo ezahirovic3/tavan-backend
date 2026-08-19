@@ -26,6 +26,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -239,7 +240,10 @@ class AuthController extends Controller
 
         // Revoke every existing session — anyone still holding an old bearer token
         // (e.g. an attacker the user is trying to lock out) must not stay logged in.
-        $user->tokens()->delete();
+        // Must go through revokeTokens(), not ->tokens()->delete(): the latter is a
+        // bulk delete that bypasses CachedPersonalAccessToken's model events, so the
+        // revoked token would keep authenticating from Redis for up to 5 more minutes.
+        $user->revokeTokens();
 
         return response()->json(['message' => 'Lozinka je uspješno resetovana. Možeš se prijaviti.']);
     }
@@ -258,11 +262,18 @@ class AuthController extends Controller
         $user->update(['password' => Hash::make($request->new_password)]);
 
         // Sign out every other session/device but keep this one (the request that
-        // just proved knowledge of the current password) logged in.
-        $currentTokenId = $user->currentAccessToken()?->id;
-        $user->tokens()
-            ->when($currentTokenId, fn ($query) => $query->where('id', '!=', $currentTokenId))
-            ->delete();
+        // just proved knowledge of the current password) logged in. currentAccessToken()
+        // is a TransientToken (no ->id) when auth comes from the session guard instead
+        // of a Sanctum bearer token — only trust the id when it's a real PAT.
+        $currentAccessToken = $user->currentAccessToken();
+        $currentTokenId = $currentAccessToken instanceof PersonalAccessToken ? $currentAccessToken->id : null;
+
+        // Must go through revokeTokens(), not ->tokens()->delete(): the latter is a
+        // bulk delete that bypasses CachedPersonalAccessToken's model events, so a
+        // revoked token would keep authenticating from Redis for up to 5 more minutes.
+        $user->revokeTokens(fn ($query) => $currentTokenId
+            ? $query->where('id', '!=', $currentTokenId)
+            : $query);
 
         return response()->json(['message' => 'Lozinka je uspješno promijenjena.']);
     }

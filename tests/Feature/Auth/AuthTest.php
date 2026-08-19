@@ -223,7 +223,7 @@ class AuthTest extends TestCase
             'newPasswordConfirmation' => 'newpassword123',
         ])
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['reset_token']);
+            ->assertJsonValidationErrors(['resetToken']);
     }
 
     // ─── Change password ─────────────────────────────────────────────────────
