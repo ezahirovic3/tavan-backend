@@ -26,6 +26,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
 {
@@ -225,7 +226,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Zahtjev je istekao. Počni ispočetka.'], 422);
         }
 
-        if (! Hash::check($request->resetToken, $record->token)) {
+        if (! Hash::check($request->reset_token, $record->token)) {
             return response()->json(['message' => 'Nevažeći zahtjev za reset.'], 422);
         }
 
@@ -234,8 +235,15 @@ class AuthController extends Controller
             return response()->json(['message' => 'Korisnik nije pronađen.'], 422);
         }
 
-        $user->update(['password' => Hash::make($request->newPassword)]);
+        $user->update(['password' => Hash::make($request->new_password)]);
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        // Revoke every existing session — anyone still holding an old bearer token
+        // (e.g. an attacker the user is trying to lock out) must not stay logged in.
+        // Must go through revokeTokens(), not ->tokens()->delete(): the latter is a
+        // bulk delete that bypasses CachedPersonalAccessToken's model events, so the
+        // revoked token would keep authenticating from Redis for up to 5 more minutes.
+        $user->revokeTokens();
 
         return response()->json(['message' => 'Lozinka je uspješno resetovana. Možeš se prijaviti.']);
     }
@@ -252,6 +260,20 @@ class AuthController extends Controller
         }
 
         $user->update(['password' => Hash::make($request->new_password)]);
+
+        // Sign out every other session/device but keep this one (the request that
+        // just proved knowledge of the current password) logged in. currentAccessToken()
+        // is a TransientToken (no ->id) when auth comes from the session guard instead
+        // of a Sanctum bearer token — only trust the id when it's a real PAT.
+        $currentAccessToken = $user->currentAccessToken();
+        $currentTokenId = $currentAccessToken instanceof PersonalAccessToken ? $currentAccessToken->id : null;
+
+        // Must go through revokeTokens(), not ->tokens()->delete(): the latter is a
+        // bulk delete that bypasses CachedPersonalAccessToken's model events, so a
+        // revoked token would keep authenticating from Redis for up to 5 more minutes.
+        $user->revokeTokens(fn ($query) => $currentTokenId
+            ? $query->where('id', '!=', $currentTokenId)
+            : $query);
 
         return response()->json(['message' => 'Lozinka je uspješno promijenjena.']);
     }

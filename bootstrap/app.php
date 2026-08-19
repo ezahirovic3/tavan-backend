@@ -29,6 +29,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('api', \App\Http\Middleware\ConvertCamelToSnakeCase::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\ConvertResponseKeysToCamelCase::class);
         $middleware->appendToGroup('api', \App\Http\Middleware\UpdateLastActiveAt::class);
+
+        // This is an API-only app — there is no web 'login' route. Without this,
+        // Laravel's default guest-redirect (route('login')) throws a
+        // RouteNotFoundException whenever an unauthenticated request doesn't send
+        // an Accept header it recognizes as JSON (e.g. Echo/Reverb's
+        // broadcasting/auth call), turning a normal 401 into a fatal 500.
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
         // Remove activity log entries older than the configured retention period (default: 365 days)
@@ -42,6 +49,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\Illuminate\Database\Eloquent\ModelNotFoundException $e, $request) {
             if ($request->is('api/*')) {
                 return response()->json(['message' => 'Resurs nije pronađen.'], 404);
+            }
+        });
+
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
             }
         });
     })->create();
