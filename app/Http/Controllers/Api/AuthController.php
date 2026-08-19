@@ -225,7 +225,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Zahtjev je istekao. Počni ispočetka.'], 422);
         }
 
-        if (! Hash::check($request->resetToken, $record->token)) {
+        if (! Hash::check($request->reset_token, $record->token)) {
             return response()->json(['message' => 'Nevažeći zahtjev za reset.'], 422);
         }
 
@@ -234,7 +234,7 @@ class AuthController extends Controller
             return response()->json(['message' => 'Korisnik nije pronađen.'], 422);
         }
 
-        $user->update(['password' => Hash::make($request->newPassword)]);
+        $user->update(['password' => Hash::make($request->new_password)]);
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
         // Revoke every existing session — anyone still holding an old bearer token

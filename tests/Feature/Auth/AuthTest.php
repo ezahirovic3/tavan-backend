@@ -3,8 +3,10 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Notifications\PasswordResetOtpNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -168,6 +170,62 @@ class AuthTest extends TestCase
             ->assertStatus(200);
     }
 
+    // ─── Forgot / reset password ────────────────────────────────────────────
+
+    public function test_user_can_reset_password_via_forgot_password_flow(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create(['password' => Hash::make('oldpassword')]);
+        $token = $user->createToken('mobile')->plainTextToken;
+
+        $this->postJson('/api/v1/auth/forgot-password', ['email' => $user->email])
+            ->assertStatus(200);
+
+        $otp = null;
+        Notification::assertSentTo($user, PasswordResetOtpNotification::class, function ($notification) use (&$otp) {
+            $property = new \ReflectionProperty($notification, 'otp');
+            $property->setAccessible(true);
+            $otp = $property->getValue($notification);
+
+            return true;
+        });
+
+        $verifyResponse = $this->postJson('/api/v1/auth/verify-reset-otp', [
+            'email' => $user->email,
+            'otp'   => $otp,
+        ])->assertStatus(200);
+
+        $resetToken = $verifyResponse->json('data.resetToken');
+        $this->assertNotEmpty($resetToken);
+
+        $this->postJson('/api/v1/auth/reset-password', [
+            'email'                   => $user->email,
+            'resetToken'              => $resetToken,
+            'newPassword'             => 'newpassword123',
+            'newPasswordConfirmation' => 'newpassword123',
+        ])->assertStatus(200);
+
+        $this->assertTrue(Hash::check('newpassword123', $user->fresh()->password));
+
+        // Resetting must revoke every existing session, including the one that
+        // requested the reset.
+        $this->withToken($token)->getJson('/api/v1/auth/me')->assertStatus(401);
+    }
+
+    public function test_reset_password_fails_with_missing_reset_token(): void
+    {
+        $user = User::factory()->create();
+
+        $this->postJson('/api/v1/auth/reset-password', [
+            'email'                   => $user->email,
+            'newPassword'             => 'newpassword123',
+            'newPasswordConfirmation' => 'newpassword123',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['reset_token']);
+    }
+
     // ─── Change password ─────────────────────────────────────────────────────
 
     public function test_user_can_change_password(): void
@@ -182,6 +240,22 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertTrue(Hash::check('newpassword123', $user->fresh()->password));
+    }
+
+    public function test_change_password_revokes_other_sessions_but_keeps_current_one(): void
+    {
+        $user          = User::factory()->create(['password' => Hash::make('oldpassword')]);
+        $currentToken  = $user->createToken('this-device')->plainTextToken;
+        $otherToken    = $user->createToken('other-device')->plainTextToken;
+
+        $this->withToken($currentToken)->postJson('/api/v1/auth/change-password', [
+            'currentPassword'          => 'oldpassword',
+            'newPassword'              => 'newpassword123',
+            'newPassword_confirmation' => 'newpassword123',
+        ])->assertStatus(200);
+
+        $this->withToken($currentToken)->getJson('/api/v1/auth/me')->assertStatus(200);
+        $this->withToken($otherToken)->getJson('/api/v1/auth/me')->assertStatus(401);
     }
 
     public function test_change_password_fails_with_wrong_current_password(): void
