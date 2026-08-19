@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Models\User;
 use App\Notifications\PasswordResetOtpNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -254,7 +255,16 @@ class AuthTest extends TestCase
             'newPassword_confirmation' => 'newpassword123',
         ])->assertStatus(200);
 
+        // The sanctum guard caches the user it resolved on first use for the
+        // lifetime of the app instance, and that instance is shared across every
+        // simulated request in this test method (there's no real reboot between
+        // them) — so without forgetting it here, both calls below would just
+        // keep returning whichever token authenticated first, regardless of
+        // which bearer token is actually sent.
+        Auth::forgetGuards();
         $this->withToken($currentToken)->getJson('/api/v1/auth/me')->assertStatus(200);
+
+        Auth::forgetGuards();
         $this->withToken($otherToken)->getJson('/api/v1/auth/me')->assertStatus(401);
     }
 
