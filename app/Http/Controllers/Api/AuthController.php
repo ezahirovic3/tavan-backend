@@ -237,6 +237,10 @@ class AuthController extends Controller
         $user->update(['password' => Hash::make($request->newPassword)]);
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
+        // Revoke every existing session — anyone still holding an old bearer token
+        // (e.g. an attacker the user is trying to lock out) must not stay logged in.
+        $user->tokens()->delete();
+
         return response()->json(['message' => 'Lozinka je uspješno resetovana. Možeš se prijaviti.']);
     }
 
@@ -252,6 +256,13 @@ class AuthController extends Controller
         }
 
         $user->update(['password' => Hash::make($request->new_password)]);
+
+        // Sign out every other session/device but keep this one (the request that
+        // just proved knowledge of the current password) logged in.
+        $currentTokenId = $user->currentAccessToken()?->id;
+        $user->tokens()
+            ->when($currentTokenId, fn ($query) => $query->where('id', '!=', $currentTokenId))
+            ->delete();
 
         return response()->json(['message' => 'Lozinka je uspješno promijenjena.']);
     }
