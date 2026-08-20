@@ -160,7 +160,10 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        return response()->json(['data' => new UserResource($request->user())]);
+        $user = $request->user();
+        $user->loadCount(['followers', 'following']);
+
+        return response()->json(['data' => new UserResource($user)]);
     }
 
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse

@@ -75,6 +75,7 @@ class Product extends Model
             'styles'               => 'array',
             'vintage_reviewed_at'   => 'datetime',
             'designer_reviewed_at'  => 'datetime',
+            'followers_notified_at' => 'datetime',
         ];
     }
 

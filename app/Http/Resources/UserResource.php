@@ -35,6 +35,9 @@ class UserResource extends JsonResource
             'total_reviews'             => $this->total_reviews,
             'profile_view_count'        => (int) ($this->profile_view_count ?? 0),
             'item_count'                => $this->when(isset($this->item_count), fn () => (int) $this->item_count),
+            'followers_count'           => $this->when(isset($this->followers_count), fn () => (int) $this->followers_count),
+            'following_count'           => $this->when(isset($this->following_count), fn () => (int) $this->following_count),
+            'is_following'              => $this->when(isset($this->is_following), fn () => (bool) $this->is_following),
             'last_active_at'            => $this->last_active_at?->toISOString(),
             'created_at'                => $this->created_at?->toISOString(),
         ];

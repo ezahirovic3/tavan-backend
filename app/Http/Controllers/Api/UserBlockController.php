@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
+use App\Models\Follow;
 use App\Models\User;
 use App\Models\UserBlock;
 use Illuminate\Http\JsonResponse;
@@ -30,6 +31,13 @@ class UserBlockController extends Controller
             'blocker_id' => $request->user()->id,
             'blocked_id' => $user->id,
         ]);
+
+        // A block severs any follow relationship between the two, either direction.
+        Follow::where(function ($q) use ($request, $user) {
+            $q->where('follower_id', $request->user()->id)->where('followed_id', $user->id);
+        })->orWhere(function ($q) use ($request, $user) {
+            $q->where('follower_id', $user->id)->where('followed_id', $request->user()->id);
+        })->delete();
 
         return response()->json(['message' => 'Korisnik je blokiran.']);
     }

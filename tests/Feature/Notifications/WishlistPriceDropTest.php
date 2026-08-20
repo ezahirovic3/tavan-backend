@@ -71,6 +71,12 @@ class WishlistPriceDropTest extends TestCase
     public function test_a_sold_product_is_not_notified_when_the_job_runs(): void
     {
         Notification::fake();
+        // Flipping status to 'sold' below incidentally fires
+        // NotifyWishlistItemSold via ProductObserver — unrelated to what
+        // this test checks, but on the sync queue connection it'd run
+        // immediately and pollute the Notification::fake() log this test
+        // asserts against. Fake the queue too so it's captured, not run.
+        Queue::fake();
 
         $product = Product::factory()->create(['status' => 'active', 'price' => 100]);
         $wishlister = User::factory()->create();

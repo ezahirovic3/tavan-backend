@@ -162,7 +162,10 @@ class OrderController extends Controller
         $order->items->each(fn ($item) => $item->product?->update(['status' => 'sold']));
 
         if ($order->trade_id) {
-            $order->trade->offeredProduct()->update(['status' => 'sold']);
+            // Update via the loaded model, not offeredProduct()->update() — the
+            // latter is a query-builder mass update and wouldn't fire Product
+            // model events (ProductObserver's wishlist "sold" notification relies on them).
+            $order->trade->offeredProduct?->update(['status' => 'sold']);
             $order->trade->update(['status' => 'completed']);
         }
 
