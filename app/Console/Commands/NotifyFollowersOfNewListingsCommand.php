@@ -6,6 +6,7 @@ use App\Jobs\NotifyFollowersNewListings;
 use App\Models\Follow;
 use App\Models\Product;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Batches "new listing" notifications so a seller listing several items in
@@ -49,7 +50,11 @@ class NotifyFollowersOfNewListingsCommand extends Command
 
             // Mark first — a mass update on a column ProductObserver doesn't hook
             // on (not status/price), so this can't trigger unrelated side effects.
-            Product::whereIn('id', $productIds)->update(['followers_notified_at' => now()]);
+            // Goes through the base query builder, not Product::whereIn(...)->update() —
+            // Eloquent's Builder::update() auto-injects updated_at on every mass update,
+            // which would silently bump this listing to the top of the updated_at-sorted
+            // feed (see ProductController::index) with no real edit behind it.
+            DB::table('products')->whereIn('id', $productIds)->update(['followers_notified_at' => now()]);
 
             if (Follow::where('followed_id', $sellerId)->exists()) {
                 NotifyFollowersNewListings::dispatch($sellerId, $productIds);
