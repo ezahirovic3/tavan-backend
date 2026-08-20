@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\UserAddressController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ProductReportController;
 use App\Http\Controllers\Api\UserBlockController;
+use App\Http\Controllers\Api\FollowController;
 use App\Http\Controllers\Api\UserReportController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\UserPreferenceController;
@@ -61,6 +62,9 @@ Route::prefix('v1')->group(function () {
     Route::get('users/{username}', [UserController::class, 'show']);
     // Public: controller uses optional auth to restrict draft visibility to owner only
     Route::get('users/{username}/products', [UserController::class, 'products']);
+    // Public — read-only, mirrors users/{username}/products
+    Route::get('users/{username}/followers', [UserController::class, 'followers']);
+    Route::get('users/{username}/following', [UserController::class, 'following']);
 
     // Support — public so the landing page (unauthenticated) can submit inquiries
     Route::post('support', [SupportInquiryController::class, 'store']);
@@ -88,6 +92,11 @@ Route::prefix('v1')->group(function () {
         Route::post('users/{user}/block', [UserBlockController::class, 'store']);
         Route::delete('users/{user}/block', [UserBlockController::class, 'destroy']);
         Route::post('users/{user}/report', [UserReportController::class, 'store']);
+
+        Route::middleware('throttle:20,1')->group(function () {
+            Route::post('users/{user}/follow', [FollowController::class, 'store']);
+            Route::delete('users/{user}/follow', [FollowController::class, 'destroy']);
+        });
 
         Route::patch('users/me', [UserController::class, 'update']);
         Route::delete('users/me', [UserController::class, 'destroy']);

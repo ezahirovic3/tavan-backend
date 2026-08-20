@@ -76,6 +76,14 @@ class UserController extends Controller
 
         $viewCount->incrementProfileView($request, $user);
 
+        $user->loadCount(['followers', 'following']);
+
+        if ($authUser) {
+            $user->is_following = \App\Models\Follow::where('follower_id', $authUser->id)
+                ->where('followed_id', $user->id)
+                ->exists();
+        }
+
         return response()->json(['data' => new UserResource($user)]);
     }
 
@@ -216,6 +224,60 @@ class UserController extends Controller
                 'last_page'    => $products->lastPage(),
                 'per_page'     => $products->perPage(),
                 'total'        => $products->total(),
+            ],
+        ]);
+    }
+
+    /** GET /users/{username}/followers — public, read-only, same shape as products() above. */
+    public function followers(Request $request, string $username): JsonResponse
+    {
+        return $this->paginatedFollowRelation($request, $username, 'followers');
+    }
+
+    /** GET /users/{username}/following */
+    public function following(Request $request, string $username): JsonResponse
+    {
+        return $this->paginatedFollowRelation($request, $username, 'following');
+    }
+
+    private function paginatedFollowRelation(Request $request, string $username, string $relation): JsonResponse
+    {
+        $user = User::where(function ($q) use ($username) {
+            if (ctype_alnum($username) && strlen($username) === 26) {
+                $q->where('id', $username);
+            } else {
+                $q->where('username', $username);
+            }
+        })->where('role', '!=', 'super_admin')->firstOrFail();
+
+        $perPage = min(max((int) $request->get('per_page', 20), 1), 100);
+
+        $related = $user->{$relation}()->orderByDesc('follows.created_at')->paginate($perPage);
+
+        // Per-row follow state, for the "Prati"/"Pratim" button on each list
+        // row — batched into one query rather than N+1 per item. Guests
+        // (no auth) just get every row as "Prati"; tapping it routes them to
+        // sign-in, same as the follow button everywhere else.
+        $authUser = $request->user() ?? \Illuminate\Support\Facades\Auth::guard('sanctum')->user();
+
+        if ($authUser) {
+            $itemIds = collect($related->items())->pluck('id');
+            $viewerFollowsIds = \App\Models\Follow::where('follower_id', $authUser->id)
+                ->whereIn('followed_id', $itemIds)
+                ->pluck('followed_id');
+
+            foreach ($related->items() as $item) {
+                $item->is_following = $viewerFollowsIds->contains($item->id);
+            }
+        }
+
+        return response()->json([
+            'data' => UserResource::collection($related->items()),
+            'meta' => [
+                'current_page' => $related->currentPage(),
+                'last_page'    => $related->lastPage(),
+                'per_page'     => $related->perPage(),
+                'total'        => $related->total(),
             ],
         ]);
     }

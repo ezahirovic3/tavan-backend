@@ -35,6 +35,8 @@ class NotificationCategory
         'brand_suggestion_approved' => self::ACTIVITY,
         'brand_suggestion_rejected' => self::ACTIVITY,
         'listing_needs_photos'      => self::ACTIVITY,
+        'new_listing'               => self::ACTIVITY,
+        'new_follower'              => self::ACTIVITY,
         'price_drop'                => self::PRICE_DROPS,
         'wishlist_item_sold'        => self::PRICE_DROPS,
         'announcement'              => self::ANNOUNCEMENTS,
@@ -56,6 +58,8 @@ class NotificationCategory
         'brand_suggestion_approved',
         'brand_suggestion_rejected',
         'listing_needs_photos',
+        'new_listing',
+        'new_follower',
         'price_drop',
         'wishlist_item_sold',
     ];

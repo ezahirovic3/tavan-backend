@@ -33,4 +33,12 @@ return [
     'price_drop_min_amount' => (float) env('PRICE_DROP_MIN_AMOUNT', 5),
     'price_drop_cooldown_hours' => (int) env('PRICE_DROP_COOLDOWN_HOURS', 48),
 
+    /*
+     * How long to wait after a followed seller's most recent new listing before
+     * fanning out a "new listing(s)" notification to their followers — batches
+     * a multi-listing session into one notification instead of one per listing.
+     * See App\Console\Commands\NotifyFollowersOfNewListingsCommand.
+     */
+    'follow_notification_quiet_minutes' => (int) env('FOLLOW_NOTIFICATION_QUIET_MINUTES', 30),
+
 ];
