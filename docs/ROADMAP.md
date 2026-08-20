@@ -225,18 +225,32 @@ C2C card payments are not currently supported in Bosnia. Requires obrt (sole tra
 - [x] Tests: `tests/Feature/Products/ProductStyleTest.php` (12 tests — validation,
       filter, search intents, preferences, founding flag)
 
-### 1.4.0 (sredina augusta) — Follows + notifications
+### 1.4.0 (sredina augusta) — Follows + notifications ✅ (v1 implemented 2026-08-20 — narrowed scope, see `tavan-mobile/docs/roadmap.md` §1.7.0 for the full writeup)
 
-- [ ] `follows` table (follower_id, followed_id, unique pair) + model + cascades
-- [ ] Endpoints: `POST/DELETE users/{user}/follow`, `GET users/me/following`,
-      follower/following counts on `UserResource` (withCount, mind N+1 on lists)
-- [ ] Throttle follow/unfollow
-- [ ] Home rail feed: `GET products?followed=true` — recent items from followed
-      sellers, no preference filtering, excludes future `drop`-state items
-- [ ] Notification fan-out (queued): new-listing digest per seller (30 min quiet /
-      60 min max delay, quiet hours 22–08, daily cap; "novi artikal" vs "X novih
-      artikala"); `drop_scheduled` immediate (1.5.0 consumes)
-- [ ] Blocks: blocked users can't follow; block severs follows both ways
+- [x] `follows` table (follower_id, followed_id, unique pair) + model + cascades —
+      shipped as `database/migrations/2026_08_20_120000_create_follows_table.php`
+      + `App\Models\Follow`, mirrors `user_blocks`' explicit-FK self-reference pattern
+- [x] Endpoints — shipped, one deliberate deviation from the sketch below:
+      `POST`/`DELETE users/{user}/follow` as planned; instead of
+      `GET users/me/following`, public `GET users/{username}/followers` /
+      `.../following` (works for *any* user, not just "me" — the mobile
+      followers/following lists render on both your own profile and anyone
+      else's). Follower/following counts on `UserResource` via `withCount`/
+      `loadCount`, opt-in per query (`isset()` guard) — the N+1 risk this
+      line already flagged, avoided since `UserResource` is embedded on
+      every product in every feed
+- [x] Throttle follow/unfollow — `throttle:20,1` on the route group
+- [ ] Home rail feed (`GET products?followed=true`) — not built, deferred
+- [x] Notification fan-out (queued) — new-listing digest per seller, shipped
+      simplified from this sketch: 30-min quiet window only (no 60-min
+      max-delay cap, no 22–08 quiet hours, no daily cap), singular/plural
+      copy ("Novi artikal" vs "Novi artikli") as planned.
+      `App\Console\Commands\NotifyFollowersOfNewListingsCommand` +
+      `App\Jobs\NotifyFollowersNewListings`. `drop_scheduled` not built —
+      no drops feature yet to consume it (still gated on §1.5.0 below)
+- [x] Blocks — blocked users can't follow (422), a block severs any existing
+      follow both directions, exactly as planned
+      (`App\Http\Controllers\Api\UserBlockController::store`)
 
 ### 1.5.0 (sep–okt) — Drops — **depends on §1 order_items refactor**
 
