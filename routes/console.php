@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('users:purge-pending-deletions')->daily();
 Schedule::command('users:notify-pending-deletions')->daily();
+Schedule::command('products:fix-imageless-listings')->daily();

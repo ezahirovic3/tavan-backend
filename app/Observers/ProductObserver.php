@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Filament\Resources\Products\ProductResource;
+use App\Jobs\NotifyWishlistItemSold;
 use App\Jobs\NotifyWishlistPriceDrop;
 use App\Models\Product;
 use App\Models\User;
@@ -31,6 +32,10 @@ class ProductObserver
 
         if ($product->status === 'active' && $product->wasChanged('price')) {
             $this->checkPriceDrop($product);
+        }
+
+        if ($product->status === 'sold' && $product->wasChanged('status')) {
+            NotifyWishlistItemSold::dispatch($product->id);
         }
     }
 
