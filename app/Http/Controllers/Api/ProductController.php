@@ -65,54 +65,78 @@ class ProductController extends Controller
             $tokens    = ProductSearchService::tokenize($request->q);
             $multiWord = count($tokens) > 1;
 
-            foreach ($tokens as $token) {
-                $terms          = ProductSearchService::expandTerms($token, stemFallback: $multiWord);
-                $categoryIntent = ProductSearchService::detectCategoryIntent($token);
-                $rootIntent     = ProductSearchService::detectRootIntent($token);
-                $styleIntent    = ProductSearchService::detectStyleIntent($token);
+            // $includeCategoryFallback gates the category-level OR-branch below.
+            // Kept as a closure parameter (rather than always on) so it can be
+            // tried both ways: precise-only first, category-broadened only if
+            // that comes back empty. See the fallback comment further down.
+            $applyTokenMatches = function ($targetQuery, bool $includeCategoryFallback) use ($tokens, $multiWord) {
+                foreach ($tokens as $token) {
+                    $terms          = ProductSearchService::expandTerms($token, stemFallback: $multiWord);
+                    $categoryIntent = $includeCategoryFallback
+                        ? ProductSearchService::detectCategoryIntent($token)
+                        : null;
+                    $rootIntent  = ProductSearchService::detectRootIntent($token);
+                    $styleIntent = ProductSearchService::detectStyleIntent($token);
 
-                $query->where(function ($q) use ($terms, $categoryIntent, $rootIntent, $styleIntent, $token) {
-                    // Text match across title, description, subcategory, and brand name.
-                    // Subcategory is included so a listing titled "Plave pantalone" but
-                    // tagged subcategory="Farmerke" still surfaces when searching "farmerke".
-                    // Title and brand comparisons ignore apostrophes so "levis"
-                    // matches "Levi's" (and the curly ’ variant).
-                    foreach ($terms as $term) {
-                        $stripped = ProductSearchService::stripApostrophes($term);
+                    $targetQuery->where(function ($q) use ($terms, $categoryIntent, $rootIntent, $styleIntent, $token) {
+                        // Text match across title, description, subcategory, and brand name.
+                        // Subcategory is included so a listing titled "Plave pantalone" but
+                        // tagged subcategory="Farmerke" still surfaces when searching "farmerke" —
+                        // and, since synonym groups are per-item-type (majica ≠ bluza ≠ košulja),
+                        // this alone already keeps "majica" out of blouses/shirts/hoodies.
+                        // Title and brand comparisons ignore apostrophes so "levis"
+                        // matches "Levi's" (and the curly ’ variant).
+                        foreach ($terms as $term) {
+                            $stripped = ProductSearchService::stripApostrophes($term);
 
-                        $q->orWhereRaw("REPLACE(REPLACE(title, '''', ''), '’', '') LIKE ?", ['%'.$stripped.'%'])
-                          ->orWhere('description', 'like', '%'.$term.'%')
-                          ->orWhere('subcategory', 'like', '%'.$term.'%')
-                          ->orWhereHas('brand', fn ($b) => $b->whereRaw("REPLACE(REPLACE(name, '''', ''), '’', '') LIKE ?", ['%'.$stripped.'%']));
-                    }
-
-                    // Bare size tokens ("haljina xl", "new balance 38") match the
-                    // size column directly — collation makes "xl" equal "XL".
-                    $q->orWhere('size', $token);
-
-                    // Category-level intent: "hlače" → bottoms, "patike" → shoes, etc.
-                    // Catches listings whose titles use a completely different word family.
-                    if ($categoryIntent) {
-                        $q->orWhere('category', $categoryIntent);
-                    }
-
-                    // Gender intent: "muske majice" → men's section
-                    if ($rootIntent) {
-                        $q->orWhere('root_category', $rootIntent);
-                    }
-
-                    // Style intent: "goth", "y2k", "pokrivene" → tagged listings.
-                    // "vintage"/"retro" additionally surface verified-vintage items —
-                    // searchers don't care about our badge-vs-style distinction.
-                    if ($styleIntent) {
-                        $q->orWhereJsonContains('styles', $styleIntent);
-
-                        if ($styleIntent === 'retro') {
-                            $q->orWhere('vintage_status', 'approved');
+                            $q->orWhereRaw("REPLACE(REPLACE(title, '''', ''), '’', '') LIKE ?", ['%'.$stripped.'%'])
+                              ->orWhere('description', 'like', '%'.$term.'%')
+                              ->orWhere('subcategory', 'like', '%'.$term.'%')
+                              ->orWhereHas('brand', fn ($b) => $b->whereRaw("REPLACE(REPLACE(name, '''', ''), '’', '') LIKE ?", ['%'.$stripped.'%']));
                         }
-                    }
-                });
-            }
+
+                        // Bare size tokens ("haljina xl", "new balance 38") match the
+                        // size column directly — collation makes "xl" equal "XL".
+                        $q->orWhere('size', $token);
+
+                        // Category-level intent: "hlače" → bottoms, "patike" → shoes, etc.
+                        // Fallback only (see caller) — every parent category groups several
+                        // distinct item types (bottoms = hlače + suknje + šorc + trenerke),
+                        // so applying this unconditionally would let all of them swamp a
+                        // specific search instead of just catching the rare listing whose
+                        // subcategory/title genuinely doesn't contain the searched word.
+                        if ($categoryIntent) {
+                            $q->orWhere('category', $categoryIntent);
+                        }
+
+                        // Gender intent: "muske majice" → men's section
+                        if ($rootIntent) {
+                            $q->orWhere('root_category', $rootIntent);
+                        }
+
+                        // Style intent: "goth", "y2k", "pokrivene" → tagged listings.
+                        // "vintage"/"retro" additionally surface verified-vintage items —
+                        // searchers don't care about our badge-vs-style distinction.
+                        if ($styleIntent) {
+                            $q->orWhereJsonContains('styles', $styleIntent);
+
+                            if ($styleIntent === 'retro') {
+                                $q->orWhere('vintage_status', 'approved');
+                            }
+                        }
+                    });
+                }
+            };
+
+            // Try the precise match (title/subcategory/brand/size/style/gender,
+            // no category broadening) against a clone first. Only fall back to
+            // including the whole parent category if that precise match finds
+            // nothing at all — otherwise a handful of true "majica" results
+            // would still get buried under every other top.
+            $precise = (clone $query);
+            $applyTokenMatches($precise, false);
+
+            $applyTokenMatches($query, ! $precise->exists());
         }
 
         // Personalized feed — filter by the authenticated user's saved preferences.
