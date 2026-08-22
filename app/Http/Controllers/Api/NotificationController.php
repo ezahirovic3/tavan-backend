@@ -79,6 +79,17 @@ class NotificationController extends Controller
         return response()->json(['message' => 'Sve je označeno kao pročitano.']);
     }
 
+    /**
+     * DELETE /notifications/{notification}
+     */
+    public function destroy(Request $request, string $notification): JsonResponse
+    {
+        $notification = $request->user()->notifications()->findOrFail($notification);
+        $notification->delete();
+
+        return response()->json(['message' => 'Obavještenje je uklonjeno.']);
+    }
+
     private function toItem(DatabaseNotification $n): array
     {
         return [
