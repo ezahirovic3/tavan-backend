@@ -211,10 +211,12 @@ class UserController extends Controller
 
         $perPage = min(max((int) $request->get('per_page', 20), 1), 100);
 
+        // Category/attribute/brand/price/sort filters — same params and query
+        // logic as the global feed, see Product::scopeApplyFilters().
         $products = $user->products()
             ->where('status', $allowedStatus)
             ->with(['images', 'brand'])
-            ->latest()
+            ->applyFilters($request)
             ->paginate($perPage);
 
         return response()->json([

@@ -192,6 +192,7 @@ Route::prefix('v1')->group(function () {
         Route::get('notifications/unread-count', [NotificationController::class, 'unreadCount']);
         Route::post('notifications/read-all', [NotificationController::class, 'markAllRead']);
         Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead']);
+        Route::delete('notifications/{notification}', [NotificationController::class, 'destroy']);
 
         // Conversations — read access open (show history, unread count)
         Route::get('conversations', [ConversationController::class, 'index']);
