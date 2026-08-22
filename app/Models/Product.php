@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\Request;
 use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 
@@ -140,5 +141,101 @@ class Product extends Model
     public function scopeVisibleToOwner($query)
     {
         return $query->whereIn('status', ['draft', 'pending_review', 'active', 'reserved']);
+    }
+
+    /**
+     * Shared catalog filter + sort logic — used by both the global feed
+     * (ProductController::index) and a seller's product list
+     * (UserController::products). Category, attribute, brand, location,
+     * price, and sort params only; search (`q`) and preference-based
+     * personalization are feed-specific and stay in ProductController.
+     */
+    public function scopeApplyFilters($query, Request $request)
+    {
+        // ── Category filters ───────────────────────────────────────────────
+        if ($request->filled('root_category')) {
+            $query->where('root_category', $request->root_category);
+        }
+
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
+        }
+
+        // subcategory accepts a single value OR an array (from multi-select filters)
+        if ($request->filled('subcategory')) {
+            $query->where('subcategory', $request->subcategory);
+        } elseif ($request->filled('subcategories')) {
+            $query->whereIn('subcategory', (array) $request->subcategories);
+        }
+
+        // ── Attribute filters (all accept single value or array) ────────────
+        if ($request->filled('condition')) {
+            $query->where('condition', $request->condition);
+        }
+
+        if ($request->filled('sizes')) {
+            $query->whereIn('size', (array) $request->sizes);
+        } elseif ($request->filled('size')) {
+            $query->where('size', $request->size);
+        }
+
+        if ($request->filled('colors')) {
+            $query->whereIn('color', (array) $request->colors);
+        } elseif ($request->filled('color')) {
+            $query->where('color', $request->color);
+        }
+
+        if ($request->filled('materials')) {
+            $query->whereIn('material', (array) $request->materials);
+        }
+
+        // styles is a JSON array column — any-of match across the selected styles
+        if ($request->filled('styles')) {
+            $query->where(function ($q) use ($request) {
+                foreach ((array) $request->styles as $style) {
+                    $q->orWhereJsonContains('styles', $style);
+                }
+            });
+        }
+
+        // ── Brand filter ──────────────────────────────────────────────────
+        if ($request->filled('brands')) {
+            $query->whereHas('brand', fn ($q) => $q->whereIn('name', (array) $request->brands));
+        }
+
+        // ── Location filter ──────────────────────────────────────────────
+        if ($request->filled('cities')) {
+            $query->whereIn('location', (array) $request->cities);
+        } elseif ($request->filled('location')) {
+            $query->where('location', $request->location);
+        }
+
+        // ── Price range ──────────────────────────────────────────────────
+        // Frontend sends priceMin/priceMax → middleware converts to price_min/price_max
+        if ($request->filled('price_min')) {
+            $query->where('price', '>=', $request->price_min);
+        }
+
+        if ($request->filled('price_max')) {
+            $query->where('price', '<=', $request->price_max);
+        }
+
+        // ── Sorting ──────────────────────────────────────────────────────
+        // Frontend sends sortBy → middleware converts to sort_by
+        //
+        // TODO(bump-feature): 'newest' sorts by updated_at as a stopgap so that
+        // editing a listing bumps it back to the top of the feed, since we don't
+        // have a real "bump" feature yet. Caveat: this also bumps on non-edit
+        // updates (vintage/designer review, admin moderation actions), not just
+        // seller edits. Once a proper paid bump feature ships, drop this and go
+        // back to created_at (or a dedicated bumped_at column).
+        match ($request->input('sort_by', 'newest')) {
+            'price_asc', 'priceAsc'   => $query->orderBy('price', 'asc'),
+            'price_desc', 'priceDesc' => $query->orderBy('price', 'desc'),
+            'oldest'                  => $query->oldest(),
+            default                   => $query->orderBy('updated_at', 'desc'),
+        };
+
+        return $query;
     }
 }
