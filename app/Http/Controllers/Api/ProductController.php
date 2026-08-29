@@ -9,6 +9,7 @@ use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\WishlistItem;
+use App\Services\ListingRefreshService;
 use App\Services\ProductSearchService;
 use App\Services\ViewCountService;
 use Illuminate\Http\JsonResponse;
@@ -515,6 +516,25 @@ class ProductController extends Controller
         $status = $seller->listings_require_review ? 'pending_review' : 'active';
 
         $product->update(['status' => $status]);
+
+        return response()->json(['data' => new ProductResource($product->fresh()->load('images', 'brand'))]);
+    }
+
+    /**
+     * POST /products/{product}/refresh — "Osvježi oglas".
+     *
+     * Renews a stale listing so it reads as newly listed. All rules (status,
+     * age, cooldown) live in ListingRefreshService, which throws a
+     * RefreshException that renders itself with a machine-readable code.
+     */
+    public function refresh(
+        Request $request,
+        Product $product,
+        ListingRefreshService $service,
+    ): JsonResponse {
+        $this->authorize('refresh', $product);
+
+        $service->refresh($request->user(), $product);
 
         return response()->json(['data' => new ProductResource($product->fresh()->load('images', 'brand'))]);
     }

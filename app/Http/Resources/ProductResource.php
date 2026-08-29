@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\ListingRefreshService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -65,7 +66,24 @@ class ProductResource extends JsonResource
                 isset($this->is_wishlisted),
                 fn () => (bool) $this->is_wishlisted
             ),
+            'refreshed_at'  => $this->refreshed_at?->toISOString(),
             'created_at'    => $this->created_at?->toISOString(),
+
+            // Owner-only, same reasoning as view_count above. Computed through
+            // ListingRefreshService so the button state the app renders and the
+            // answer POST /products/{id}/refresh gives are one computation and
+            // can't drift. eligibilityFor() runs no queries, so this stays free
+            // across a full page of products.
+            $this->mergeWhen($request->user()?->id === $this->seller_id, function () {
+                $eligibility = app(ListingRefreshService::class)
+                    ->eligibilityFor($this->resource);
+
+                return [
+                    'can_refresh'        => $eligibility->canRefresh,
+                    'refreshable_at'     => $eligibility->nextEligibleAt?->toISOString(),
+                    'refresh_blocked_by' => $eligibility->blockedReason,
+                ];
+            }),
         ];
     }
 }

@@ -17,6 +17,29 @@ class ProductObserver
 {
     private const MILESTONE_LOG_NAME = 'milestone';
 
+    /**
+     * Stamp published_at the first time a listing becomes visible to buyers.
+     *
+     * Runs before the write, so the stamp joins the same UPDATE — no extra
+     * query, no recursion. Hooking `saving` rather than the publish endpoint
+     * catches every path to 'active': POST /products/{id}/publish, a Filament
+     * admin approval, a direct PATCH with {status}, and creation with
+     * status: active.
+     *
+     * For a review-gated listing this fires at approval, days after creation,
+     * which is what keeps an approved listing debuting at the top of the feed
+     * (Product::scopeApplyFilters sorts on it).
+     *
+     * Guarded on null so it is stamped exactly once: hide -> unhide and
+     * takedown -> restore must not act as a free refresh.
+     */
+    public function saving(Product $product): void
+    {
+        if ($product->status === 'active' && $product->published_at === null) {
+            $product->published_at = now();
+        }
+    }
+
     public function created(Product $product): void
     {
         if ($product->status === 'active') {

@@ -94,6 +94,7 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 | PATCH | `/products/{product}` | Yes (owner) | Update product |
 | DELETE | `/products/{product}` | Yes (owner) | Delete product |
 | POST | `/products/{product}/publish` | Yes (owner) | Publish draft → active |
+| POST | `/products/{product}/refresh` | Yes (owner) | Renew a stale listing ("Osvježi oglas") |
 | POST | `/products/{product}/images` | Yes (owner) | Upload image (multipart) |
 | DELETE | `/products/{product}/images/{image}` | Yes (owner) | Delete image |
 | PATCH | `/products/{product}/images/reorder` | Yes (owner) | Reorder images |
@@ -109,11 +110,40 @@ Response: `{ "data": { "token": "...", "user": { ... } } }`
 - `color` — color key
 - `material` — material key
 - `price_min` / `price_max`
-- `sort` — `newest` (default) | `price_asc` | `price_desc`
+- `sortBy` — `newest` (default) | `price_asc` | `price_desc` | `oldest`
+  - `newest` orders by effective recency: `COALESCE(refreshed_at, published_at, created_at) DESC`.
+    A listing is "new" from when it first went live (approval time for review-gated
+    listings), and becomes new again only when its seller refreshes it. Editing a
+    listing does **not** move it.
+  - `oldest` orders by `created_at ASC`.
 - `page`, `per_page`
 - `seller_id` — filter by seller
 - `query` — text search
 - `vintageOnly` — `true` to return only vintage-approved products
+
+### POST /products/{product}/refresh
+Renews one of the authenticated user's own listings ("Osvježi oglas") so it reads as newly listed — it stamps `refreshed_at`, which the `newest` feed sorts on. Free and unmetered; there is no per-seller quota.
+
+This is **not** a boost: it returns the listing to its natural place in the recency order, it does not lift it above other listings. (The paid "bump" is a separate future feature.)
+
+Rules, all enforced server-side:
+- The listing must be `active`. Any other status → `422 refresh_not_eligible`.
+- Its effective recency — `COALESCE(refreshed_at, published_at, created_at)` — must be older than `tavan.refresh_min_age_days` (30 by default). Otherwise → `429 refresh_too_recent`, with `retryAfter` (seconds) and `nextEligibleAt` (ISO), plus a `Retry-After` header.
+
+One rule covers both the age gate and the cooldown, and measures from publication rather than creation so a listing delayed in review doesn't become refreshable days after going live.
+
+Refreshing does not touch `updated_at`, write an activity log entry, or re-notify the seller's followers.
+
+### Product response — refresh fields
+```json
+{
+  "refreshedAt": "2026-08-29T10:00:00.000000Z",
+  "canRefresh": false,
+  "refreshableAt": "2026-09-28T10:00:00.000000Z",
+  "refreshBlockedBy": "too_recent"
+}
+```
+`refreshedAt` is public and `null` until first refreshed. `canRefresh`, `refreshableAt` and `refreshBlockedBy` are **owner-only** — they are omitted entirely for anyone else. `refreshBlockedBy` is `not_active` | `too_recent` | `null`.
 
 ### POST /products/{product}/vintage
 Submits a Vintage badge application for a product the authenticated user owns. If the seller has `is_vintage_seller = true`, the badge is approved immediately. Otherwise it enters the admin review queue (`pending`). A product can only have one active application (returns 422 if already `pending` or `approved`). A rejected product cannot re-apply.

@@ -41,4 +41,22 @@ return [
      */
     'follow_notification_quiet_minutes' => (int) env('FOLLOW_NOTIFICATION_QUIET_MINUTES', 30),
 
+    /*
+     * Listing refresh ("Osvježi oglas") — the free renewal for stale listings.
+     * Stamps products.refreshed_at, which the feed sorts on via
+     * COALESCE(refreshed_at, published_at, created_at).
+     *
+     * How old a listing must be — since it went live, or since it was last
+     * refreshed — before its seller can renew it. One value covers both the age
+     * gate and the cooldown, because they are the same rule.
+     *
+     * NOT the paid "bump" (top-of-category for a purchased window); that is a
+     * separate future feature with its own columns and its own sort key.
+     *
+     * There is deliberately no per-seller quota: refresh is inventory hygiene,
+     * not a visibility perk, and one-at-a-time renewal is the only throttle.
+     * See App\Services\ListingRefreshService.
+     */
+    'refresh_min_age_days' => (int) env('LISTING_REFRESH_MIN_AGE_DAYS', 30),
+
 ];

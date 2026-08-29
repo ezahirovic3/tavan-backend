@@ -122,6 +122,11 @@ Route::prefix('v1')->group(function () {
             Route::patch('products/{product}', [ProductController::class, 'update']);
             Route::delete('products/{product}', [ProductController::class, 'destroy']);
             Route::post('products/{product}/publish', [ProductController::class, 'publish']);
+            // "Osvježi oglas" — renew a stale listing. The real guardrails (30-day
+            // age/cooldown, active-only) are in ListingRefreshService; this throttle
+            // is just an abuse ceiling, since renewal is one-at-a-time by design.
+            Route::post('products/{product}/refresh', [ProductController::class, 'refresh'])
+                ->middleware('throttle:30,1');
             Route::post('products/{product}/vintage', [ProductController::class, 'applyVintage']);
             Route::post('products/{product}/designer', [ProductController::class, 'applyDesigner']);
             Route::post('products/{product}/images', [ProductImageController::class, 'store']);
