@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -77,7 +78,25 @@ class Product extends Model
             'vintage_reviewed_at'   => 'datetime',
             'designer_reviewed_at'  => 'datetime',
             'followers_notified_at' => 'datetime',
+            'refreshed_at'          => 'datetime',
+            'published_at'          => 'datetime',
         ];
+    }
+
+    /**
+     * Where this listing sits on the feed's recency axis — when it last became
+     * "new" to buyers.
+     *
+     * published_at is the moment it first went live, which for a review-gated
+     * listing is the admin approval rather than the seller's submission.
+     * refreshed_at overrides it when the seller renews.
+     *
+     * Mirrors the SQL in scopeApplyFilters() and the products_status_recency_idx
+     * index expression — change all three together.
+     */
+    public function getFeedRecencyAtAttribute(): ?CarbonInterface
+    {
+        return $this->refreshed_at ?? $this->published_at ?? $this->created_at;
     }
 
     public function seller(): BelongsTo
@@ -223,18 +242,27 @@ class Product extends Model
         // ── Sorting ──────────────────────────────────────────────────────
         // Frontend sends sortBy → middleware converts to sort_by
         //
-        // TODO(bump-feature): 'newest' sorts by updated_at as a stopgap so that
-        // editing a listing bumps it back to the top of the feed, since we don't
-        // have a real "bump" feature yet. Caveat: this also bumps on non-edit
-        // updates (vintage/designer review, admin moderation actions), not just
-        // seller edits. Once a proper paid bump feature ships, drop this and go
-        // back to created_at (or a dedicated bumped_at column).
+        // Effective recency = COALESCE(refreshed_at, published_at, created_at):
+        // a listing is "new" from when it first went live (published_at — the
+        // admin approval moment for review-gated listings), and becomes new
+        // again only when its seller refreshes it via
+        // POST /products/{id}/refresh. Editing no longer re-floats a listing.
+        //
+        // Mirrors Product::getFeedRecencyAtAttribute() and must byte-match the
+        // products_status_recency_idx expression or the index won't be used.
+        //
+        // When paid bumps ship they become a LEADING sort key here
+        // — (promoted_until > NOW()) DESC — with recency as the secondary key.
         match ($request->input('sort_by', 'newest')) {
             'price_asc', 'priceAsc'   => $query->orderBy('price', 'asc'),
             'price_desc', 'priceDesc' => $query->orderBy('price', 'desc'),
-            'oldest'                  => $query->oldest(),
-            default                   => $query->orderBy('updated_at', 'desc'),
+            'oldest'                  => $query->orderBy('created_at', 'asc'),
+            default                   => $query->orderByRaw('COALESCE(refreshed_at, published_at, created_at) DESC'),
         };
+
+        // Deterministic pagination when rows share a timestamp. ULIDs are
+        // time-ordered, so this is a stable secondary recency key.
+        $query->orderByDesc('id');
 
         return $query;
     }

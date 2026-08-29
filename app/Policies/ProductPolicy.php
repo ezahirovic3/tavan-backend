@@ -29,4 +29,14 @@ class ProductPolicy
     {
         return $user->id === $product->seller_id;
     }
+
+    /**
+     * Ownership only. Whether the listing is *currently* refreshable (status,
+     * age, cooldown) is App\Services\ListingRefreshService's business — admins
+     * bypass this policy via before(), but not those rules.
+     */
+    public function refresh(User $user, Product $product): bool
+    {
+        return $user->id === $product->seller_id;
+    }
 }
