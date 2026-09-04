@@ -132,4 +132,24 @@ class ProductSearchTest extends TestCase
 
         $this->assertCount(0, $this->search('nike'));
     }
+
+    public function test_fuzzy_synonym_fallback_keeps_literal_brand_token(): void
+    {
+        // "marant" is within edit distance 2 of the scarf synonym "marama".
+        // The fuzzy fallback must not drop the literal token, or a listing
+        // whose title carries an unregistered brand returns nothing.
+        $dress = Product::factory()->create([
+            'category' => 'dresses',
+            'title'    => 'Isabel Marant haljina',
+        ]);
+
+        $results = $this->search('Isabel Marant');
+
+        $this->assertCount(1, $results);
+        $this->assertEquals($dress->id, $results[0]['id']);
+
+        // Single-token brand search hits the same fuzzy path.
+        $single = $this->search('Marant');
+        $this->assertContains($dress->id, array_column($single, 'id'));
+    }
 }
