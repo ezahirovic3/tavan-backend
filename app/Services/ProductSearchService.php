@@ -177,6 +177,10 @@ class ProductSearchService
             'ruž', 'ruževi', 'karmin', 'maskara', 'puder',
             'sjenilo', 'sjenila', 'korektor', 'hajlajter', 'rumenilo',
             'serum', 'serumi', 'losion',
+            // men's "Lična njega" (same category key)
+            'brijanje', 'brada', 'brade', 'aftershave', 'balzam',
+            'trimer', 'trimeri', 'žilet', 'žileti', 'britva', 'britve',
+            'pjena', 'dezodorans', 'dezodoransi', 'kolonjska',
         ],
         'sets' => [
             'komplet', 'kompleti', 'set', 'setovi',
