@@ -48,6 +48,7 @@ class UpdateProductRequest extends FormRequest
             'category'      => ['sometimes', 'nullable', 'string', 'max:128'],
             'subcategory'   => ['sometimes', 'nullable', 'string', 'max:128'],
             'condition'     => ['sometimes', Rule::in(['new', 'very_good', 'good', 'worn'])],
+            'is_sealed'     => ['sometimes', 'nullable', 'boolean'],
             'size'          => ['sometimes', 'nullable', 'string', 'max:32'],
             'color'         => ['sometimes', 'nullable', 'string', 'max:64'],
             'material'      => ['sometimes', 'nullable', 'string', 'max:128'],

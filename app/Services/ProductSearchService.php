@@ -171,6 +171,18 @@ class ProductSearchService
             'kaiš', 'kaiševi', 'remen',
             'rukavice', 'sat', 'satovi', 'novčanik', 'novčanici',
         ],
+        'beauty' => [
+            'šminka', 'šminke', 'kozmetika', 'makeup', 'make-up', 'ljepota',
+            'parfem', 'parfemi', 'parfum', 'miris', 'mirisi',
+            'ruž', 'ruževi', 'karmin', 'maskara', 'puder',
+            'sjenilo', 'sjenila', 'korektor', 'hajlajter', 'rumenilo',
+            'serum', 'serumi', 'losion',
+        ],
+        'sets' => [
+            'komplet', 'kompleti', 'set', 'setovi',
+            'dvodijelni', 'dvodjelni', 'dvodijelno',
+            'trodijelni', 'trodjelni', 'coord', 'co-ord',
+        ],
     ];
 
     // Maps search terms to style keys (App\Enums\ProductStyle values) stored in
@@ -253,6 +265,8 @@ class ProductSearchService
         // Length guards keep short brand names (e.g. "zara", "h&m") from
         // accidentally matching a synonym group: 4-char terms may differ by 1
         // ("trba" → "torba"), 5+ chars by 2.
+        $original = mb_strtolower(trim($q));
+
         $length      = mb_strlen($normalized);
         $maxDistance = match (true) {
             $length >= 5 => 2,
@@ -275,11 +289,15 @@ class ProductSearchService
             }
 
             if ($bestDistance <= $maxDistance && $bestGroup !== null) {
-                return $bestGroup;
+                // Keep the literal term alongside the fuzzy-matched group. The
+                // match is only a guess, and for unknown 5+ char tokens — often
+                // brand names, e.g. "marant" is within edit distance 2 of the
+                // scarf synonym "marama" — dropping the original would erase the
+                // only branch that could hit the listing title or brand name,
+                // making "Isabel Marant" return nothing.
+                return array_values(array_unique([$original, ...$bestGroup]));
             }
         }
-
-        $original = mb_strtolower(trim($q));
 
         if ($stemFallback && $length >= 4) {
             $stem = rtrim($original, 'aeiou');

@@ -122,6 +122,41 @@ class ProductSearchTest extends TestCase
         $this->assertEquals('men', $results[0]['rootCategory']);
     }
 
+    public function test_beauty_term_falls_back_to_the_beauty_category(): void
+    {
+        // Listing categorised as beauty, title has none of the search words.
+        Product::factory()->create([
+            'category' => 'beauty',
+            'title'    => 'Dior Sauvage 100ml',
+        ]);
+        Product::factory()->create([
+            'category' => 'tops',
+            'title'    => 'Bijela majica',
+        ]);
+
+        $results = $this->search('parfem');
+
+        $this->assertCount(1, $results);
+        $this->assertEquals('beauty', $results[0]['category']);
+    }
+
+    public function test_komplet_term_falls_back_to_the_sets_category(): void
+    {
+        Product::factory()->create([
+            'category' => 'sets',
+            'title'    => 'Zelena trenerka Nike',
+        ]);
+        Product::factory()->create([
+            'category' => 'tops',
+            'title'    => 'Bijela majica',
+        ]);
+
+        $results = $this->search('komplet');
+
+        $this->assertCount(1, $results);
+        $this->assertEquals('sets', $results[0]['category']);
+    }
+
     public function test_single_token_brand_query_is_not_stemmed(): void
     {
         // "nike" must not become "nik" and match e.g. "tunika"
@@ -131,5 +166,25 @@ class ProductSearchTest extends TestCase
         ]);
 
         $this->assertCount(0, $this->search('nike'));
+    }
+
+    public function test_fuzzy_synonym_fallback_keeps_literal_brand_token(): void
+    {
+        // "marant" is within edit distance 2 of the scarf synonym "marama".
+        // The fuzzy fallback must not drop the literal token, or a listing
+        // whose title carries an unregistered brand returns nothing.
+        $dress = Product::factory()->create([
+            'category' => 'dresses',
+            'title'    => 'Isabel Marant haljina',
+        ]);
+
+        $results = $this->search('Isabel Marant');
+
+        $this->assertCount(1, $results);
+        $this->assertEquals($dress->id, $results[0]['id']);
+
+        // Single-token brand search hits the same fuzzy path.
+        $single = $this->search('Marant');
+        $this->assertContains($dress->id, array_column($single, 'id'));
     }
 }

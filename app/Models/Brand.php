@@ -59,4 +59,40 @@ class Brand extends Model
     {
         return $query->where('is_other', true);
     }
+
+    /**
+     * Fold a brand name to a comparable identity: lowercase, drop apostrophes
+     * ("Levi's" == "levis"), turn separators (. - _ /) into spaces so
+     * "isabel-marant" == "Isabel Marant", then collapse whitespace.
+     * Mirrors normalizeBrandName() in the mobile brandDesigner screen.
+     */
+    public static function normalizeName(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+        $value = str_replace(["'", '’', '`'], '', $value);
+        $value = str_replace(['.', '-', '_', '/'], ' ', $value);
+        $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+
+        return trim($value);
+    }
+
+    /**
+     * Find a catalogue brand whose name matches `$name` once normalised.
+     * Defaults to the same scope the mobile brand list uses (active, non-"Ostali");
+     * pass $activeOnly = false to match against every brand (e.g. before creating
+     * one, to avoid a near-duplicate of a disabled brand).
+     */
+    public static function findByNormalizedName(string $name, bool $activeOnly = true): ?self
+    {
+        $target = static::normalizeName($name);
+
+        if ($target === '') {
+            return null;
+        }
+
+        return static::query()
+            ->when($activeOnly, fn ($q) => $q->where('is_active', true)->where('is_other', false))
+            ->get(['id', 'name'])
+            ->first(fn (self $brand) => static::normalizeName($brand->name) === $target);
+    }
 }

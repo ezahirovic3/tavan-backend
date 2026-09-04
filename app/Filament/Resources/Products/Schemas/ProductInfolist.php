@@ -117,6 +117,11 @@ class ProductInfolist
                                     default         => $state ?? '—',
                                 }),
                             TextEntry::make('color')->label('Boja')->placeholder('—'),
+                            TextEntry::make('is_sealed')
+                                ->label('Pakovanje')
+                                ->placeholder('—')
+                                ->visible(fn ($record) => $record->category === 'beauty')
+                                ->formatStateUsing(fn ($state) => $state ? 'Zapečaćeno / neotvoreno' : 'Otvoreno'),
                             TextEntry::make('styles')
                                 ->label('Stilovi')
                                 ->placeholder('—')

@@ -10,6 +10,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class ProductForm
@@ -56,8 +57,11 @@ class ProductForm
                                     'activewear'  => 'Activewear (sportska odjeća)',
                                     'occasion'    => 'Occasion (svečana odjeća)',
                                     'swimwear'    => 'Swimwear (kupaći kostimi)',
+                                    'beauty'      => 'Beauty (šminka, parfemi, njega)',
+                                    'sets'        => 'Sets / Kompleti (dvodijelni)',
                                 ])
                                 ->searchable()
+                                ->live()
                                 ->native(false),
 
                             TextInput::make('subcategory')
@@ -77,6 +81,11 @@ class ProductForm
                                     'worn'      => 'Vidljivo nošeno',
                                 ])
                                 ->native(false),
+
+                            Toggle::make('is_sealed')
+                                ->label('Zapečaćeno / neotvoreno')
+                                ->helperText('Samo za Beauty — proizvod je u originalnom neotvorenom pakovanju.')
+                                ->visible(fn (Get $get) => $get('category') === 'beauty'),
 
                             TextInput::make('price')
                                 ->label('Cijena')

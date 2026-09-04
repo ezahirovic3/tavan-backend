@@ -3,10 +3,10 @@
 namespace App\Filament\Resources\Products\Tables;
 
 use App\Models\Brand;
-use App\Services\ConversationService;
-use App\Services\PushNotificationService;
+use App\Services\ProductReviewService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -132,6 +132,9 @@ class ProductsTable
                     'jewelry'     => 'Jewelry',
                     'activewear'  => 'Activewear',
                     'occasion'    => 'Occasion',
+                    'swimwear'    => 'Swimwear',
+                    'beauty'      => 'Beauty',
+                    'sets'        => 'Sets / Kompleti',
                 ])->multiple(),
 
                 SelectFilter::make('brand_id')
@@ -182,36 +185,14 @@ class ProductsTable
                         ? 'Oglas postaje aktivan. Prodavac dobija obavijest da su budući oglasi odobreni i idu direktno online.'
                         : 'Oglas postaje aktivan i vidljiv u aplikaciji.')
                     ->action(function ($record) {
-                        $record->update(['status' => 'active']);
+                        $sellerApproved = app(ProductReviewService::class)->approve($record, auth()->user());
 
-                        $seller = $record->seller;
-
-                        if ($seller && $seller->listings_require_review) {
-                            $seller->update(['listings_require_review' => false]);
-
-                            $conversations = app(ConversationService::class);
-                            $push = app(PushNotificationService::class);
-
-                            $conversation = $conversations->findOrCreateSupportConversation($seller->id);
-
-                            $conversations->sendSupportReply(
-                                $conversation,
-                                auth()->user(),
-                                "Tvoji oglasi su pregledani i odobreni! 🎉\n\nOd sada svi tvoji novi oglasi idu direktno online — nema više čekanja na pregled.\n\nNapomena: Ako primimo prijave vezane za tvoj profil ili oglase, pregled može biti ponovo uključen. Hvala na razumijevanju i dobrodošao/la u Tavan zajednicu! 🩷",
-                            );
-
-                            $push->sendToUser(
-                                $seller->id,
-                                'Tavan Podrška',
-                                'Tvoji oglasi su odobreni! Od sada objavljuješ direktno online 🎉',
-                                ['type' => 'support_message', 'conversationId' => $conversation->id],
-                            );
-
-                            Notification::make()->success()->title('Oglas odobren — prodavac odobren, poruka poslana')->send();
-                            return;
-                        }
-
-                        Notification::make()->success()->title('Oglas odobren')->send();
+                        Notification::make()
+                            ->success()
+                            ->title($sellerApproved
+                                ? 'Oglas odobren — prodavac odobren, poruka poslana'
+                                : 'Oglas odobren')
+                            ->send();
                     }),
 
                 Action::make('reject')
@@ -228,21 +209,7 @@ class ProductsTable
                     ])
                     ->modalHeading('Odbaci oglas')
                     ->action(function (array $data, $record) {
-                        $record->update(['status' => 'draft']);
-
-                        $conversations = app(ConversationService::class);
-                        $push = app(PushNotificationService::class);
-
-                        $conversation = $conversations->findOrCreateSupportConversation($record->seller_id);
-                        $messageBody = "Tvoj oglas \"{$record->title}\" je odbijen.\n\nRazlog: {$data['reason']}";
-                        $conversations->sendSupportReply($conversation, auth()->user(), $messageBody);
-
-                        $push->sendToUser(
-                            $record->seller_id,
-                            'Oglas odbijen',
-                            "Tvoj oglas \"{$record->title}\" je odbijen. Otvori poruke za detalje.",
-                            ['type' => 'support_message', 'conversationId' => $conversation->id],
-                        );
+                        app(ProductReviewService::class)->reject($record, auth()->user(), $data['reason']);
 
                         Notification::make()->success()->title('Oglas odbačen, poruka poslana prodavcu')->send();
                     }),
@@ -290,6 +257,46 @@ class ProductsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('approve')
+                        ->label('Odobri odabrane')
+                        ->icon('heroicon-m-check')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->modalHeading('Odobri odabrane oglase')
+                        ->modalDescription('Samo oglasi sa statusom "Na pregledu" će biti odobreni. Prodavci koji čekaju odobrenje dobijaju obavijest.')
+                        ->action(function ($records) {
+                            $service = app(ProductReviewService::class);
+                            $admin   = auth()->user();
+
+                            $approved        = 0;
+                            $sellersApproved = 0;
+
+                            foreach ($records as $record) {
+                                if ($record->status !== 'pending_review') {
+                                    continue;
+                                }
+
+                                $sellersApproved += $service->approve($record, $admin) ? 1 : 0;
+                                $approved++;
+                            }
+
+                            if ($approved === 0) {
+                                Notification::make()
+                                    ->warning()
+                                    ->title('Nijedan odabrani oglas nije bio "Na pregledu"')
+                                    ->send();
+
+                                return;
+                            }
+
+                            Notification::make()
+                                ->success()
+                                ->title("Odobreno oglasa: {$approved}"
+                                    . ($sellersApproved ? " · prodavača odobreno: {$sellersApproved}" : ''))
+                                ->send();
+                        })
+                        ->deselectRecordsAfterCompletion(),
+
                     DeleteBulkAction::make()->visible(fn () => auth()->user()->isSuperAdmin()),
                 ]),
             ])

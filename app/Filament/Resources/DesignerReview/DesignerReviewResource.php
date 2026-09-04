@@ -114,7 +114,7 @@ class DesignerReviewResource extends Resource
                     ->color('success')
                     ->visible(fn ($record) => $record->designer_status === 'pending')
                     ->requiresConfirmation()
-                    ->modalHeading('Odobri designer badge')
+                    ->modalHeading('Odobri Dizajner badge')
                     ->modalDescription('Badge postaje vidljiv na oglasu u aplikaciji.')
                     ->action(function ($record) {
                         $record->update([
@@ -124,8 +124,8 @@ class DesignerReviewResource extends Resource
                             'designer_reject_reason' => null,
                         ]);
 
-                        $title = 'Designer badge odobren!';
-                        $body  = "Tvoj oglas \"{$record->title}\" je dobio Designer badge.";
+                        $title = 'Dizajner badge odobren!';
+                        $body  = "Tvoj oglas \"{$record->title}\" je dobio Dizajner badge.";
 
                         app(PushNotificationService::class)->sendToUser(
                             $record->seller_id,
@@ -142,7 +142,7 @@ class DesignerReviewResource extends Resource
                             ['productId' => $record->id],
                         );
 
-                        Notification::make()->success()->title('Designer badge odobren')->send();
+                        Notification::make()->success()->title('Dizajner badge odobren')->send();
                     }),
 
                 Action::make('reject')
@@ -170,13 +170,13 @@ class DesignerReviewResource extends Resource
                         $push = app(PushNotificationService::class);
 
                         $conversation = $conversations->findOrCreateSupportConversation($record->seller_id);
-                        $messageBody  = "Zahtjev za Designer badge za oglas \"{$record->title}\" je odbijen.\n\nRazlog: {$data['reason']}";
+                        $messageBody  = "Zahtjev za Dizajner badge za oglas \"{$record->title}\" je odbijen.\n\nRazlog: {$data['reason']}";
                         $conversations->sendSupportReply($conversation, auth()->user(), $messageBody);
 
                         $push->sendToUser(
                             $record->seller_id,
-                            'Designer badge odbijen',
-                            "Zahtjev za Designer badge za \"{$record->title}\" je odbijen. Otvori poruke za detalje.",
+                            'Dizajner badge odbijen',
+                            "Zahtjev za Dizajner badge za \"{$record->title}\" je odbijen. Otvori poruke za detalje.",
                             ['type' => 'support_message', 'conversationId' => $conversation->id],
                         );
 

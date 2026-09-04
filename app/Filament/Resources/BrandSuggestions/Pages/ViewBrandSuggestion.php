@@ -8,4 +8,12 @@ use Filament\Resources\Pages\ViewRecord;
 class ViewBrandSuggestion extends ViewRecord
 {
     protected static string $resource = BrandSuggestionResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            BrandSuggestionResource::approveAction(),
+            BrandSuggestionResource::rejectAction(),
+        ];
+    }
 }
