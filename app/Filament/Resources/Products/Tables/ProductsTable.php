@@ -134,6 +134,7 @@ class ProductsTable
                     'occasion'    => 'Occasion',
                     'swimwear'    => 'Swimwear',
                     'beauty'      => 'Beauty',
+                    'sets'        => 'Sets / Kompleti',
                 ])->multiple(),
 
                 SelectFilter::make('brand_id')

@@ -58,6 +58,7 @@ class ProductForm
                                     'occasion'    => 'Occasion (svečana odjeća)',
                                     'swimwear'    => 'Swimwear (kupaći kostimi)',
                                     'beauty'      => 'Beauty (šminka, parfemi, njega)',
+                                    'sets'        => 'Sets / Kompleti (dvodijelni)',
                                 ])
                                 ->searchable()
                                 ->live()

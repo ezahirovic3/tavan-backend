@@ -178,6 +178,11 @@ class ProductSearchService
             'sjenilo', 'sjenila', 'korektor', 'hajlajter', 'rumenilo',
             'serum', 'serumi', 'losion',
         ],
+        'sets' => [
+            'komplet', 'kompleti', 'set', 'setovi',
+            'dvodijelni', 'dvodjelni', 'dvodijelno',
+            'trodijelni', 'trodjelni', 'coord', 'co-ord',
+        ],
     ];
 
     // Maps search terms to style keys (App\Enums\ProductStyle values) stored in

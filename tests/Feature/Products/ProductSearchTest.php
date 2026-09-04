@@ -140,6 +140,23 @@ class ProductSearchTest extends TestCase
         $this->assertEquals('beauty', $results[0]['category']);
     }
 
+    public function test_komplet_term_falls_back_to_the_sets_category(): void
+    {
+        Product::factory()->create([
+            'category' => 'sets',
+            'title'    => 'Zelena trenerka Nike',
+        ]);
+        Product::factory()->create([
+            'category' => 'tops',
+            'title'    => 'Bijela majica',
+        ]);
+
+        $results = $this->search('komplet');
+
+        $this->assertCount(1, $results);
+        $this->assertEquals('sets', $results[0]['category']);
+    }
+
     public function test_single_token_brand_query_is_not_stemmed(): void
     {
         // "nike" must not become "nik" and match e.g. "tunika"
