@@ -132,6 +132,8 @@ class ProductsTable
                     'jewelry'     => 'Jewelry',
                     'activewear'  => 'Activewear',
                     'occasion'    => 'Occasion',
+                    'swimwear'    => 'Swimwear',
+                    'beauty'      => 'Beauty',
                 ])->multiple(),
 
                 SelectFilter::make('brand_id')

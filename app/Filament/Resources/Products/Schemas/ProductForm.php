@@ -56,6 +56,7 @@ class ProductForm
                                     'activewear'  => 'Activewear (sportska odjeća)',
                                     'occasion'    => 'Occasion (svečana odjeća)',
                                     'swimwear'    => 'Swimwear (kupaći kostimi)',
+                                    'beauty'      => 'Beauty (šminka, parfemi, njega)',
                                 ])
                                 ->searchable()
                                 ->native(false),

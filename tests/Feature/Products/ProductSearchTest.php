@@ -122,6 +122,24 @@ class ProductSearchTest extends TestCase
         $this->assertEquals('men', $results[0]['rootCategory']);
     }
 
+    public function test_beauty_term_falls_back_to_the_beauty_category(): void
+    {
+        // Listing categorised as beauty, title has none of the search words.
+        Product::factory()->create([
+            'category' => 'beauty',
+            'title'    => 'Dior Sauvage 100ml',
+        ]);
+        Product::factory()->create([
+            'category' => 'tops',
+            'title'    => 'Bijela majica',
+        ]);
+
+        $results = $this->search('parfem');
+
+        $this->assertCount(1, $results);
+        $this->assertEquals('beauty', $results[0]['category']);
+    }
+
     public function test_single_token_brand_query_is_not_stemmed(): void
     {
         // "nike" must not become "nik" and match e.g. "tunika"

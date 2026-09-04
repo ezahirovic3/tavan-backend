@@ -171,6 +171,13 @@ class ProductSearchService
             'kaiš', 'kaiševi', 'remen',
             'rukavice', 'sat', 'satovi', 'novčanik', 'novčanici',
         ],
+        'beauty' => [
+            'šminka', 'šminke', 'kozmetika', 'makeup', 'make-up', 'ljepota',
+            'parfem', 'parfemi', 'parfum', 'miris', 'mirisi',
+            'ruž', 'ruževi', 'karmin', 'maskara', 'puder',
+            'sjenilo', 'sjenila', 'korektor', 'hajlajter', 'rumenilo',
+            'serum', 'serumi', 'losion',
+        ],
     ];
 
     // Maps search terms to style keys (App\Enums\ProductStyle values) stored in
