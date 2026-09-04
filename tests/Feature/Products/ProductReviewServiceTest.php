@@ -13,13 +13,9 @@ class ProductReviewServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        // Support replies are sent from the system user; it must exist for the FK.
-        User::factory()->create(['id' => config('tavan.system_user_id')]);
-    }
+    // The system support user (sender of support replies) is created by the
+    // 2026_05_09_000005_create_system_support_user migration, so RefreshDatabase
+    // already provides it.
 
     public function test_approve_publishes_a_pending_listing(): void
     {
