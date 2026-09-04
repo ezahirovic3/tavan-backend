@@ -48,6 +48,7 @@ class StoreProductRequest extends FormRequest
             'category'      => ['nullable', 'string', 'max:128'],
             'subcategory'   => ['nullable', 'string', 'max:128'],
             'condition'     => [$isDraft ? 'nullable' : 'required', 'nullable', Rule::in(['new', 'very_good', 'good', 'worn'])],
+            'is_sealed'     => ['sometimes', 'nullable', 'boolean'],
             'size'          => ['nullable', 'string', 'max:32'],
             'color'         => ['nullable', 'string', 'max:64'],
             'material'      => ['nullable', 'string', 'max:128'],

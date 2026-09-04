@@ -105,6 +105,31 @@ class ProductTest extends TestCase
         ]);
     }
 
+    public function test_beauty_listing_stores_and_returns_is_sealed(): void
+    {
+        $seller = User::factory()->create();
+
+        $response = $this->actingAs($seller)->postJson('/api/v1/products', [
+            'title'         => 'Dior Sauvage 100ml',
+            'description'   => 'Neotvoreno',
+            'price'         => 60.00,
+            'root_category' => 'women',
+            'category'      => 'beauty',
+            'condition'     => 'new',
+            'is_sealed'     => true,
+            'location'      => 'Sarajevo',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('data.isSealed', true);
+
+        $this->assertDatabaseHas('products', [
+            'title'     => 'Dior Sauvage 100ml',
+            'category'  => 'beauty',
+            'is_sealed' => true,
+        ]);
+    }
+
     public function test_trusted_seller_product_goes_active_immediately(): void
     {
         $seller = User::factory()->create(['listings_require_review' => false]);

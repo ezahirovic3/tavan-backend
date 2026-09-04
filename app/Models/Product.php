@@ -34,6 +34,7 @@ class Product extends Model
         'category',
         'subcategory',
         'condition',
+        'is_sealed',
         'size',
         'color',
         'material',
@@ -68,6 +69,7 @@ class Product extends Model
     {
         return [
             'price'                => 'decimal:2',
+            'is_sealed'            => 'boolean',
             'allows_trades'        => 'boolean',
             'allows_offers'        => 'boolean',
             'pickup_enabled'       => 'boolean',
