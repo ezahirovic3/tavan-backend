@@ -45,7 +45,7 @@ Route::prefix('v1')->group(function () {
     Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('auth/verify-reset-otp', [AuthController::class, 'verifyResetOtp']);
     Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
-    Route::post('auth/phone/send-otp', [AuthController::class, 'sendPhoneOtp']);
+    Route::post('auth/phone/send-otp', [AuthController::class, 'sendPhoneOtp'])->middleware('throttle:phone-otp-send');
 
     Route::get('brands', [BrandController::class, 'index']);
 
@@ -86,7 +86,7 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
         Route::post('auth/change-password', [AuthController::class, 'changePassword']);
-        Route::post('auth/phone/verify-otp', [AuthController::class, 'verifyPhoneOtp']);
+        Route::post('auth/phone/verify-otp', [AuthController::class, 'verifyPhoneOtp'])->middleware('throttle:phone-otp-verify');
 
         Route::get('users/me/blocks', [UserBlockController::class, 'index']);
         Route::post('users/{user}/block', [UserBlockController::class, 'store']);

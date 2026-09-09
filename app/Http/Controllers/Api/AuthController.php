@@ -283,7 +283,7 @@ class AuthController extends Controller
 
     public function sendPhoneOtp(SendPhoneOtpRequest $request): JsonResponse
     {
-        $this->phoneVerification->sendOtp($request->phone);
+        $this->phoneVerification->sendOtp($request->phone, $request->ip());
 
         return response()->json(['message' => 'Verifikacijski kod je poslan.']);
     }
