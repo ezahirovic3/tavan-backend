@@ -17,14 +17,14 @@ class SendPhoneOtpRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'phone' => ['required', 'string', 'regex:/^\+[1-9]\d{6,14}$/'],
+            'phone' => self::bosnianPhoneRules(),
         ];
     }
 
     public function messages(): array
     {
         return [
-            'phone.regex' => 'Unesite ispravan broj telefona u međunarodnom formatu (npr. +38761123456).',
+            'phone.regex' => 'Trenutno podržavamo samo brojeve mobitela iz BiH (+387 6X XXX XXX).',
         ];
     }
 }
