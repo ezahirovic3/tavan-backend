@@ -60,14 +60,19 @@ class SupportConversationResource extends Resource
                     ->schema([
                         Select::make('participant_one_id')
                             ->label('Korisnik')
-                            ->options(fn () => User::where('is_system', false)
+                            ->searchable()
+                            ->getSearchResultsUsing(fn (string $search) => User::where('is_system', false)
                                 ->whereNotIn('role', ['admin', 'super_admin'])
+                                ->where(fn ($q) => $q->where('username', 'like', "%{$search}%")
+                                    ->orWhere('name', 'like', "%{$search}%"))
                                 ->orderBy('username')
-                                ->limit(500)
+                                ->limit(50)
                                 ->get()
                                 ->mapWithKeys(fn ($u) => [$u->id => '@' . ($u->username ?? '?') . ' · ' . ($u->name ?? '—')])
                             )
-                            ->searchable()
+                            ->getOptionLabelUsing(fn ($value) => ($u = User::find($value))
+                                ? '@' . ($u->username ?? '?') . ' · ' . ($u->name ?? '—')
+                                : null)
                             ->required(),
 
                         Textarea::make('initial_message')
