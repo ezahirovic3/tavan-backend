@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\BannedDevice;
 use App\Models\User;
+use App\Notifications\UserBannedNotification;
 use Carbon\Carbon;
 
 class BanService
@@ -45,6 +46,8 @@ class BanService
                 ['banned_at' => now(), 'reason' => $reason],
             );
         }
+
+        $user->notify(new UserBannedNotification($bannedUntil));
     }
 
     public function lift(User $user): void
