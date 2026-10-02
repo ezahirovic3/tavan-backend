@@ -7,6 +7,7 @@ use App\Jobs\SendPhoneOtpJob;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Twilio\Exceptions\RestException;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -101,6 +102,28 @@ class PhoneOtpTest extends TestCase
         $provider->shouldReceive('send')->once()->with('+38761123456');
 
         (new SendPhoneOtpJob('+38761123456'))->handle($provider);
+    }
+
+    public function test_job_gives_up_immediately_when_twilio_rejects_the_number(): void
+    {
+        // 60203 = Verify "max send attempts reached" — retrying only extends the lock.
+        $provider = $this->mock(OtpProviderInterface::class);
+        $provider->shouldReceive('send')->once()->andThrow(new RestException('Max send attempts reached', 60203, 429));
+
+        $job = (new SendPhoneOtpJob('+38761123456'))->withFakeQueueInteractions();
+        $job->handle($provider);
+
+        $job->assertFailed();
+    }
+
+    public function test_job_rethrows_transient_twilio_errors_so_the_queue_retries(): void
+    {
+        $provider = $this->mock(OtpProviderInterface::class);
+        $provider->shouldReceive('send')->once()->andThrow(new RestException('Service unavailable', 20503, 503));
+
+        $this->expectException(RestException::class);
+
+        (new SendPhoneOtpJob('+38761123456'))->withFakeQueueInteractions()->handle($provider);
     }
 
     // ─── Verify: attempt cap + graceful Twilio failure ──────────────────────
