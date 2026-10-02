@@ -24,18 +24,25 @@ class SendPhoneOtpJob implements ShouldQueue
 {
     use Queueable;
 
-    public int $backoff = 10;
+    /**
+     * Real errors (not rate-limit releases) allowed before the job fails.
+     * Every attempt is a Twilio send attempt, and Verify locks a number after
+     * ~5 sends in 10 minutes — so retry sparingly.
+     */
+    public int $maxExceptions = 2;
+
+    public int $backoff = 30;
 
     public function __construct(public readonly string $phone) {}
 
     /**
-     * Keep attempting (through rate-limit releases and transient Twilio
-     * errors) for up to 10 minutes, then let the job fail. A permanent
-     * Twilio rejection calls fail() directly and skips the rest.
+     * A code that shows up minutes late is useless — by then the user has
+     * either received a later one or given up. Stop well before Verify's
+     * 10-minute code expiry.
      */
     public function retryUntil(): DateTime
     {
-        return now()->addMinutes(10)->toDateTime();
+        return now()->addMinutes(2)->toDateTime();
     }
 
     /**
@@ -53,16 +60,28 @@ class SendPhoneOtpJob implements ShouldQueue
         try {
             $otp->send($this->phone);
         } catch (RestException $e) {
-            // Twilio rejected the number itself (invalid, unroutable, blocked).
-            // Retrying will not help — log and drop it.
+            if ($this->isTransient($e)) {
+                // Twilio-side throttling or outage: one more try is fine.
+                throw $e;
+            }
+
+            // Twilio rejected the number itself (invalid, unroutable, blocked,
+            // max send attempts reached). Retrying only extends the lock.
             Log::warning('OTP send rejected by Twilio', [
                 'phone'  => $this->phone,
+                'status' => $e->getStatusCode(),
                 'code'   => $e->getCode(),
                 'detail' => $e->getMessage(),
             ]);
 
             $this->fail($e);
         }
+    }
+
+    private function isTransient(RestException $e): bool
+    {
+        // 20429 = Twilio API rate limit (global, not per-number).
+        return $e->getCode() === 20429 || $e->getStatusCode() >= 500;
     }
 
     public function failed(?Throwable $e): void

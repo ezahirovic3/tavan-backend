@@ -3,8 +3,6 @@
 namespace App\Services\Auth;
 
 use App\Contracts\OtpProviderInterface;
-use Illuminate\Validation\ValidationException;
-use Twilio\Exceptions\RestException;
 use Twilio\Rest\Client;
 
 class TwilioOtpProvider implements OtpProviderInterface
@@ -19,17 +17,15 @@ class TwilioOtpProvider implements OtpProviderInterface
         $this->client = new Client($accountSid, $authToken);
     }
 
+    /**
+     * Twilio errors propagate as RestException on purpose: SendPhoneOtpJob
+     * inspects them to decide between retrying and giving up.
+     */
     public function send(string $phone): void
     {
-        try {
-            $this->client->verify->v2->services($this->verifySid)
-                ->verifications
-                ->create($phone, 'sms');
-        } catch (RestException $e) {
-            throw ValidationException::withMessages([
-                'phone' => 'Unesite ispravan broj telefona u međunarodnom formatu (npr. +38761123456).',
-            ]);
-        }
+        $this->client->verify->v2->services($this->verifySid)
+            ->verifications
+            ->create($phone, 'sms');
     }
 
     public function check(string $phone, string $code): bool
